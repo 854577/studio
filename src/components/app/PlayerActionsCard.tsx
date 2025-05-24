@@ -3,23 +3,16 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Briefcase, Fish, Bed, Dumbbell } from 'lucide-react';
 import type { ActionType } from '@/app/page'; // Assuming ActionType is exported from page.tsx or a shared types file
 
 interface PlayerActionsCardProps {
   onAction: (actionType: ActionType) => void;
   timeLeftForAction: Record<ActionType, string | null>;
   isDisabled: boolean;
+  actionConfig: Record<ActionType, { label: string; icon: React.ElementType; modalTitle: string }>; // Atualizado para incluir modalTitle
 }
 
-const actionConfig: Record<ActionType, { label: string; icon: React.ElementType }> = {
-  trabalhar: { label: 'Trabalhar', icon: Briefcase },
-  pescar: { label: 'Pescar', icon: Fish },
-  dormir: { label: 'Dormir', icon: Bed },
-  treinar: { label: 'Treinar', icon: Dumbbell },
-};
-
-const PlayerActionsCard: React.FC<PlayerActionsCardProps> = ({ onAction, timeLeftForAction, isDisabled }) => {
+const PlayerActionsCard: React.FC<PlayerActionsCardProps> = ({ onAction, timeLeftForAction, isDisabled, actionConfig }) => {
   return (
     <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
       <CardHeader>
@@ -39,7 +32,7 @@ const PlayerActionsCard: React.FC<PlayerActionsCardProps> = ({ onAction, timeLef
               key={action}
               onClick={() => onAction(action)}
               disabled={buttonIsDisabled}
-              className="w-full py-4 text-sm sm:text-base flex flex-col h-auto items-center justify-center"
+              className="w-full py-4 text-sm sm:text-base flex flex-col h-auto items-center justify-center min-h-[80px]"
               variant={buttonIsDisabled ? "secondary" : "default"}
             >
               <Icon className={`mb-1 h-5 w-5 ${buttonIsDisabled ? 'text-muted-foreground' : ''}`} />
@@ -56,3 +49,5 @@ const PlayerActionsCard: React.FC<PlayerActionsCardProps> = ({ onAction, timeLef
 };
 
 export default PlayerActionsCard;
+
+    
