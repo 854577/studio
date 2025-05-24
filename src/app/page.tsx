@@ -7,14 +7,15 @@ import type { Player } from '@/types/player';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Search, AlertCircle, ShoppingBag } from 'lucide-react'; // Adicionado ShoppingBag
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
+import { Search, AlertCircle, ShoppingBag } from 'lucide-react'; 
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard, { PlayerStatsSkeleton } from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
 import RechargeCard from '@/components/app/RechargeCard';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent as ShadDialogContent, DialogHeader as ShadDialogHeader, DialogTitle as ShadDialogTitle } from '@/components/ui/dialog'; // Renamed to avoid conflict
 import { Briefcase, Fish, Bed, Dumbbell } from 'lucide-react'; 
-import Link from 'next/link'; // Adicionado Link
+import Link from 'next/link'; 
 
 export type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 export const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
@@ -62,8 +63,9 @@ export default function HomePage() {
       // Para simplificar, vamos apenas preencher o input e o usuário pode clicar em buscar
       // ou você pode adaptar handleSearch para ser chamado aqui.
       // Se quiser busca automática:
-      // setCurrentPlayerId(pid.trim()); // Ou chamar handleSearch com o pid.
+      handleSearch(undefined, pid.trim());
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -73,7 +75,7 @@ export default function HomePage() {
       try {
         const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${id}.json`);
         if (!response.ok) {
-           if (response.status === 404 || (await response.clone().json()) === null) { // Firebase retorna 200 OK com null se o nó não existe
+           if (response.status === 404 || (await response.clone().json()) === null) { 
             setError(`Player ID "${id}" not found.`);
           } else {
             throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
@@ -168,10 +170,10 @@ export default function HomePage() {
     };
   }, [actionCooldownEndTimes, currentPlayerId]);
 
-  const handleSearch = async (event?: FormEvent) => { // Tornar event opcional
-    if (event) event.preventDefault(); // Prevenir comportamento padrão apenas se chamado por evento de formulário
+  const handleSearch = async (event?: FormEvent, idFromUrl?: string) => { 
+    if (event) event.preventDefault(); 
     
-    const trimmedId = playerIdInput.trim();
+    const trimmedId = idFromUrl || playerIdInput.trim();
     if (!trimmedId) {
       setError('Player ID cannot be empty.');
       setPlayerData(null);
@@ -183,8 +185,7 @@ export default function HomePage() {
     setError(null);
     setPlayerData(null); 
 
-    // Atualizar URL com o playerId pesquisado
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !idFromUrl) {
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.set('playerId', trimmedId);
       window.history.pushState({}, '', currentUrl.toString());
@@ -217,7 +218,7 @@ export default function HomePage() {
     setActiveActionAnimation(actionType);
 
     setTimeout(async () => {
-      if (!playerData || !currentPlayerId) {
+      if (!playerData || !currentPlayerId) { // Double check here
         console.error("Player data or ID became null during action processing.");
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
@@ -318,7 +319,7 @@ export default function HomePage() {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2 tracking-tight">RPG himiko</h1>
       </header>
 
-      <form onSubmit={handleSearch} className="w-full max-w-md mb-8 flex items-stretch gap-2 sm:gap-3">
+      <form onSubmit={(e) => handleSearch(e)} className="w-full max-w-md mb-8 flex items-stretch gap-2 sm:gap-3">
         <Input
           type="text"
           value={playerIdInput}
@@ -420,18 +421,18 @@ export default function HomePage() {
         </>
       )}
 
-      {activeActionAnimation && (
-        <Dialog open={!!activeActionAnimation} onOpenChange={() => {}}>
-          <DialogContent className="sm:max-w-[280px] p-6 flex flex-col items-center justify-center bg-card/95 backdrop-blur-sm shadow-2xl rounded-lg border-border/50">
-            <DialogHeader className="mb-3">
-              <DialogTitle className="text-center text-xl font-semibold text-primary">
-                {actionConfig[activeActionAnimation!].modalTitle}
-              </DialogTitle>
-            </DialogHeader>
+      {activeActionAnimation && actionConfig[activeActionAnimation] && (
+        <Dialog open={!!activeActionAnimation} onOpenChange={() => {setActiveActionAnimation(null); setIsActionInProgress(false);}}>
+          <ShadDialogContent className="sm:max-w-[280px] p-6 flex flex-col items-center justify-center bg-card/95 backdrop-blur-sm shadow-2xl rounded-lg border-border/50">
+            <ShadDialogHeader className="mb-3">
+              <ShadDialogTitle className="text-center text-xl font-semibold text-primary">
+                {actionConfig[activeActionAnimation].modalTitle}
+              </ShadDialogTitle>
+            </ShadDialogHeader>
             <div className="animate-pulse text-primary">
-              {React.createElement(actionConfig[activeActionAnimation!].icon, { size: 72, strokeWidth: 1.5 })}
+              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 72, strokeWidth: 1.5 })}
             </div>
-          </DialogContent>
+          </ShadDialogContent>
         </Dialog>
       )}
       
@@ -443,3 +444,4 @@ export default function HomePage() {
     </div>
   );
 }
+
