@@ -27,10 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}>
-        <div id="stars-small" className="stars-layer"></div>
-        <div id="stars-medium" className="stars-layer"></div>
-        <div id="stars-large" className="stars-layer"></div>
-        <div className="relative z-10 bg-transparent min-h-screen">
+        <div className="min-h-screen">
           {children}
         </div>
         <Toaster />

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Activity, Store } from 'lucide-react';
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Activity, Store, Briefcase, Fish, Bed, Dumbbell } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
@@ -19,10 +19,10 @@ const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 
 export const actionConfig: Record<ActionType, { icon: React.ElementType, goldRange: [number, number], xpRange: [number, number], title: string, modalTitle: string }> = {
-  trabalhar: { icon: UserRound, goldRange: [100, 500], xpRange: [100, 500], title: "Você trabalhou duro!", modalTitle: "Trabalhando..." },
-  pescar: { icon: UserRound, goldRange: [100, 500], xpRange: [100, 500], title: "Boa pescaria!", modalTitle: "Pescando..." },
-  dormir: { icon: UserRound, goldRange: [0, 0], xpRange: [100, 500], title: "Você descansou bem.", modalTitle: "Descansando..." },
-  treinar: { icon: UserRound, goldRange: [0, 0], xpRange: [100, 500], title: "Treino intenso!", modalTitle: "Treinando..." },
+  trabalhar: { icon: Briefcase, goldRange: [100, 500], xpRange: [100, 500], title: "Você trabalhou duro!", modalTitle: "Trabalhando..." },
+  pescar: { icon: Fish, goldRange: [100, 500], xpRange: [100, 500], title: "Boa pescaria!", modalTitle: "Pescando..." },
+  dormir: { icon: Bed, goldRange: [0, 0], xpRange: [100, 500], title: "Você descansou bem.", modalTitle: "Descansando..." },
+  treinar: { icon: Dumbbell, goldRange: [0, 0], xpRange: [100, 500], title: "Treino intenso!", modalTitle: "Treinando..." },
 };
 
 
@@ -64,28 +64,25 @@ function HomePageInternal() {
           setPlayerData(parsedData);
           setCurrentPlayerId(sessionPlayerId);
           setPlayerIdInput(pidFromUrl); 
-          // Senha não é restaurada do session storage por segurança, mas o usuário já está "logado"
         } catch (e) {
           console.error("Failed to parse session player data", e);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
            if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-            setPasswordInput(''); // Limpa senha se for um novo jogador sendo carregado via URL
+            setPasswordInput(''); 
           }
         }
       } else {
-         // Se o pid da URL mudou em relação ao jogador logado, ou não há sessão
         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-          setPlayerData(null); // Limpa dados do jogador anterior
-          setCurrentPlayerId(null); // Desloga o jogador anterior
-          setPasswordInput(''); // Limpa senha para o novo login
+          setPlayerData(null); 
+          setCurrentPlayerId(null); 
+          setPasswordInput(''); 
           setLoginError(null);
           setError(null);
         }
-        setPlayerIdInput(pidFromUrl); // Preenche o campo de busca com o pid da URL
+        setPlayerIdInput(pidFromUrl); 
       }
     } else {
-      // Se não há playerId na URL, limpa tudo se havia um jogador logado
       if (currentPlayerId) {
         setPlayerData(null);
         setCurrentPlayerId(null);
@@ -97,7 +94,7 @@ function HomePageInternal() {
         setError(null);
       }
     }
-  }, [searchParams, currentPlayerId]); // Re-executar se searchParams ou currentPlayerId mudar
+  }, [searchParams, currentPlayerId]); 
 
 
   useEffect(() => {
@@ -110,14 +107,12 @@ function HomePageInternal() {
           if (endTime > Date.now()) { 
             loadedCooldowns[action] = endTime;
           } else {
-            // Cooldown expirou, remove do localStorage
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); 
           }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      // Limpa cooldowns se não houver jogador logado
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
@@ -143,19 +138,16 @@ function HomePageInternal() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay(); // Atualiza imediatamente
-        const id = setInterval(updateDisplay, 1000); // E depois a cada segundo
+        updateDisplay(); 
+        const id = setInterval(updateDisplay, 1000); 
         intervalIds.push(id);
       } else {
-        // Garante que se o cooldown já passou ao carregar, ele seja nulo
         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-        // E remove do localStorage se ainda existir por algum motivo
         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
         }
       }
     });
-    // Cleanup function to clear intervals when component unmounts or dependencies change
     return () => intervalIds.forEach(clearInterval);
   }, [actionCooldownEndTimes, currentPlayerId]);
 
@@ -192,7 +184,6 @@ function HomePageInternal() {
           }
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(fetchedPlayerData));
-          // Não limpar passwordInput aqui, pois o formulário de login some
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
           setPlayerData(null); 
@@ -246,7 +237,7 @@ function HomePageInternal() {
     setCurrentActionLoading(null); 
 
     setTimeout(async () => {
-      if (!currentPlayerId || !playerData) { // Re-verificar antes de prosseguir
+      if (!currentPlayerId || !playerData) { 
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
         const msg = !currentPlayerId ? "ID do jogador não encontrado." : "Dados do jogador não encontrados.";
@@ -257,12 +248,11 @@ function HomePageInternal() {
 
       let currentPlayerDataForAction: Player | null = null;
       try {
-        // Buscar os dados mais recentes do jogador antes de aplicar a ação
         const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`);
         if (!response.ok) throw new Error('Falha ao buscar dados atualizados do jogador.');
         currentPlayerDataForAction = await response.json();
 
-        if (!currentPlayerDataForAction) { // Se, por algum motivo, o jogador sumiu do DB
+        if (!currentPlayerDataForAction) { 
           throw new Error('Não foi possível encontrar os dados atualizados do jogador.');
         }
 
@@ -320,14 +310,14 @@ function HomePageInternal() {
   let contentToRender;
   if (loading && !playerData && !loginError) {
     contentToRender = (
-      <div className="flex flex-col items-center justify-center flex-grow animate-in fade-in-0 duration-500">
-        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center flex-grow">
+        <Loader2 className="w-16 h-16 text-primary" />
         <p className="mt-4 text-lg text-muted-foreground">Buscando informações...</p>
       </div>
     );
   } else if (!playerData && !loading) {
     contentToRender = (
-      <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4 animate-in fade-in-0 slide-in-from-top-8 duration-500">
+      <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4">
         {loginError && (
           <Alert variant="destructive" className="w-full mb-6 shadow-lg">
             <AlertCircle className="w-4 h-4" />
@@ -367,11 +357,11 @@ function HomePageInternal() {
               <Button
                 type="submit"
                 disabled={loading || !playerIdInput.trim() || !passwordInput}
-                className="w-full h-12 text-base font-semibold transition-all duration-150 ease-in-out bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95 rounded-md"
+                className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-md"
                 aria-label="Buscar Jogador"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-5 h-5" />
                 ) : (
                   <Search size={20} />
                 )}
@@ -384,7 +374,7 @@ function HomePageInternal() {
     );
   } else if (playerData && !loginError && !loading) { 
     contentToRender = (
-      <div className="w-full max-w-5xl px-2 space-y-8 animate-in fade-in-0 duration-500">
+      <div className="w-full max-w-5xl px-2 space-y-8">
          {error && ( 
           <Alert variant="destructive" className="w-full max-w-md mx-auto shadow-lg">
             <AlertCircle className="w-4 h-4" />
@@ -456,7 +446,7 @@ function HomePageInternal() {
             <DialogHeader className="items-center text-center">
               <DialogTitle className="mb-4 text-2xl font-semibold text-primary">{actionConfig[activeActionAnimation].modalTitle}</DialogTitle>
             </DialogHeader>
-            <div className="flex justify-center animate-pulse text-primary">
+            <div className="flex justify-center text-primary">
               {React.createElement(actionConfig[activeActionAnimation].icon, { size: 80, strokeWidth: 1.5 })}
             </div>
           </DialogContent>
@@ -473,11 +463,10 @@ function HomePageInternal() {
 }
 
 export default function HomePage() {
-  // Suspense Fallback para useSearchParams
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+        <Loader2 className="w-16 h-16" />
         <p className="mt-4 text-lg text-muted-foreground">Carregando aplicação...</p>
       </div>
     }>
@@ -485,6 +474,4 @@ export default function HomePage() {
     </Suspense>
   );
 }
-    
-
     

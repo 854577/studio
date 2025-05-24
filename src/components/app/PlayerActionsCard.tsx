@@ -6,7 +6,7 @@ import type { Player } from '@/types/player';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Briefcase, Fish, Bed, Dumbbell, Loader2 } from 'lucide-react';
-import { actionConfig } from '@/app/page'; // Importar actionConfig
+// import { actionConfig } from '@/app/page'; // Importar actionConfig // No longer needed here
 
 type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 
@@ -17,7 +17,7 @@ interface PlayerActionsCardProps {
   actionCooldownEndTimes: Record<ActionType, number>;
   timeLeftForAction: Record<ActionType, string | null>;
   isActionInProgress: boolean;
-  currentActionLoading: ActionType | null; // Nova prop
+  currentActionLoading: ActionType | null; 
   disabled?: boolean;
   className?: string;
 }
@@ -54,10 +54,6 @@ const PlayerActionsCard: React.FC<PlayerActionsCardProps> = ({
             const config = actionButtonConfigClient[actionType];
             const Icon = config.icon;
             const cooldownTime = timeLeftForAction[actionType];
-            // Botão está desabilitado se:
-            // 1. O prop 'disabled' geral está true
-            // 2. Uma ação GLOBAL está em progresso (isActionInProgress)
-            // 3. ESTA ação específica está em cooldown (!!cooldownTime)
             const isDisabledByGlobal = disabled || isActionInProgress;
             const isThisActionDisabled = isDisabledByGlobal || !!cooldownTime;
             const isLoadingThisAction = currentActionLoading === actionType;
@@ -67,17 +63,17 @@ const PlayerActionsCard: React.FC<PlayerActionsCardProps> = ({
               <Button
                 key={actionType}
                 onClick={() => onAction(actionType)}
-                disabled={isThisActionDisabled || isLoadingThisAction} // Desabilita se esta ação específica está carregando ou em cooldown
+                disabled={isThisActionDisabled || isLoadingThisAction} 
                 variant={config.variant || "default"}
-                className="flex flex-col items-center justify-center w-full h-auto p-4 py-5 space-y-2.5 transition-all duration-150 ease-in-out transform rounded-lg shadow-md min-h-[100px] hover:scale-105 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="flex flex-col items-center justify-center w-full h-auto p-4 py-5 space-y-2.5 rounded-lg shadow-md min-h-[100px] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {isLoadingThisAction ? (
-                  <Loader2 size={32} className="animate-spin text-primary-foreground" />
+                  <Loader2 size={32} className="text-primary-foreground" />
                 ) : (
                   <Icon size={32} className={isThisActionDisabled ? "text-muted-foreground" : "text-primary-foreground"} />
                 )}
                 <span className="text-sm font-semibold">{config.label}</span>
-                {cooldownTime && !isLoadingThisAction && ( // Não mostrar cooldown se estiver carregando
+                {cooldownTime && !isLoadingThisAction && ( 
                   <span className="text-xs text-destructive-foreground opacity-90">({cooldownTime})</span>
                 )}
               </Button>
@@ -90,5 +86,3 @@ const PlayerActionsCard: React.FC<PlayerActionsCardProps> = ({
 };
 
 export default PlayerActionsCard;
-
-    

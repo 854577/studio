@@ -80,7 +80,6 @@ function LojaContent() {
         setPlayerData(result.updatedPlayer); 
         sessionStorage.setItem('playerData', JSON.stringify(result.updatedPlayer));
       } else {
-        // Se updatedPlayer não for retornado, recarregar os dados para refletir a mudança no ouro.
         fetchPlayerData(playerId);
       }
     } else {
@@ -91,7 +90,7 @@ function LojaContent() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background text-foreground">
-        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+        <Loader2 className="w-16 h-16 text-primary" />
         <p className="mt-6 text-xl text-muted-foreground">Carregando loja...</p>
       </div>
     );
@@ -128,7 +127,7 @@ function LojaContent() {
   }
 
   return (
-    <div className="container py-10 mx-auto max-w-6xl px-4 animate-in fade-in-0 duration-500">
+    <div className="container py-10 mx-auto max-w-6xl px-4">
       <header className="mb-10 text-center border-b pb-6 border-border/30">
         <h1 className="flex items-center justify-center mb-3 text-5xl font-extrabold tracking-tight text-primary sm:text-6xl">
           <ShoppingBasket size={50} className="mr-4" /> Loja do Aventureiro
@@ -149,7 +148,7 @@ function LojaContent() {
             <AccordionContent className="p-4 sm:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
                 {category.items.map((item) => (
-                  <Card key={item.name} className="flex flex-col overflow-hidden transition-all duration-200 shadow-md hover:shadow-xl bg-card/80 border-border/50 hover:border-primary/50">
+                  <Card key={item.name} className="flex flex-col overflow-hidden shadow-md bg-card/80 border-border/50">
                     <CardHeader className="items-center p-4 sm:p-5 text-center">
                       <item.icon size={48} className={cn("mb-3", item.color || "text-accent")} />
                       <CardTitle className="text-xl font-semibold truncate" title={item.name}>{item.name}</CardTitle>
@@ -164,7 +163,7 @@ function LojaContent() {
                         className="w-full mt-auto text-base h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md"
                       >
                         {purchasingItemId === item.name ? (
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          <Loader2 className="w-5 h-5 mr-2" />
                         ) : (
                           <ShoppingCart className="w-5 h-5 mr-2" />
                         )}
@@ -195,7 +194,7 @@ export default function LojaPage() {
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+        <Loader2 className="w-16 h-16" />
         <p className="mt-6 text-xl text-muted-foreground">Carregando...</p>
       </div>
     }>
@@ -203,5 +202,3 @@ export default function LojaPage() {
     </Suspense>
   );
 }
-
-    
