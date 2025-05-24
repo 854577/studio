@@ -15,8 +15,8 @@ export async function POST(request: NextRequest) {
   console.log('Webhook do Mercado Pago recebido!');
 
   if (!accessToken || accessToken === "FALLBACK_WEBHOOK_TOKEN") {
-    console.error('Webhook não pode processar: Access Token do MP não configurado no servidor.');
-    return NextResponse.json({ error: 'Configuração do servidor incompleta.' }, { status: 500 });
+    console.error('Webhook não pode processar: MP_ACCESS_TOKEN não está configurado no servidor. Verifique as variáveis de ambiente.');
+    return NextResponse.json({ error: 'MP_ACCESS_TOKEN não está configurado no servidor para o webhook. Verifique as variáveis de ambiente.' }, { status: 500 });
   }
 
   try {
@@ -110,3 +110,4 @@ export async function GET(request: NextRequest) {
   console.log("Webhook endpoint: GET request received (geralmente usado para verificação).");
   return NextResponse.json({ message: "Webhook endpoint is active. Use POST for notifications." });
 }
+

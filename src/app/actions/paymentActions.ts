@@ -24,7 +24,8 @@ export async function createPaymentPreference(
   amount: number // Amount in BRL
 ): Promise<CreatePaymentPreferenceResult> {
   if (!accessToken || accessToken === "FALLBACK_TOKEN_IF_NOT_SET_NEVER_USE_IN_PROD_WITHOUT_ENV") {
-    return { error: 'A configuração do servidor para pagamentos está incompleta. Contate o administrador.' };
+    console.error('Tentativa de criar preferência de pagamento sem MP_ACCESS_TOKEN configurado.');
+    return { error: 'MP_ACCESS_TOKEN não está configurado no servidor. Verifique as variáveis de ambiente para pagamentos.' };
   }
 
   if (!playerId || amount <= 0) {
@@ -73,3 +74,4 @@ export async function createPaymentPreference(
     return { error: `Erro ao processar pagamento: ${errorMessage}` };
   }
 }
+
