@@ -67,16 +67,21 @@ export default function HomePage() {
     if (currentPlayerId) {
       fetchPlayerData(currentPlayerId);
     }
-  }, [currentPlayerId, error]); // Adicionado `error` para evitar loop se a busca inicial falhar.
+  }, [currentPlayerId]); // Removido 'error' da dependência para evitar re-fetch desnecessário em caso de erro de busca.
 
   // Efeito para carregar e gerenciar cooldowns
   useEffect(() => {
     if (typeof window !== 'undefined' && currentPlayerId) {
       const loadedCooldowns: Record<ActionType, number> = { trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 };
       (['trabalhar', 'pescar', 'dormir', 'treinar'] as ActionType[]).forEach(action => {
-        const endTime = localStorage.getItem(`cooldown_${action}_${currentPlayerId}`);
-        if (endTime) {
-          loadedCooldowns[action] = parseInt(endTime, 10);
+        const endTimeString = localStorage.getItem(`cooldown_${action}_${currentPlayerId}`);
+        if (endTimeString) {
+          const endTime = parseInt(endTimeString, 10);
+          if (endTime > Date.now()) { // Só carrega se ainda estiver ativo
+            loadedCooldowns[action] = endTime;
+          } else { // Se expirou, remove do localStorage para garantir limpeza
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+          }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
@@ -107,6 +112,7 @@ export default function HomePage() {
           }));
         } else {
           setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+          // Se o cooldown expirou e o item ainda existe no localStorage (improvável devido à lógica de carregamento, mas como garantia)
           if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
              localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -276,8 +282,9 @@ export default function HomePage() {
       console.error('Firebase save error:', saveError);
       toast({
         title: "Erro ao Salvar",
-        description: `Não foi possível salvar os dados no Firebase. ${saveError instanceof Error ? saveError.message : 'Erro desconhecido.'}`,
+        description: `Não foi possível salvar os dados no Firebase. ${saveError instanceof Error ? saveError.message : 'Erro desconhecido.'}. Verifique as regras de segurança do Firebase e o console para mais detalhes.`,
         variant: "destructive",
+        duration: 7000,
       });
       // Opcional: Reverter a atualização local se o salvamento falhar?
       // setPlayerData(playerData); // Reverte para o estado anterior se o save falhar
