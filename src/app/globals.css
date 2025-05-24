@@ -103,5 +103,126 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden; /* Para evitar scrollbar horizontal com as estrelas */
+  }
+}
+
+/* Fundo estrelado */
+#stars-small, #stars-medium, #stars-large {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 300%; /* Para permitir a animação de rolagem */
+  z-index: 0;
+  pointer-events: none;
+}
+
+#stars-small::before, #stars-medium::before, #stars-large::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+@keyframes animStarUp {
+  from { transform: translateY(0); }
+  to { transform: translateY(-100%); } /* Move uma altura de viewport para cima */
+}
+
+/* Estrelas Pequenas (mais rápidas, parecem mais próximas) */
+#stars-small::before {
+  box-shadow: 
+    /* Geração de 50 estrelas pequenas */
+    /* Ajuste a densidade e posição conforme necessário */
+    5vw 10vh 0 0px hsl(var(--foreground)), 15vw 30vh 0 0px hsl(var(--foreground)), 25vw 5vh 0 0px hsl(var(--foreground)),
+    35vw 40vh 0 0px hsl(var(--foreground)), 45vw 15vh 0 0px hsl(var(--foreground)), 55vw 50vh 0 0px hsl(var(--foreground)),
+    65vw 20vh 0 0px hsl(var(--foreground)), 75vw 60vh 0 0px hsl(var(--foreground)), 85vw 25vh 0 0px hsl(var(--foreground)),
+    95vw 70vh 0 0px hsl(var(--foreground)), 5vw 80vh 0 0px hsl(var(--foreground)), 15vw 95vh 0 0px hsl(var(--foreground)),
+    25vw 65vh 0 0px hsl(var(--foreground)), 35vw 100vh 0 0px hsl(var(--foreground)),45vw 115vh 0 0px hsl(var(--foreground)),
+    /* ... adicione mais conforme necessário ... */
+    10vw 125vh 0 0px hsl(var(--foreground)), 20vw 145vh 0 0px hsl(var(--foreground)), 30vw 105vh 0 0px hsl(var(--foreground)),
+    40vw 150vh 0 0px hsl(var(--foreground)), 50vw 120vh 0 0px hsl(var(--foreground)), 60vw 160vh 0 0px hsl(var(--foreground)),
+    70vw 130vh 0 0px hsl(var(--foreground)), 80vw 170vh 0 0px hsl(var(--foreground)), 90vw 135vh 0 0px hsl(var(--foreground)),
+    5vw 190vh 0 0px hsl(var(--foreground)), 15vw 200vh 0 0px hsl(var(--foreground)), 25vw 210vh 0 0px hsl(var(--foreground)),
+    /* ... (repetir padrão para mais estrelas) ... */
+    35vw 220vh 0 0px hsl(var(--foreground)), 45vw 230vh 0 0px hsl(var(--foreground)), 55vw 240vh 0 0px hsl(var(--foreground)),
+    65vw 250vh 0 0px hsl(var(--foreground)), 75vw 260vh 0 0px hsl(var(--foreground)), 85vw 270vh 0 0px hsl(var(--foreground)),
+    95vw 280vh 0 0px hsl(var(--foreground)), 5vw 290vh 0 0px hsl(var(--foreground)), 15vw 10vh 0 0px hsl(var(--foreground));
+  animation: animStarUp 150s linear infinite;
+}
+
+/* Estrelas Médias */
+#stars-medium::before {
+  box-shadow: 
+    /* Geração de 30 estrelas médias */
+    10vw 20vh 0 1px hsl(var(--foreground)), 30vw 60vh 0 1px hsl(var(--foreground)), 50vw 10vh 0 1px hsl(var(--foreground)),
+    70vw 70vh 0 1px hsl(var(--foreground)), 90vw 30vh 0 1px hsl(var(--foreground)), 20vw 90vh 0 1px hsl(var(--foreground)),
+    40vw 5vh 0 1px hsl(var(--foreground)), 60vw 50vh 0 1px hsl(var(--foreground)), 80vw 80vh 0 1px hsl(var(--foreground)),
+    /* ... adicione mais conforme necessário ... */
+    15vw 110vh 0 1px hsl(var(--foreground)), 35vw 150vh 0 1px hsl(var(--foreground)), 55vw 100vh 0 1px hsl(var(--foreground)),
+    75vw 160vh 0 1px hsl(var(--foreground)), 95vw 120vh 0 1px hsl(var(--foreground)), 25vw 180vh 0 1px hsl(var(--foreground)),
+    45vw 100vh 0 1px hsl(var(--foreground)), 65vw 140vh 0 1px hsl(var(--foreground)), 85vw 170vh 0 1px hsl(var(--foreground)),
+    /* ... (repetir padrão para mais estrelas) ... */
+    10vw 210vh 0 1px hsl(var(--foreground)), 30vw 250vh 0 1px hsl(var(--foreground)), 50vw 200vh 0 1px hsl(var(--foreground)),
+    70vw 260vh 0 1px hsl(var(--foreground)), 90vw 220vh 0 1px hsl(var(--foreground)), 20vw 280vh 0 1px hsl(var(--foreground));
+  animation: animStarUp 200s linear infinite;
+}
+
+/* Estrelas Grandes (mais lentas, parecem mais distantes) */
+#stars-large::before {
+  box-shadow: 
+    /* Geração de 20 estrelas grandes */
+    20vw 40vh 0 2px hsl(var(--foreground)), 60vw 80vh 0 2px hsl(var(--foreground)), 80vw 10vh 0 2px hsl(var(--foreground)),
+    10vw 70vh 0 2px hsl(var(--foreground)), 40vw 95vh 0 2px hsl(var(--foreground)),
+    /* ... adicione mais conforme necessário ... */
+    30vw 130vh 0 2px hsl(var(--foreground)), 70vw 170vh 0 2px hsl(var(--foreground)), 90vw 110vh 0 2px hsl(var(--foreground)),
+    5vw 160vh 0 2px hsl(var(--foreground)), 50vw 190vh 0 2px hsl(var(--foreground)),
+    25vw 220vh 0 2px hsl(var(--foreground)), 65vw 260vh 0 2px hsl(var(--foreground)), 85vw 200vh 0 2px hsl(var(--foreground)),
+    15vw 250vh 0 2px hsl(var(--foreground)), 55vw 280vh 0 2px hsl(var(--foreground));
+  animation: animStarUp 250s linear infinite;
+}
+
+@layer utilities {
+  .animated-rgb-border-thin {
+    position: relative;
+    overflow: visible; /* Allow pseudo-element to be slightly outside if needed for border */
+    border-radius: var(--radius); /* Match card border radius */
+  }
+
+  .animated-rgb-border-thin::before {
+    content: '';
+    position: absolute;
+    top: -1px; /* Adjust to control border position relative to content */
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    border-radius: inherit; /* Inherit border-radius */
+    padding: 1px; /* Thickness of the border effect, effectively */
+    background: linear-gradient(60deg, hsl(224, 84%, 58%), hsl(300, 84%, 58%), hsl(0, 84%, 58%), hsl(60, 84%, 58%), hsl(120, 84%, 58%), hsl(180, 84%, 58%), hsl(224, 84%, 58%));
+    background-size: 300% 300%;
+    animation: gradientShift 4s ease infinite;
+    z-index: -1; /* Behind the content, but above the item's own background if any */
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: destination-out; /* For Safari */
+    mask-composite: subtract; /* Standard */
+  }
+
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
   }
 }
