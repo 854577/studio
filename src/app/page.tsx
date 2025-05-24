@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Activity, Briefcase, Fish, Bed, Dumbbell } from 'lucide-react';
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2 } from 'lucide-react'; //Gamepad2 adicionado
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
@@ -36,8 +36,8 @@ function HomePageInternal() {
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // Erro geral pós-login
+  const [loginError, setLoginError] = useState<string | null>(null); // Erro específico do login
 
 
   const [actionCooldownEndTimes, setActionCooldownEndTimes] = useState<Record<ActionType, number>>({
@@ -63,27 +63,33 @@ function HomePageInternal() {
           const parsedData = JSON.parse(sessionPlayerData);
           setPlayerData(parsedData);
           setCurrentPlayerId(sessionPlayerId);
-          setPlayerIdInput(pidFromUrl); 
+          setPlayerIdInput(pidFromUrl);
+          // Não limpamos passwordInput aqui, pois o usuário já está "logado" na sessão
         } catch (e) {
           console.error("Failed to parse session player data", e);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
+          // Se falhar ao carregar da sessão, e o ID da URL for diferente, limpar tudo
            if (currentPlayerId && pidFromUrl !== currentPlayerId) {
             setPasswordInput(''); 
+            setPlayerData(null);
+            setCurrentPlayerId(null);
           }
         }
       } else {
+        // Se não há sessão correspondente, ou o ID da URL é para um novo jogador
         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
           setPlayerData(null); 
           setCurrentPlayerId(null); 
           setPasswordInput(''); 
-          setLoginError(null);
-          setError(null);
+          setLoginError(null); // Limpa erro de login anterior
+          setError(null); // Limpa erro geral anterior
         }
         setPlayerIdInput(pidFromUrl); 
       }
     } else {
-      if (currentPlayerId) {
+      // Se não há playerId na URL, considera logout
+      if (currentPlayerId) { // Havia um jogador logado?
         setPlayerData(null);
         setCurrentPlayerId(null);
         setPlayerIdInput('');
@@ -94,7 +100,7 @@ function HomePageInternal() {
         setError(null);
       }
     }
-  }, [searchParams, currentPlayerId]); 
+  }, [searchParams, currentPlayerId]); // Adicionado currentPlayerId para reavaliar se ele mudar externamente
 
 
   useEffect(() => {
@@ -107,12 +113,14 @@ function HomePageInternal() {
           if (endTime > Date.now()) { 
             loadedCooldowns[action] = endTime;
           } else {
+            // Cooldown expirado, remover do localStorage
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); 
           }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
+      // Se não há currentPlayerId, reseta os cooldowns na memória
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
@@ -131,6 +139,7 @@ function HomePageInternal() {
           setTimeLeftForAction(prev => ({ ...prev, [action]: `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}` }));
         } else {
           setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+          // Limpar do localStorage se o timer interno expirar
           if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -142,12 +151,15 @@ function HomePageInternal() {
         const id = setInterval(updateDisplay, 1000); 
         intervalIds.push(id);
       } else {
+        // Garantir que o estado visual seja null se já expirou
         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-        if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
+        // E limpar do localStorage se ainda existir por alguma razão
+         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
         }
       }
     });
+    // Limpar intervalos quando o componente desmontar ou as dependências mudarem
     return () => intervalIds.forEach(clearInterval);
   }, [actionCooldownEndTimes, currentPlayerId]);
 
@@ -167,6 +179,8 @@ function HomePageInternal() {
     setLoading(true);
     setLoginError(null);
     setError(null); 
+    setPlayerData(null); // Limpa dados antigos antes da nova busca
+    setCurrentPlayerId(null); // Limpa jogador antigo
     
     try {
       const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
@@ -184,19 +198,15 @@ function HomePageInternal() {
           }
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(fetchedPlayerData));
-          // Do not clear passwordInput here for successful login
+          // Não limpar passwordInput aqui para login bem-sucedido
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
-          setPlayerData(null); 
-          setCurrentPlayerId(null);
           setPasswordInput(''); 
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
         }
       } else {
         setLoginError('Nome de usuário ou senha inválidos.');
-        setPlayerData(null);
-        setCurrentPlayerId(null);
         setPasswordInput('');
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
@@ -205,8 +215,6 @@ function HomePageInternal() {
       console.error('Fetch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setLoginError(`Erro ao buscar dados: ${errorMessage}`);
-      setPlayerData(null);
-      setCurrentPlayerId(null);
       setPasswordInput(''); 
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
@@ -231,13 +239,14 @@ function HomePageInternal() {
     setIsActionInProgress(true);
     setCurrentActionLoading(actionType); 
 
-
+    // Pequeno delay para o spinner aparecer antes do diálogo de animação
     await new Promise(resolve => setTimeout(resolve, 300)); 
     
     setActiveActionAnimation(actionType);
-    setCurrentActionLoading(null); 
+    setCurrentActionLoading(null); // Limpa o loading do botão específico
 
     setTimeout(async () => {
+      // Re-verificar playerData e currentPlayerId pois podem ter mudado
       if (!currentPlayerId || !playerData) { 
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
@@ -249,11 +258,12 @@ function HomePageInternal() {
 
       let currentPlayerDataForAction: Player | null = null;
       try {
+        // Buscar os dados MAIS RECENTES do jogador antes de aplicar a ação
         const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`);
         if (!response.ok) throw new Error('Falha ao buscar dados atualizados do jogador.');
         currentPlayerDataForAction = await response.json();
 
-        if (!currentPlayerDataForAction) { 
+        if (!currentPlayerDataForAction) { // Se o jogador foi deletado ou algo assim
           throw new Error('Não foi possível encontrar os dados atualizados do jogador.');
         }
 
@@ -274,8 +284,9 @@ function HomePageInternal() {
       const newOuro = (currentPlayerDataForAction.ouro || 0) + goldEarned;
       const newXp = (currentPlayerDataForAction.xp || 0) + xpEarned;
 
+      // Atualiza o estado local IMEDIATAMENTE para feedback visual
       const updatedLocalPlayerData = { ...currentPlayerDataForAction, ouro: newOuro, xp: newXp };
-      setPlayerData(updatedLocalPlayerData); 
+      setPlayerData(updatedLocalPlayerData); // ATENÇÃO: Isso usa currentPlayerDataForAction que foi recém-buscado
       sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData));
 
 
@@ -303,20 +314,21 @@ function HomePageInternal() {
       setActiveActionAnimation(null);
       setIsActionInProgress(false);
 
-    }, 1200);
+    }, 1200); // Duração da animação
   };
 
   const currentYear = new Date().getFullYear();
 
   let contentToRender;
+
   if (loading && !playerData && !loginError) {
     contentToRender = (
-      <div className="flex flex-col items-center justify-center flex-grow">
+      <div className="flex flex-col items-center justify-center flex-grow mt-10">
         <Loader2 className="w-16 h-16 text-primary " />
-        <p className="mt-4 text-lg text-muted-foreground">Buscando informações...</p>
+        <p className="mt-4 text-lg text-muted-foreground">Buscando informações do jogador...</p>
       </div>
     );
-  } else if (!playerData && !loading) {
+  } else if (!playerData && !loading) { // Tela de Login
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4 ">
         {loginError && (
@@ -373,11 +385,11 @@ function HomePageInternal() {
         </Card>
       </div>
     );
-  } else if (playerData && !loginError && !loading) { 
+  } else if (playerData && !loginError && !loading) { // Perfil do Jogador
     contentToRender = (
       <div className="w-full max-w-5xl px-2 space-y-8 ">
-         {error && ( 
-          <Alert variant="destructive" className="w-full max-w-md mx-auto shadow-lg">
+         {error && ( // Erro geral pós-login
+          <Alert variant="destructive" className="w-full max-w-md mx-auto my-4 shadow-lg">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -388,7 +400,7 @@ function HomePageInternal() {
         <Accordion type="multiple" defaultValue={['player-actions']} className="w-full space-y-6">
           <AccordionItem value="player-actions" className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden">
             <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30">
-              <Activity size={24} className="mr-3" /> Ações do Jogador
+              <Gamepad2 size={24} className="mr-3" /> Ações do Jogador 
             </AccordionTrigger>
             <AccordionContent className="p-4 sm:p-6">
               <PlayerActionsCard
@@ -421,6 +433,25 @@ function HomePageInternal() {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+      </div>
+    );
+  } else if (loading && playerData) { // Carregando, mas já tem dados (skeleton para transição suave)
+     contentToRender = (
+      <div className="w-full max-w-5xl px-2 space-y-8 ">
+        <PlayerStatsCard playerData={null} isLoading={true} />
+         <div className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden p-6 space-y-4">
+            <div className="h-8 bg-muted rounded w-1/3"></div>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div className="h-20 bg-muted rounded"></div>
+                <div className="h-20 bg-muted rounded"></div>
+                <div className="h-20 bg-muted rounded"></div>
+                <div className="h-20 bg-muted rounded"></div>
+            </div>
+        </div>
+         <div className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden p-6 space-y-4">
+            <div className="h-8 bg-muted rounded w-1/3"></div>
+            <div className="h-12 bg-muted rounded w-full"></div>
+        </div>
       </div>
     );
   }
@@ -463,6 +494,9 @@ function HomePageInternal() {
   );
 }
 
+// Adicionando importações que podem estar faltando para os ícones de ação
+import { Briefcase, Fish, Bed, Dumbbell } from 'lucide-react';
+
 export default function HomePage() {
   return (
     <Suspense fallback={
@@ -475,4 +509,6 @@ export default function HomePage() {
     </Suspense>
   );
 }
+    
+
     

@@ -4,7 +4,7 @@
 import type { Player } from '@/types/player';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Zap, Sparkles, Wallet, Package } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, TrendingUp, Zap, Sparkles, Wallet, Package } from 'lucide-react'; // BarChart3 trocado por TrendingUp
 import { Skeleton } from '@/components/ui/skeleton';
 import { itemDetails } from '@/app/loja/lojaData'; 
 
@@ -53,8 +53,8 @@ interface PlayerStatsCardProps {
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading }) => {
   if (isLoading) {
     return (
-      <Card className="w-full max-w-4xl shadow-2xl bg-card border-border/50">
-        <CardHeader className="flex flex-col items-center gap-4 p-4 text-center sm:flex-row sm:p-6 sm:text-left">
+      <Card className="w-full max-w-4xl overflow-hidden shadow-2xl bg-card border-border/50">
+        <CardHeader className="flex flex-col items-center gap-4 p-4 text-center border-b sm:flex-row sm:p-6 sm:text-left border-border/30">
           <Skeleton className="w-20 h-20 rounded-full sm:w-24 sm:h-24" />
           <div className="space-y-2">
             <Skeleton className="w-40 h-7 sm:w-56" />
@@ -92,11 +92,10 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 
 
   const mainStats = [
-    { icon: Wallet, label: 'Saldo (BRL)', value: playerData.saldoBRL !== undefined ? playerData.saldoBRL.toFixed(2) : 'N/A', color: 'text-green-500' },
     { icon: Heart, label: 'Vida', value: playerData.vida, color: 'text-destructive' },
     { icon: CircleDollarSign, label: 'Ouro', value: playerData.ouro, color: 'text-[hsl(var(--chart-5))]' },
     { icon: Star, label: 'Level', value: playerData.nivel, color: 'text-[hsl(var(--chart-4))]' },
-    { icon: BarChart3, label: 'XP', value: playerData.xp, color: 'text-muted-foreground' },
+    { icon: TrendingUp, label: 'XP', value: playerData.xp, color: 'text-muted-foreground' }, // Ícone alterado
     { icon: Zap, label: 'Energia', value: playerData.energia, color: 'text-[hsl(var(--chart-4))]' },
     { icon: Sparkles, label: 'Mana', value: playerData.mana, color: 'text-[hsl(var(--chart-1))]' },
   ];
@@ -132,16 +131,14 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
         </div>
       </CardHeader>
       <CardContent className="p-2 sm:p-3">
-        {(mainStats.length > 0 || otherStats.length > 0) && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
             {mainStats.map(stat => stat.value !== undefined && (
               <PlayerStatItem key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} iconColor={stat.color} />
             ))}
             {otherStats.map(stat => (
               <PlayerStatItem key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} iconColor={stat.color} />
             ))}
-          </div>
-        )}
+        </div>
 
         {inventoryItems.length > 0 && (
           <>

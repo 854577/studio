@@ -2,11 +2,17 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Sword, Axe, PocketKnife, Crosshair, Wand2, Shield, Shirt, VenetianMask,
-  HardHat, Footprints, Hand, Layers, CircleDollarSign, Diamond, Target, Fish, // Added Fish here
+  HardHat, Footprints, Hand, Layers, CircleDollarSign, Diamond, Target, Fish,
   BookOpen, Flame, Gem, Sigma, EyeOff, BookMarked, Medal, HelpCircle,
   HeartPulse, BatteryCharging, Beef, IterationCw, BriefcaseMedical, GlassWater, ArrowRight, PaintBucket, Vegan,
   Bird, Option, CloudDrizzle, KeyRound, Scroll, Hammer, Feather, Box, Zap, Sparkles, Package, ShoppingBasket, Tent,
-  Grape, Apple, Carrot, Utensils, Lollipop, Shell, PawPrint, Anchor, Bone, Wheat, Leaf, Sprout, Sun, Moon, Wind, Snowflake, Map, Telescope, Microscope, FlaskConical, Beaker, TestTube2, Brain, Speech, Users, Building, Castle, MountainSnow, Palmtree, Ship, Plane, Rocket, Car, TrainTrack, TramFront, Bus, Bicycle, Construction, Drama, DraftingCompass, Scale, Coins, Percent, BadgeHelp, BadgeInfo, BadgePercent, BadgePlus, BadgeMinus, Handshake, ShieldAlert, ShieldCheck, ShieldOff, ShieldQuestion, GanttChartSquare, CookingPot
+  Grape, Apple, Carrot, Utensils, Lollipop, Shell, PawPrint, Anchor, Bone, Wheat, Leaf, Sprout, Sun, Moon, Wind, Snowflake, Map, Telescope, Microscope, FlaskConical, Beaker, TestTube2, Brain, Speech, Users, Building, Castle, MountainSnow, Palmtree, Ship, Plane, Rocket, Car, TrainTrack, TramFront, Bus, Bicycle, Construction, Drama, DraftingCompass, Scale, Coins, Percent, BadgeHelp, BadgeInfo, BadgePercent, BadgePlus, BadgeMinus, Handshake, ShieldAlert, ShieldCheck, ShieldOff, ShieldQuestion, GanttChartSquare, CookingPot,
+  Bomb, // Novo
+  Backpack, // Novo
+  Gift, // Novo
+  Bed, // Novo
+  MoveRight, // Novo
+  GitFork, // Novo
 } from 'lucide-react';
 
 export interface ShopItem {
@@ -29,10 +35,10 @@ export const itemDetails: Record<string, { icon: LucideIcon, price: number, colo
   'espada curta': { icon: Sword, price: 50, color: 'text-gray-400' },
   'machado de lenhador': { icon: Axe, price: 70, color: 'text-yellow-700' },
   'adaga': { icon: PocketKnife, price: 30, color: 'text-gray-500' },
-  'arco curto': { icon: Crosshair, price: 60, color: 'text-lime-600' },
+  'arco curto': { icon: Target, price: 60, color: 'text-lime-600' }, // Alterado
   'cajado simples': { icon: Wand2, price: 40, color: 'text-purple-500' },
-  'lança': { icon: Crosshair, price: 80, color: 'text-amber-600' }, // Using Crosshair as a spear-like
-  'tridente': { icon: Crosshair, price: 120, color: 'text-cyan-500' }, // Using Crosshair as a trident-like
+  'lança': { icon: MoveRight, price: 80, color: 'text-amber-600' }, // Alterado
+  'tridente': { icon: GitFork, price: 120, color: 'text-cyan-500' }, // Alterado
   'foice': { icon: Axe, price: 90, color: 'text-neutral-500' },
   'alabarda': { icon: Axe, price: 150, color: 'text-red-700' },
   'espada longa': { icon: Sword, price: 100, color: 'text-gray-300' },
@@ -50,32 +56,32 @@ export const itemDetails: Record<string, { icon: LucideIcon, price: number, colo
   'armadura de couro': { icon: Layers, price: 80, color: 'text-amber-700' },
   'escudo de ferro': { icon: Shield, price: 90, color: 'text-gray-400' },
   'elmo de ferro': { icon: HardHat, price: 70, color: 'text-gray-500' },
-  'grevas de aço': { icon: Footprints, price: 60, color: 'text-neutral-400' }, // Using Footprints as Greaves
-  'peitoral de placas': { icon: Shirt, price: 200, color: 'text-slate-400' }, // Using Shirt as a placeholder
-  'manto sombrio': { icon: VenetianMask, price: 120, color: 'text-indigo-700' }, // Using VenetianMask
+  'grevas de aço': { icon: Footprints, price: 60, color: 'text-neutral-400' },
+  'peitoral de placas': { icon: Layers, price: 200, color: 'text-slate-400' }, // Alterado
+  'manto sombrio': { icon: Shirt, price: 120, color: 'text-indigo-700' }, // Alterado
   // Acessórios
   'amuleto da sorte': { icon: Diamond, price: 50, color: 'text-green-400' },
-  'anel mágico': { icon: Gem, price: 70, color: 'text-blue-400' }, // Changed from Ring
+  'anel mágico': { icon: Gem, price: 70, color: 'text-blue-400' },
   'cinto de utilidades': { icon: Layers, price: 30, color: 'text-yellow-700' },
   'colar de mana': { icon: Gem, price: 60, color: 'text-purple-400' },
   'brincos de agilidade': { icon: Feather, price: 40, color: 'text-sky-400' },
   // Ferramentas
   'kit de primeiros socorros': { icon: BriefcaseMedical, price: 25, color: 'text-red-500' },
-  'tocha': { icon: Flame, price: 5, color: 'text-orange-500' }, // Changed from Torch
-  'corda (10m)': { icon: IterationCw, price: 10, color: 'text-yellow-700' }, // IterationCw for rope
+  'tocha': { icon: Flame, price: 5, color: 'text-orange-500' },
+  'corda (10m)': { icon: IterationCw, price: 10, color: 'text-yellow-700' },
   'mapa da região': { icon: Map, price: 15, color: 'text-lime-700' },
   'luneta': { icon: Telescope, price: 40, color: 'text-blue-600' },
   'kit de escalada': { icon: MountainSnow, price: 50, color: 'text-gray-500' },
-  'vara de pescar': { icon: Anchor, price: 20, color: 'text-cyan-600' }, // Using Anchor
-  'picareta': { icon: Construction, price: 30, color: 'text-orange-600' },
+  'vara de pescar': { icon: Fish, price: 20, color: 'text-cyan-600' }, // Alterado
+  'picareta': { icon: Hammer, price: 30, color: 'text-orange-600' }, // Alterado
   'pá': { icon: Construction, price: 25, color: 'text-yellow-600' },
   // Consumíveis
-  'poção de cura': { icon: BriefcaseMedical, price: 30, color: 'text-red-400' }, // Re-using for potion
-  'poção de mana': { icon: GlassWater, price: 30, color: 'text-blue-400' }, // Using GlassWater
-  'antídoto': { icon: BriefcaseMedical, price: 20, color: 'text-green-400' }, // Re-using
+  'poção de cura': { icon: FlaskConical, price: 30, color: 'text-red-400' }, // Alterado
+  'poção de mana': { icon: FlaskConical, price: 30, color: 'text-blue-400' }, // Alterado
+  'antídoto': { icon: FlaskConical, price: 20, color: 'text-green-400' }, // Alterado
   'ração de viagem': { icon: Beef, price: 10, color: 'text-yellow-800' },
   'elixir de força': { icon: Zap, price: 50, color: 'text-orange-400' },
-  'bomba de fumaça': { icon: CloudDrizzle, price: 15, color: 'text-gray-500' },
+  'bomba de fumaça': { icon: Bomb, price: 15, color: 'text-gray-500' }, // Alterado
   // Itens Mágicos e Raros
   'orbe do poder': { icon: Gem, price: 500, color: 'text-purple-600' },
   'pergaminho de teleporte': { icon: Scroll, price: 100, color: 'text-blue-500' },
@@ -84,22 +90,22 @@ export const itemDetails: Record<string, { icon: LucideIcon, price: number, colo
   'gema da alma': { icon: Diamond, price: 1000, color: 'text-red-600' },
   // Outros
   'tenda': { icon: Tent, price: 50, color: 'text-green-700' },
-  'saco de dormir': { icon: Package, price: 20, color: 'text-lime-800' }, // Using Package
-  'mochila grande': { icon: ShoppingBasket, price: 40, color: 'text-yellow-700' },
+  'saco de dormir': { icon: Bed, price: 20, color: 'text-lime-800' }, // Alterado
+  'mochila grande': { icon: Backpack, price: 40, color: 'text-yellow-700' }, // Alterado
   'fogo de artifício': { icon: Sparkles, price: 5, color: 'text-red-500' },
-  'presente misterioso': { icon: Package, price: 100, color: 'text-purple-500' },
+  'presente misterioso': { icon: Gift, price: 100, color: 'text-purple-500' }, // Alterado
   'mapa do tesouro': { icon: Scroll, price: 75, color: 'text-amber-600' },
   // Comidas (para expandir consumíveis)
   'maçã': { icon: Apple, price: 5, color: 'text-red-500' },
-  'pão': { icon: Beef, price: 7, color: 'text-yellow-700' }, // Placeholder
-  'queijo': { icon: Sigma, price: 10, color: 'text-yellow-400' }, // Placeholder
+  'pão': { icon: Wheat, price: 7, color: 'text-yellow-700' }, // Alterado
+  'queijo': { icon: CookingPot, price: 10, color: 'text-yellow-400' }, // Alterado
   'peixe grelhado': { icon: Fish, price: 15, color: 'text-orange-500' },
   'garrafa de água': { icon: GlassWater, price: 3, color: 'text-blue-300' },
   'cenoura': { icon: Carrot, price: 4, color: 'text-orange-500'},
   'uva': { icon: Grape, price: 6, color: 'text-purple-500'},
   'bife': {icon: Beef, price: 20, color: 'text-red-700'},
   // Itens de Quest
-  'artefato antigo': { icon: Gem, price: 0, color: 'text-yellow-400' }, // Price 0 suggests quest item
+  'artefato antigo': { icon: Gem, price: 0, color: 'text-yellow-400' }, 
   'carta selada': { icon: Scroll, price: 0, color: 'text-amber-500' },
   'osso de dragão': { icon: Bone, price: 0, color: 'text-gray-300' },
   // Montarias (placeholders)
@@ -118,10 +124,10 @@ export const shopCategoriesData: ShopCategory[] = [
       createItemDetail('espada curta', 50, Sword, 'text-gray-400'),
       createItemDetail('machado de lenhador', 70, Axe, 'text-yellow-700'),
       createItemDetail('adaga', 30, PocketKnife, 'text-gray-500'),
-      createItemDetail('arco curto', 60, Crosshair, 'text-lime-600'),
+      createItemDetail('arco curto', 60, Target, 'text-lime-600'), // Alterado
       createItemDetail('cajado simples', 40, Wand2, 'text-purple-500'),
-      createItemDetail('lança', 80, Crosshair, 'text-amber-600'),
-      createItemDetail('tridente', 120, Crosshair, 'text-cyan-500'),
+      createItemDetail('lança', 80, MoveRight, 'text-amber-600'), // Alterado
+      createItemDetail('tridente', 120, GitFork, 'text-cyan-500'), // Alterado
       createItemDetail('foice', 90, Axe, 'text-neutral-500'),
       createItemDetail('alabarda', 150, Axe, 'text-red-700'),
       createItemDetail('espada longa', 100, Sword, 'text-gray-300'),
@@ -144,8 +150,8 @@ export const shopCategoriesData: ShopCategory[] = [
       createItemDetail('escudo de ferro', 90, Shield, 'text-gray-400'),
       createItemDetail('elmo de ferro', 70, HardHat, 'text-gray-500'),
       createItemDetail('grevas de aço', 60, Footprints, 'text-neutral-400'),
-      createItemDetail('peitoral de placas', 200, Shirt, 'text-slate-400'),
-      createItemDetail('manto sombrio', 120, VenetianMask, 'text-indigo-700'),
+      createItemDetail('peitoral de placas', 200, Layers, 'text-slate-400'), // Alterado
+      createItemDetail('manto sombrio', 120, Shirt, 'text-indigo-700'), // Alterado
     ],
   },
   {
@@ -167,23 +173,23 @@ export const shopCategoriesData: ShopCategory[] = [
       createItemDetail('mapa da região', 15, Map, 'text-lime-700'),
       createItemDetail('luneta', 40, Telescope, 'text-blue-600'),
       createItemDetail('kit de escalada', 50, MountainSnow, 'text-gray-500'),
-      createItemDetail('vara de pescar', 20, Anchor, 'text-cyan-600'),
-      createItemDetail('picareta', 30, Construction, 'text-orange-600'),
+      createItemDetail('vara de pescar', 20, Fish, 'text-cyan-600'), // Alterado
+      createItemDetail('picareta', 30, Hammer, 'text-orange-600'), // Alterado
       createItemDetail('pá', 25, Construction, 'text-yellow-600'),
     ],
   },
   {
     name: "Consumíveis",
     items: [
-      createItemDetail('poção de cura', 30, BriefcaseMedical, 'text-red-400'),
-      createItemDetail('poção de mana', 30, GlassWater, 'text-blue-400'),
-      createItemDetail('antídoto', 20, BriefcaseMedical, 'text-green-400'),
+      createItemDetail('poção de cura', 30, FlaskConical, 'text-red-400'), // Alterado
+      createItemDetail('poção de mana', 30, FlaskConical, 'text-blue-400'), // Alterado
+      createItemDetail('antídoto', 20, FlaskConical, 'text-green-400'), // Alterado
       createItemDetail('ração de viagem', 10, Beef, 'text-yellow-800'),
       createItemDetail('elixir de força', 50, Zap, 'text-orange-400'),
-      createItemDetail('bomba de fumaça', 15, CloudDrizzle, 'text-gray-500'),
+      createItemDetail('bomba de fumaça', 15, Bomb, 'text-gray-500'), // Alterado
       createItemDetail('maçã', 5, Apple, 'text-red-500'),
-      createItemDetail('pão', 7, Beef, 'text-yellow-700'),
-      createItemDetail('queijo', 10, Sigma, 'text-yellow-400'),
+      createItemDetail('pão', 7, Wheat, 'text-yellow-700'), // Alterado
+      createItemDetail('queijo', 10, CookingPot, 'text-yellow-400'), // Alterado
       createItemDetail('peixe grelhado', 15, Fish, 'text-orange-500'),
       createItemDetail('garrafa de água', 3, GlassWater, 'text-blue-300'),
       createItemDetail('cenoura', 4, Carrot, 'text-orange-500'),
@@ -205,10 +211,10 @@ export const shopCategoriesData: ShopCategory[] = [
     name: "Outros",
     items: [
       createItemDetail('tenda', 50, Tent, 'text-green-700'),
-      createItemDetail('saco de dormir', 20, Package, 'text-lime-800'),
-      createItemDetail('mochila grande', 40, ShoppingBasket, 'text-yellow-700'),
+      createItemDetail('saco de dormir', 20, Bed, 'text-lime-800'), // Alterado
+      createItemDetail('mochila grande', 40, Backpack, 'text-yellow-700'), // Alterado
       createItemDetail('fogo de artifício', 5, Sparkles, 'text-red-500'),
-      createItemDetail('presente misterioso', 100, Package, 'text-purple-500'),
+      createItemDetail('presente misterioso', 100, Gift, 'text-purple-500'), // Alterado
       createItemDetail('mapa do tesouro', 75, Scroll, 'text-amber-600'),
     ],
   },
@@ -231,3 +237,4 @@ export const shopCategoriesData: ShopCategory[] = [
   },
 ];
 
+    
