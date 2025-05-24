@@ -248,12 +248,13 @@ export default function HomePage() {
       localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
     }
   };
+  
+  const currentYear = new Date().getFullYear();
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-8 pt-12 sm:pt-20">
       <header className="mb-10 sm:mb-12 text-center">
         <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2 tracking-tight">RPG himiko</h1>
-        <p className="text-md sm:text-lg text-muted-foreground">Player Information Lookup</p>
       </header>
 
       <form onSubmit={handleSearch} className="w-full max-w-md mb-8 flex items-stretch gap-2 sm:gap-3">
@@ -452,6 +453,13 @@ export default function HomePage() {
           </Card>
         </>
       )}
+      <footer className="w-full max-w-lg text-center mt-12 mb-8">
+        <p className="text-xs text-muted-foreground">
+          &copy; {currentYear} Yuri Draco. Todos os direitos reservados.
+        </p>
+      </footer>
     </div>
   );
 }
+
+    
