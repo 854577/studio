@@ -1,9 +1,9 @@
 
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react'; // Adicionado Suspense
 import { useState, type FormEvent, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation'; // Import useSearchParams
+import { useSearchParams } from 'next/navigation';
 import type { Player } from '@/types/player';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,8 +26,8 @@ export const actionConfig: Record<ActionType, { label: string; icon: React.Eleme
   treinar: { label: 'Treinar', icon: Dumbbell, modalTitle: 'Treinando...' },
 };
 
-export default function HomePage() {
-  const searchParams = useSearchParams(); // Use the hook
+function HomePageContent() {
+  const searchParams = useSearchParams();
   const [playerIdInput, setPlayerIdInput] = useState<string>('');
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
@@ -55,29 +55,72 @@ export default function HomePage() {
 
   useEffect(() => {
     const pidFromUrl = searchParams.get('playerId');
+    const storedPlayerId = typeof window !== 'undefined' ? sessionStorage.getItem('currentPlayerId') : null;
+    const storedPlayerDataString = typeof window !== 'undefined' ? sessionStorage.getItem('playerData') : null;
+
     if (pidFromUrl) {
-        setPlayerIdInput(pidFromUrl);
-        // If the URL's player ID is different from the currently active player,
-        // clear old player's data and password input to prompt for new login.
-        if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-            setPlayerData(null);
-            setPasswordInput('');
+      setPlayerIdInput(pidFromUrl); // Preenche o input com o ID da URL
+
+      if (storedPlayerId && storedPlayerDataString && pidFromUrl === storedPlayerId) {
+        // Tenta restaurar da sessionStorage se o ID da URL corresponder
+        try {
+          const parsedPlayerData: Player = JSON.parse(storedPlayerDataString);
+          // Verifica se os dados parseados são válidos e realmente correspondem ao ID
+          // (nome ou id, dependendo de como o ID é armazenado no objeto Player)
+          if (parsedPlayerData && (parsedPlayerData.nome === pidFromUrl || parsedPlayerData.id === pidFromUrl || Object.keys(parsedPlayerData).length > 0)) {
+            setCurrentPlayerId(pidFromUrl);
+            setPlayerData(parsedPlayerData);
             setError(null);
-            // Cooldowns will reset/reload based on currentPlayerId change in their own useEffect.
+            // Não precisa de senha aqui, estamos restaurando uma "sessão"
+            return; // Sai do useEffect para evitar a lógica de limpeza abaixo
+          } else {
+            // Dados no storage são inválidos ou não correspondem, limpar storage
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('currentPlayerId');
+              sessionStorage.removeItem('playerData');
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse playerData from sessionStorage", e);
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('currentPlayerId');
+            sessionStorage.removeItem('playerData');
+          }
         }
-        // If pidFromUrl === currentPlayerId and playerData is loaded, UI will display it.
+      }
+
+      // Se não restaurado da sessão, ou se o pidFromUrl é diferente do currentPlayerId logado
+      // precisamos de um novo login para o pidFromUrl.
+      // Limpa dados do jogador anterior e senha se o ID da URL for diferente do jogador logado.
+      if (currentPlayerId && pidFromUrl !== currentPlayerId) {
+        setPlayerData(null);
+        setPasswordInput(''); // Força nova entrada de senha para o novo ID
+        setError(null);
+        // Não resetar currentPlayerId aqui; será feito em handleSearch ou se a URL for limpa
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('currentPlayerId');
+          sessionStorage.removeItem('playerData');
+        }
+      }
+      // Se pidFromUrl === currentPlayerId mas não restaurou da sessão (ex: playerData era null no storage),
+      // o formulário será exibido pedindo senha (correto).
+      // Se currentPlayerId é null (primeira carga com pidFromUrl), o formulário é exibido (correto).
+
     } else {
-        // No playerId in the URL. If a player was active, clear their session.
-        if (currentPlayerId) {
-            setPlayerIdInput('');
-            setPasswordInput('');
-            setCurrentPlayerId(null);
-            setPlayerData(null);
-            setError(null);
-            // Cooldowns will be reset by their own useEffect when currentPlayerId becomes null.
+      // Sem playerId na URL. Limpar tudo se havia um jogador logado.
+      if (currentPlayerId) { // Só limpa se havia alguém logado
+        setPlayerIdInput('');
+        setPasswordInput('');
+        setCurrentPlayerId(null);
+        setPlayerData(null);
+        setError(null);
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('currentPlayerId');
+          sessionStorage.removeItem('playerData');
         }
+      }
     }
-  }, [searchParams, currentPlayerId]);
+  }, [searchParams, currentPlayerId]); // Não incluir playerData para evitar loops se ele for setado aqui
 
 
   useEffect(() => {
@@ -96,7 +139,6 @@ export default function HomePage() {
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      // Clear cooldowns if no currentPlayerId (e.g., logged out or initial state)
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
@@ -104,14 +146,11 @@ export default function HomePage() {
 
   useEffect(() => {
     const intervalIds: NodeJS.Timeout[] = [];
-
     (Object.keys(actionConfig) as ActionType[]).forEach(action => {
       const endTime = actionCooldownEndTimes[action];
-
       const updateDisplay = () => {
         const now = Date.now();
         const remainingTime = endTime - now;
-
         if (remainingTime > 0) {
           const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
           const seconds = Math.floor((remainingTime / 1000) % 60);
@@ -138,7 +177,6 @@ export default function HomePage() {
           }
       }
     });
-
     return () => {
       intervalIds.forEach(clearInterval);
     };
@@ -146,42 +184,35 @@ export default function HomePage() {
 
   const handleSearch = async (event?: FormEvent) => {
     if (event) event.preventDefault();
-
     const trimmedId = playerIdInput.trim();
     const trimmedPassword = passwordInput.trim();
 
     if (!trimmedId) {
       setError('O nome do usuário não pode estar vazio.');
-      setPlayerData(null);
-      setCurrentPlayerId(null);
-      setPasswordInput('');
+      setPlayerData(null); setCurrentPlayerId(null); setPasswordInput('');
+      if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
       return;
     }
     if (!trimmedPassword) {
       setError('A senha não pode estar vazia.');
-      setPlayerData(null);
-      setCurrentPlayerId(null);
-      // Keep passwordInput as is, so user doesn't have to retype if only password was missing.
+      // Não limpar playerData ou currentPlayerId aqui, pode ser que o usuário só esqueceu a senha para o jogador já no input
       return;
     }
 
     setLoading(true);
     setError(null);
-    setPlayerData(null);
-    // Don't reset currentPlayerId here, let the logic below set it on success.
+    setPlayerData(null); // Limpa dados antigos antes da nova busca
 
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
-
       if (!response.ok) {
          if (response.status === 404 || (await response.clone().json()) === null) {
           setError(`Nome de usuário ou senha inválidos.`);
         } else {
           throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
         }
-        setPlayerData(null);
-        setCurrentPlayerId(null); // Clear current player on any fetch error for this ID
-        setPasswordInput('');
+        setPlayerData(null); setCurrentPlayerId(null); setPasswordInput('');
+        if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
         setLoading(false);
         return;
       }
@@ -191,30 +222,39 @@ export default function HomePage() {
         if (fetchedPlayerData.senha === trimmedPassword) {
           setPlayerData(fetchedPlayerData);
           setError(null);
-          setCurrentPlayerId(trimmedId); // Set current player ID on successful auth
+          setCurrentPlayerId(trimmedId);
           if (typeof window !== 'undefined') {
+            sessionStorage.setItem('currentPlayerId', trimmedId);
+            sessionStorage.setItem('playerData', JSON.stringify(fetchedPlayerData));
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('playerId', trimmedId);
             window.history.pushState({}, '', currentUrl.toString());
           }
         } else {
           setError(`Nome de usuário ou senha inválidos.`);
-          setPlayerData(null);
-          setCurrentPlayerId(null); // Clear current player if password incorrect
+          setPlayerData(null); setCurrentPlayerId(null);
+          if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
         }
       } else {
         setError(`Nome de usuário ou senha inválidos.`);
-        setPlayerData(null);
-        setCurrentPlayerId(null); // Clear current player if no data or no password field
+        setPlayerData(null); setCurrentPlayerId(null);
+        if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
       }
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido ao buscar dados.');
-      setPlayerData(null);
-      setCurrentPlayerId(null); // Clear current player on exception
+      setPlayerData(null); setCurrentPlayerId(null);
+      if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
     } finally {
       setLoading(false);
-      if (error || (playerData && playerData.senha !== trimmedPassword)) { // Clear password only on error or mismatch
+      // Limpar senha apenas se houver erro OU se os dados do jogador foram carregados mas a senha não bateu
+      // (não limpar se a busca falhou por ID não encontrado antes mesmo de checar a senha, ou se restaurado da sessão)
+      if (error || (playerData && fetchedPlayerData && fetchedPlayerData.senha !== trimmedPassword)) {
+        setPasswordInput('');
+      } else if (!error && !playerData && currentPlayerId) {
+        // Caso onde pidFromUrl restaurou currentPlayerId mas não playerData, então a senha é necessária.
+        // Não limpar a senha se ela foi digitada.
+      } else if (error && !playerData) { // Erro tipo 404, jogador nao existe
         setPasswordInput('');
       }
     }
@@ -229,7 +269,6 @@ export default function HomePage() {
       });
       return;
     }
-
     const now = Date.now();
     if (actionCooldownEndTimes[actionType] > now) {
       toast({
@@ -256,41 +295,26 @@ export default function HomePage() {
       let xpEarned = 0;
       let actionToastTitle = "";
       let updatedPlayerData = { ...playerData };
-
       const randomReward = () => Math.floor(Math.random() * (500 - 100 + 1)) + 100;
 
       switch (actionType) {
-        case 'trabalhar':
-          goldEarned = randomReward();
-          xpEarned = randomReward();
-          actionToastTitle = "Você trabalhou duro!";
-          break;
-        case 'pescar':
-          goldEarned = randomReward();
-          xpEarned = randomReward();
-          actionToastTitle = "Boa pescaria!";
-          break;
-        case 'dormir':
-          xpEarned = randomReward();
-          actionToastTitle = "Você descansou bem.";
-          break;
-        case 'treinar':
-          xpEarned = randomReward();
-          actionToastTitle = "Treino concluído!";
-          break;
+        case 'trabalhar': goldEarned = randomReward(); xpEarned = randomReward(); actionToastTitle = "Você trabalhou duro!"; break;
+        case 'pescar': goldEarned = randomReward(); xpEarned = randomReward(); actionToastTitle = "Boa pescaria!"; break;
+        case 'dormir': xpEarned = randomReward(); actionToastTitle = "Você descansou bem."; break;
+        case 'treinar': xpEarned = randomReward(); actionToastTitle = "Treino concluído!"; break;
       }
-
       updatedPlayerData.ouro = (playerData.ouro || 0) + goldEarned;
       updatedPlayerData.xp = (playerData.xp || 0) + xpEarned;
-
       setPlayerData(updatedPlayerData);
+      if (typeof window !== 'undefined') { // Atualiza sessionStorage também
+          sessionStorage.setItem('playerData', JSON.stringify(updatedPlayerData));
+      }
 
       const newCooldownEndTime = Date.now() + ACTION_COOLDOWN_DURATION;
       setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
       if (typeof window !== 'undefined') {
         localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
       }
-
       toast({
         title: actionToastTitle,
         description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP.`,
@@ -300,35 +324,21 @@ export default function HomePage() {
         const updatePath = `https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`;
         const response = await fetch(updatePath, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ouro: updatedPlayerData.ouro, xp: updatedPlayerData.xp }),
         });
-
         if (!response.ok) {
-          const errorBody = await response.text();
-          console.error('Firebase save error response body:', errorBody);
-          let errorData = {};
-          try {
-            errorData = JSON.parse(errorBody);
-          } catch (parseError) {
-            console.warn('Could not parse Firebase error response as JSON:', parseError);
-            errorData = { message: errorBody || 'Unknown Firebase error structure.' };
-          }
-          throw new Error(`Falha ao salvar no Firebase: ${response.statusText} (status ${response.status}). Caminho: ${updatePath}. Detalhes: ${JSON.stringify(errorData)}`);
+          const errorBody = await response.text(); console.error('Firebase save error response body:', errorBody);
+          let errorData; try { errorData = JSON.parse(errorBody); } catch (parseError) { errorData = { message: errorBody || 'Unknown Firebase error.' }; }
+          throw new Error(`Falha ao salvar no Firebase: ${response.statusText} (status ${response.status}). Detalhes: ${JSON.stringify(errorData)}`);
         }
-        toast({
-          title: "Progresso Salvo!",
-          description: "Suas recompensas foram salvas no banco de dados.",
-        });
+        toast({ title: "Progresso Salvo!", description: "Suas recompensas foram salvas no banco de dados." });
       } catch (saveError) {
         console.error('Firebase save error:', saveError);
         toast({
           title: "Erro ao Salvar",
-          description: `Não foi possível salvar os dados no Firebase. ${saveError instanceof Error ? saveError.message : 'Erro desconhecido.'}. Verifique as regras de segurança do Firebase e o console para mais detalhes.`,
-          variant: "destructive",
-          duration: 7000,
+          description: `Não foi possível salvar os dados no Firebase. ${saveError instanceof Error ? saveError.message : 'Erro desconhecido.'}`,
+          variant: "destructive", duration: 7000,
         });
       } finally {
         setActiveActionAnimation(null);
@@ -474,5 +484,14 @@ export default function HomePage() {
         </p>
       </footer>
     </div>
+  );
+}
+
+// Adiciona o componente Suspense para envolver HomePageContent
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Carregando...</div>}>
+      <HomePageContent />
+    </Suspense>
   );
 }
