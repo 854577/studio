@@ -4,7 +4,7 @@ import {
   Sword, Axe, PocketKnife, Crosshair, Wand2, Shield, Shirt, VenetianMask,
   HardHat, Footprints, Hand, Layers, CircleDollarSign, Diamond, Target,
   BookOpen, Flame, Gem, Sigma, EyeOff, BookMarked, Medal, HelpCircle,
-  HeartPulse, BatteryCharging, Beef, Torch, IterationCw, BriefcaseMedical, GlassWater, ArrowRight, PaintBucket, Vegan,
+  HeartPulse, BatteryCharging, Beef, IterationCw, BriefcaseMedical, GlassWater, ArrowRight, PaintBucket, Vegan,
   Bird, Option, CloudDrizzle, KeyRound, Scroll, Hammer, Feather, Box, Zap, Sparkles, Package, ShoppingBasket, Tent
 } from 'lucide-react';
 
@@ -46,7 +46,7 @@ const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
   "manto": { price: 60, icon: Shirt }, // Usando Shirt para Manto
 
   // Itens Mágicos
-  "anel mágico": { price: 200, icon: Gem }, // Alterado de Ring para Gem
+  "anel mágico": { price: 200, icon: Gem },
   "colar de mana": { price: 190, icon: CircleDollarSign }, // Usando CircleDollarSign para Colar (genérico)
   "livro antigo": { price: 180, icon: BookOpen },
   "orbe de fogo": { price: 210, icon: Flame },
@@ -61,7 +61,7 @@ const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
   "poção de vida": { price: 30, icon: HeartPulse },
   "poção de energia": { price: 35, icon: BatteryCharging },
   "ração": { price: 20, icon: Beef },
-  "tocha": { price: 10, icon: Torch },
+  "tocha": { price: 10, icon: Flame }, // Alterado de Torch para Flame
   "corda": { price: 15, icon: IterationCw },
   "kit de primeiros socorros": { price: 50, icon: BriefcaseMedical },
   "água encantada": { price: 45, icon: GlassWater },
@@ -119,3 +119,4 @@ export const shopCategoriesData: ShopCategory[] = [
 export const itemPrices: Record<string, number> = Object.fromEntries(
   Object.entries(itemDetails).map(([name, { price }]) => [name, price])
 );
+
