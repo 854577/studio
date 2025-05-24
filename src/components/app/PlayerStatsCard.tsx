@@ -29,7 +29,7 @@ interface PlayerStatsCardProps {
 }
 
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
-  const orderedKeys: (keyof Player)[] = ['saldoBRL', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
+  const orderedKeys: (keyof Player)[] = ['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
   
   const mainStats = orderedKeys.map(key => {
     if (playerData[key] === undefined || playerData[key] === null) return null;
@@ -40,12 +40,6 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
     let value: string | number = playerData[key] as string | number;
 
     switch (key) {
-      case 'saldoBRL':
-        icon = Wallet;
-        label = 'Saldo (BRL)';
-        value = (playerData.saldoBRL ?? 0).toFixed(2);
-        iconClassName = 'text-green-500'; // Consistent color for BRL
-        break;
       case 'vida':
         icon = Heart;
         label = 'Vida';
@@ -130,7 +124,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
           {playerData.nome && <CardDescription className="mt-1 text-sm sm:text-base truncate">Exibindo estatísticas para {playerData.nome}</CardDescription>}
         </div>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
+      <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
         {mainStats}
         {otherStats}
       </CardContent>
@@ -147,7 +141,7 @@ export const PlayerStatsSkeleton: React.FC = () => (
         <Skeleton className="h-4 bg-muted rounded w-1/2 sm:w-32 mx-auto sm:mx-0" />
       </div>
     </CardHeader>
-    <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
+    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
       {[...Array(6)].map((_, i) => (
         <div key={i} className="flex items-center p-3 sm:p-4 bg-muted/50 rounded-lg border border-border/30">
           <Skeleton className="h-5 w-5 bg-muted rounded-full mr-2 sm:mr-2.5 shrink-0" />
