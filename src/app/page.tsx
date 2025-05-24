@@ -20,7 +20,7 @@ import Link from 'next/link';
 export type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 export const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 
-export const actionConfig: Record<ActionType, { label: string; icon: React.ElementType; modalTitle: string }> = {
+export const actionConfig = {
   trabalhar: { label: 'Trabalhar', icon: Briefcase, modalTitle: 'Trabalhando...' },
   pescar: { label: 'Pescar', icon: Fish, modalTitle: 'Pescando...' },
   dormir: { label: 'Dormir', icon: Bed, modalTitle: 'Descansando...' },
@@ -66,12 +66,14 @@ function HomePageContent() {
         if (storedPlayerDataString) {
           try {
             const parsedPlayerData: Player = JSON.parse(storedPlayerDataString);
-            if (parsedPlayerData && (parsedPlayerData.nome === pidFromUrl || parsedPlayerData.id === pidFromUrl || Object.keys(parsedPlayerData).length > 0)) {
+            // Verifica se existe o nome do jogador ou se o objeto não está vazio
+            if (parsedPlayerData && (parsedPlayerData.nome || Object.keys(parsedPlayerData).length > 0)) {
               setCurrentPlayerId(pidFromUrl);
               setPlayerData(parsedPlayerData);
               setError(null);
-              return;
+              return; 
             } else {
+              // Se os dados parseados forem inválidos, limpa o sessionStorage
               if (typeof window !== 'undefined') {
                 sessionStorage.removeItem('currentPlayerId');
                 sessionStorage.removeItem('playerData');
@@ -86,11 +88,11 @@ function HomePageContent() {
           }
         }
       }
-
+      
       // Se o pid da URL mudou e não corresponde ao jogador logado na sessão, limpa o jogador atual
       if (currentPlayerId && pidFromUrl !== currentPlayerId) {
         setPlayerData(null);
-        setCurrentPlayerId(null); // Importante para forçar a exibição do formulário de login para o novo ID
+        setCurrentPlayerId(null); 
         setPasswordInput('');
         setError(null);
         if (typeof window !== 'undefined') {
@@ -131,6 +133,7 @@ function HomePageContent() {
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
+      // Se não há currentPlayerId, reseta os cooldowns para o estado inicial
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
@@ -159,14 +162,16 @@ function HomePageContent() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay();
+        updateDisplay(); // Chama uma vez para exibir imediatamente
         const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
-        setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-        if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
-          localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
-        }
+        // Garante que o tempo seja nulo se não houver cooldown ativo
+         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+         // Remove do localStorage se existir e estiver expirado
+         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
+             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+          }
       }
     });
     return () => {
@@ -204,7 +209,7 @@ function HomePageContent() {
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
       if (!response.ok) {
-        if (response.status === 404 || (await response.clone().json()) === null) {
+        if (response.status === 404 || (await response.clone().json()) === null) { // Verifica se o corpo da resposta é null
           setError(`Nome de usuário ou senha inválidos.`);
         } else {
           throw new Error(`Falha na API: ${response.statusText} (status ${response.status})`);
@@ -250,6 +255,7 @@ function HomePageContent() {
       if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
     } finally {
       setLoading(false);
+      // Não limpar passwordInput aqui no 'finally' para o caso de erro onde o usuário pode querer corrigir só um campo
     }
   };
 
@@ -276,7 +282,8 @@ function HomePageContent() {
     setActiveActionAnimation(actionType);
 
     setTimeout(async () => {
-      if (!playerData || !currentPlayerId) {
+      // Re-verificar playerData e currentPlayerId aqui, pois podem ter mudado
+      if (!playerData || !currentPlayerId) { 
         console.error("Player data or ID became null during action processing.");
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
@@ -287,7 +294,7 @@ function HomePageContent() {
       let goldEarned = 0;
       let xpEarned = 0;
       let actionToastTitle = "";
-      let updatedPlayerData = { ...playerData };
+      let updatedPlayerData = { ...playerData }; // Cria uma cópia para modificar
       const randomReward = () => Math.floor(Math.random() * (500 - 100 + 1)) + 100;
 
       switch (actionType) {
@@ -298,8 +305,8 @@ function HomePageContent() {
       }
       updatedPlayerData.ouro = (playerData.ouro || 0) + goldEarned;
       updatedPlayerData.xp = (playerData.xp || 0) + xpEarned;
-      setPlayerData(updatedPlayerData);
-      if (typeof window !== 'undefined') {
+      setPlayerData(updatedPlayerData); // Atualiza o estado local com as recompensas
+      if (typeof window !== 'undefined') { // Atualiza também o sessionStorage
         sessionStorage.setItem('playerData', JSON.stringify(updatedPlayerData));
       }
 
@@ -328,6 +335,7 @@ function HomePageContent() {
         toast({ title: "Progresso Salvo!", description: "Suas recompensas foram salvas no banco de dados." });
       } catch (saveError) {
         console.error('Firebase save error:', saveError);
+        // Atualiza o estado de erro global da página se o save falhar
         setError(`Erro ao salvar: ${saveError instanceof Error ? saveError.message : 'Desconhecido'}. Ouro e XP podem não ter sido salvos no servidor.`);
         toast({
           title: "Erro ao Salvar",
@@ -338,7 +346,7 @@ function HomePageContent() {
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
       }
-    }, 1500);
+    }, 1500); // Duração da animação
   };
 
   const currentYear = new Date().getFullYear();
