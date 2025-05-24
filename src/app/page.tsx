@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, AlertCircle, ShoppingBag, KeyRound, Briefcase, Fish, Bed, Dumbbell, UserRound } from 'lucide-react';
+import { Search, AlertCircle, ShoppingBag, KeyRound, Briefcase, Fish, Bed, Dumbbell, UserRound, Wallet } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard, { PlayerStatsSkeleton } from '@/components/app/PlayerStatsCard';
@@ -20,7 +20,7 @@ import Link from 'next/link';
 export type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 export const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 
-export const actionConfig = {
+export const actionConfig: Record<ActionType, { label: string; icon: React.ElementType; modalTitle: string }> = {
   trabalhar: { label: 'Trabalhar', icon: Briefcase, modalTitle: 'Trabalhando...' },
   pescar: { label: 'Pescar', icon: Fish, modalTitle: 'Pescando...' },
   dormir: { label: 'Dormir', icon: Bed, modalTitle: 'Descansando...' },
@@ -62,49 +62,49 @@ function HomePageContent() {
     if (pidFromUrl) {
       setPlayerIdInput(pidFromUrl);
 
-      if (storedPlayerId && pidFromUrl === storedPlayerId) {
-        if (storedPlayerDataString) {
-          try {
-            const parsedPlayerData: Player = JSON.parse(storedPlayerDataString);
-            // Verifica se existe o nome do jogador ou se o objeto não está vazio
-            if (parsedPlayerData && (parsedPlayerData.nome || Object.keys(parsedPlayerData).length > 0)) {
-              setCurrentPlayerId(pidFromUrl);
-              setPlayerData(parsedPlayerData);
-              setError(null);
-              return; 
-            } else {
-              // Se os dados parseados forem inválidos, limpa o sessionStorage
-              if (typeof window !== 'undefined') {
-                sessionStorage.removeItem('currentPlayerId');
-                sessionStorage.removeItem('playerData');
-              }
-            }
-          } catch (e) {
-            console.error("Falha ao parsear playerData do sessionStorage", e);
+      if (storedPlayerId && pidFromUrl === storedPlayerId && storedPlayerDataString) {
+        try {
+          const parsedPlayerData: Player = JSON.parse(storedPlayerDataString);
+          if (parsedPlayerData && (parsedPlayerData.nome || Object.keys(parsedPlayerData).length > 0)) {
+            setCurrentPlayerId(pidFromUrl);
+            setPlayerData(parsedPlayerData);
+            setError(null);
+            return; 
+          } else {
             if (typeof window !== 'undefined') {
               sessionStorage.removeItem('currentPlayerId');
               sessionStorage.removeItem('playerData');
             }
           }
+        } catch (e) {
+          console.error("Falha ao parsear playerData do sessionStorage", e);
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('currentPlayerId');
+            sessionStorage.removeItem('playerData');
+          }
         }
       }
       
-      // Se o pid da URL mudou e não corresponde ao jogador logado na sessão, limpa o jogador atual
+      // Se o pid da URL é diferente do jogador atualmente carregado (e havia um jogador carregado),
+      // limpa os dados do jogador anterior e a senha, pois é um novo contexto de login.
       if (currentPlayerId && pidFromUrl !== currentPlayerId) {
         setPlayerData(null);
         setCurrentPlayerId(null); 
-        setPasswordInput('');
+        setPasswordInput(''); // Limpa a senha porque o contexto do jogador mudou
         setError(null);
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
         }
       }
+      // Se não havia currentPlayerId, ou se pidFromUrl === currentPlayerId mas a sessão não pôde ser restaurada,
+      // o formulário de login será exibido (assumindo que playerData é null).
+      // O playerIdInput já está setado com pidFromUrl. A senha não é limpa aqui, permitindo a tentativa de login.
     } else {
-      // Se não há pid na URL, e tínhamos um jogador logado, limpa tudo.
+      // Se não há pid na URL, e tínhamos um jogador logado, limpa tudo (efetivamente desloga).
       if (currentPlayerId) {
         setPlayerIdInput('');
-        setPasswordInput('');
+        setPasswordInput(''); // Limpa a senha ao "deslogar"
         setCurrentPlayerId(null);
         setPlayerData(null);
         setError(null);
@@ -127,13 +127,12 @@ function HomePageContent() {
           if (endTime > Date.now()) {
             loadedCooldowns[action] = endTime;
           } else {
-            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); // Limpa cooldown expirado
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); 
           }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      // Se não há currentPlayerId, reseta os cooldowns para o estado inicial
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
@@ -162,13 +161,11 @@ function HomePageContent() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay(); // Chama uma vez para exibir imediatamente
+        updateDisplay(); 
         const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
-        // Garante que o tempo seja nulo se não houver cooldown ativo
          setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-         // Remove do localStorage se existir e estiver expirado
          if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
              localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -188,34 +185,30 @@ function HomePageContent() {
       setError('O nome do usuário não pode estar vazio.');
       setPlayerData(null); setCurrentPlayerId(null);
       if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
-      // Não limpar passwordInput aqui, pode ser que o usuário só esqueceu o nome
       return;
     }
     if (!trimmedPassword) {
       setError('A senha não pode estar vazia.');
-      // Não limpar playerData ou currentPlayerId aqui, pode ser que o usuário só esqueceu a senha para o jogador já no input
       return;
     }
 
     setLoading(true);
     setError(null);
-    // Limpar playerData antes da busca garante que o form de login desapareça se a busca for para um novo jogador
-    // e que o skeleton apareça.
-    if (currentPlayerId !== trimmedId) { // Se está buscando um jogador diferente do logado (ou nenhum logado)
+    
+    if (currentPlayerId !== trimmedId) { 
         setPlayerData(null);
     }
-
 
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
       if (!response.ok) {
-        if (response.status === 404 || (await response.clone().json()) === null) { // Verifica se o corpo da resposta é null
+        if (response.status === 404 || (await response.clone().json()) === null) { 
           setError(`Nome de usuário ou senha inválidos.`);
         } else {
           throw new Error(`Falha na API: ${response.statusText} (status ${response.status})`);
         }
         setPlayerData(null); setCurrentPlayerId(null);
-        setPasswordInput(''); // Limpar senha em caso de falha na busca
+        setPasswordInput(''); 
         if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
         setLoading(false);
         return;
@@ -225,37 +218,37 @@ function HomePageContent() {
       if (fetchedPlayerData && fetchedPlayerData.senha !== undefined) {
         if (fetchedPlayerData.senha === trimmedPassword) {
           setPlayerData(fetchedPlayerData);
-          setError(null); // Sucesso no login
+          setError(null); 
           setCurrentPlayerId(trimmedId);
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('currentPlayerId', trimmedId);
             sessionStorage.setItem('playerData', JSON.stringify(fetchedPlayerData));
             const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('playerId', trimmedId);
-            window.history.pushState({}, '', currentUrl.toString());
+            if (currentUrl.searchParams.get('playerId') !== trimmedId) {
+                currentUrl.searchParams.set('playerId', trimmedId);
+                window.history.pushState({}, '', currentUrl.toString());
+            }
           }
-          // Não limpar passwordInput aqui em caso de sucesso, o formulário vai sumir
         } else {
           setError(`Nome de usuário ou senha inválidos.`);
           setPlayerData(null); setCurrentPlayerId(null);
-          setPasswordInput(''); // Limpar senha se a senha estiver incorreta
+          setPasswordInput(''); 
           if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
         }
       } else {
         setError(`Nome de usuário ou senha inválidos.`);
         setPlayerData(null); setCurrentPlayerId(null);
-        setPasswordInput(''); // Limpar senha se jogador não encontrado ou sem campo senha
+        setPasswordInput(''); 
         if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
       }
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido ao buscar dados.');
       setPlayerData(null); setCurrentPlayerId(null);
-      setPasswordInput(''); // Limpar senha em caso de erro de fetch
+      setPasswordInput(''); 
       if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
     } finally {
       setLoading(false);
-      // Não limpar passwordInput aqui no 'finally' para o caso de erro onde o usuário pode querer corrigir só um campo
     }
   };
 
@@ -282,7 +275,6 @@ function HomePageContent() {
     setActiveActionAnimation(actionType);
 
     setTimeout(async () => {
-      // Re-verificar playerData e currentPlayerId aqui, pois podem ter mudado
       if (!playerData || !currentPlayerId) { 
         console.error("Player data or ID became null during action processing.");
         setActiveActionAnimation(null);
@@ -294,7 +286,7 @@ function HomePageContent() {
       let goldEarned = 0;
       let xpEarned = 0;
       let actionToastTitle = "";
-      let updatedPlayerData = { ...playerData }; // Cria uma cópia para modificar
+      let updatedPlayerData = { ...playerData }; 
       const randomReward = () => Math.floor(Math.random() * (500 - 100 + 1)) + 100;
 
       switch (actionType) {
@@ -305,8 +297,8 @@ function HomePageContent() {
       }
       updatedPlayerData.ouro = (playerData.ouro || 0) + goldEarned;
       updatedPlayerData.xp = (playerData.xp || 0) + xpEarned;
-      setPlayerData(updatedPlayerData); // Atualiza o estado local com as recompensas
-      if (typeof window !== 'undefined') { // Atualiza também o sessionStorage
+      setPlayerData(updatedPlayerData); 
+      if (typeof window !== 'undefined') { 
         sessionStorage.setItem('playerData', JSON.stringify(updatedPlayerData));
       }
 
@@ -335,7 +327,6 @@ function HomePageContent() {
         toast({ title: "Progresso Salvo!", description: "Suas recompensas foram salvas no banco de dados." });
       } catch (saveError) {
         console.error('Firebase save error:', saveError);
-        // Atualiza o estado de erro global da página se o save falhar
         setError(`Erro ao salvar: ${saveError instanceof Error ? saveError.message : 'Desconhecido'}. Ouro e XP podem não ter sido salvos no servidor.`);
         toast({
           title: "Erro ao Salvar",
@@ -346,7 +337,7 @@ function HomePageContent() {
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
       }
-    }, 1500); // Duração da animação
+    }, 1500); 
   };
 
   const currentYear = new Date().getFullYear();
@@ -357,10 +348,8 @@ function HomePageContent() {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2 tracking-tight">RPG himiko</h1>
       </header>
 
-      {/* Skeleton Loader - Mostrado apenas durante o carregamento inicial de um jogador */}
       {loading && !playerData && <PlayerStatsSkeleton />}
 
-      {/* Error Alert - Mostrado se houver erro e não estiver logado/carregando dados de jogador */}
       {error && !playerData && !loading && (
         <Alert variant="destructive" className="w-full max-w-md mb-6 shadow-lg animate-in fade-in-0 duration-500">
           <AlertCircle className="h-4 w-4" />
@@ -369,7 +358,6 @@ function HomePageContent() {
         </Alert>
       )}
 
-      {/* Login Form - Mostrado se não houver dados de jogador E não estiver carregando */}
       {!playerData && !loading && (
         <Card className="w-full max-w-md mb-8 animate-in fade-in-0 slide-in-from-top-12 duration-700 ease-out shadow-2xl border-border/50">
           <CardHeader className="pt-8 pb-4">
@@ -424,7 +412,7 @@ function HomePageContent() {
                 className="h-12 w-full flex justify-center items-center bg-primary hover:bg-primary/90 text-primary-foreground text-base font-semibold rounded-md shadow-md transition-transform duration-150 ease-in-out hover:scale-105 active:scale-95"
                 aria-label="Buscar Jogador"
               >
-                {loading && !playerData ? ( // Mostrar spinner apenas se estiver carregando e não tiver dados de jogador (login)
+                {loading ? ( 
                   <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
                 ) : (
                   <Search size={20} className="mr-2" />
@@ -436,8 +424,6 @@ function HomePageContent() {
         </Card>
       )}
 
-
-      {/* Player Data Section - Mostrado se os dados do jogador estiverem carregados e não houver erro de login */}
       {!loading && playerData && !error && currentPlayerId && (
         <div className="w-full max-w-lg animate-in fade-in-0 duration-500">
           <PlayerStatsCard playerData={playerData} />
@@ -466,7 +452,6 @@ function HomePageContent() {
         </div>
       )}
 
-      {/* Erro Pós-Login (ex: erro ao salvar ação) */}
       {error && playerData && !loading && (
         <Alert variant="destructive" className="w-full max-w-md mt-6 shadow-lg animate-in fade-in-0 duration-500">
           <AlertCircle className="h-4 w-4" />
