@@ -44,6 +44,7 @@ export default function HomePage() {
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
+      // Reset cooldowns if no currentPlayerId (e.g., on initial load or after an error)
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null });
     }
@@ -68,6 +69,7 @@ export default function HomePage() {
           }));
         } else {
           setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+          // Remove from localStorage only if it exists and currentPlayerId is set
           if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
              localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -80,6 +82,7 @@ export default function HomePage() {
         intervalIds.push(id);
       } else {
          setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+         // Ensure removal from localStorage if expired and currentPlayerId is set
          if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
              localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -97,14 +100,14 @@ export default function HomePage() {
     if (!trimmedId) {
       setError('Player ID cannot be empty.');
       setPlayerData(null);
-      setCurrentPlayerId(null);
+      setCurrentPlayerId(null); // Reset currentPlayerId
       return;
     }
 
     setLoading(true);
     setError(null);
     setPlayerData(null);
-    setCurrentPlayerId(null);
+    setCurrentPlayerId(null); // Reset currentPlayerId before new search
 
     try {
       const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
@@ -115,7 +118,7 @@ export default function HomePage() {
 
       if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[trimmedId]) {
         setPlayerData(allPlayersData[trimmedId]);
-        setCurrentPlayerId(trimmedId); // Definir o ID do jogador atual
+        setCurrentPlayerId(trimmedId); // Set currentPlayerId on successful search
       } else if (allPlayersData === null || typeof allPlayersData !== 'object') {
         setError('Invalid data format received from API or no players found.');
       } else {
@@ -214,7 +217,13 @@ export default function HomePage() {
       });
 
     } catch (err) {
-      console.error('Firebase save error:', err);
+      // Log mais detalhado para o console do desenvolvedor
+      console.error('Detalhes do erro ao salvar no Firebase:', {
+        message: err instanceof Error ? err.message : String(err),
+        playerId: currentPlayerId,
+        dataAttemptedToSave: { dinheiro: newDinheiro, xp: newXp },
+        originalError: err
+      });
       toast({
         title: "Erro ao Salvar no Servidor",
         description: err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.",
@@ -380,3 +389,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
