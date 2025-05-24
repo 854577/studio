@@ -7,9 +7,10 @@ import type { Player } from '@/types/player';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2 } from 'lucide-react';
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Activity, Store } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
@@ -62,26 +63,29 @@ function HomePageInternal() {
           const parsedData = JSON.parse(sessionPlayerData);
           setPlayerData(parsedData);
           setCurrentPlayerId(sessionPlayerId);
-          setPlayerIdInput(pidFromUrl);
+          setPlayerIdInput(pidFromUrl); 
+          // Senha não é restaurada do session storage por segurança, mas o usuário já está "logado"
         } catch (e) {
           console.error("Failed to parse session player data", e);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
-          if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-            setPasswordInput('');
+           if (currentPlayerId && pidFromUrl !== currentPlayerId) {
+            setPasswordInput(''); // Limpa senha se for um novo jogador sendo carregado via URL
           }
         }
       } else {
+         // Se o pid da URL mudou em relação ao jogador logado, ou não há sessão
         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-          setPlayerData(null);
-          setCurrentPlayerId(null);
-          setPasswordInput(''); 
+          setPlayerData(null); // Limpa dados do jogador anterior
+          setCurrentPlayerId(null); // Desloga o jogador anterior
+          setPasswordInput(''); // Limpa senha para o novo login
           setLoginError(null);
           setError(null);
         }
-        setPlayerIdInput(pidFromUrl);
+        setPlayerIdInput(pidFromUrl); // Preenche o campo de busca com o pid da URL
       }
     } else {
+      // Se não há playerId na URL, limpa tudo se havia um jogador logado
       if (currentPlayerId) {
         setPlayerData(null);
         setCurrentPlayerId(null);
@@ -93,7 +97,7 @@ function HomePageInternal() {
         setError(null);
       }
     }
-  }, [searchParams, currentPlayerId]);
+  }, [searchParams, currentPlayerId]); // Re-executar se searchParams ou currentPlayerId mudar
 
 
   useEffect(() => {
@@ -106,12 +110,14 @@ function HomePageInternal() {
           if (endTime > Date.now()) { 
             loadedCooldowns[action] = endTime;
           } else {
+            // Cooldown expirou, remove do localStorage
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); 
           }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
+      // Limpa cooldowns se não houver jogador logado
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
@@ -137,16 +143,19 @@ function HomePageInternal() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay();
-        const id = setInterval(updateDisplay, 1000);
+        updateDisplay(); // Atualiza imediatamente
+        const id = setInterval(updateDisplay, 1000); // E depois a cada segundo
         intervalIds.push(id);
       } else {
+        // Garante que se o cooldown já passou ao carregar, ele seja nulo
         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+        // E remove do localStorage se ainda existir por algum motivo
         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
         }
       }
     });
+    // Cleanup function to clear intervals when component unmounts or dependencies change
     return () => intervalIds.forEach(clearInterval);
   }, [actionCooldownEndTimes, currentPlayerId]);
 
@@ -228,31 +237,32 @@ function HomePageInternal() {
     }
     
     setIsActionInProgress(true);
-    setCurrentActionLoading(actionType); // Define qual ação está carregando
+    setCurrentActionLoading(actionType); 
 
 
-    // Curto timeout para o spinner do botão aparecer antes do modal
     await new Promise(resolve => setTimeout(resolve, 300)); 
     
     setActiveActionAnimation(actionType);
-    setCurrentActionLoading(null); // Reseta o spinner do botão
+    setCurrentActionLoading(null); 
 
     setTimeout(async () => {
-      if (!currentPlayerId) { 
+      if (!currentPlayerId || !playerData) { // Re-verificar antes de prosseguir
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
-        setError("ID do jogador não encontrado. Por favor, faça login novamente.");
-        toast({ title: "Erro", description: "ID do jogador não encontrado.", variant: "destructive" });
+        const msg = !currentPlayerId ? "ID do jogador não encontrado." : "Dados do jogador não encontrados.";
+        setError(`${msg} Por favor, faça login novamente.`);
+        toast({ title: "Erro de Sessão", description: msg, variant: "destructive" });
         return;
       }
 
       let currentPlayerDataForAction: Player | null = null;
       try {
+        // Buscar os dados mais recentes do jogador antes de aplicar a ação
         const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`);
         if (!response.ok) throw new Error('Falha ao buscar dados atualizados do jogador.');
         currentPlayerDataForAction = await response.json();
 
-        if (!currentPlayerDataForAction) { 
+        if (!currentPlayerDataForAction) { // Se, por algum motivo, o jogador sumiu do DB
           throw new Error('Não foi possível encontrar os dados atualizados do jogador.');
         }
 
@@ -302,20 +312,20 @@ function HomePageInternal() {
       setActiveActionAnimation(null);
       setIsActionInProgress(false);
 
-    }, 1200); // Reduzido um pouco a duração da animação do modal
+    }, 1200);
   };
 
   const currentYear = new Date().getFullYear();
 
   let contentToRender;
-  if (loading && !playerData && !loginError) { // Estado de carregamento inicial, antes de tentar logar
+  if (loading && !playerData && !loginError) {
     contentToRender = (
-      <div className="flex flex-col items-center justify-center flex-grow">
+      <div className="flex flex-col items-center justify-center flex-grow animate-in fade-in-0 duration-500">
         <Loader2 className="w-16 h-16 animate-spin text-primary" />
         <p className="mt-4 text-lg text-muted-foreground">Buscando informações...</p>
       </div>
     );
-  } else if (!playerData && !loading) { // Formulário de Login
+  } else if (!playerData && !loading) {
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4 animate-in fade-in-0 slide-in-from-top-8 duration-500">
         {loginError && (
@@ -372,54 +382,61 @@ function HomePageInternal() {
         </Card>
       </div>
     );
-  } else if (playerData && !loginError && !loading) { // Dados do Jogador
+  } else if (playerData && !loginError && !loading) { 
     contentToRender = (
-      <div className="w-full max-w-5xl px-2 animate-in fade-in-0 duration-500">
+      <div className="w-full max-w-5xl px-2 space-y-8 animate-in fade-in-0 duration-500">
          {error && ( 
-          <Alert variant="destructive" className="w-full max-w-md mx-auto mb-6 shadow-lg">
+          <Alert variant="destructive" className="w-full max-w-md mx-auto shadow-lg">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <PlayerStatsCard playerData={playerData} />
-        <PlayerActionsCard
-          playerData={playerData}
-          currentPlayerId={currentPlayerId}
-          onAction={handlePlayerAction}
-          actionCooldownEndTimes={actionCooldownEndTimes}
-          timeLeftForAction={timeLeftForAction}
-          isActionInProgress={isActionInProgress}
-          currentActionLoading={currentActionLoading}
-          disabled={!playerData || !currentPlayerId || isActionInProgress}
-          className="mt-8"
-        />
-         <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50 mx-auto">
-          <CardHeader className="pb-4">
-              <CardTitle className="flex items-center text-xl text-primary">
-                  <ShoppingBag size={24} className="mr-2" />
-                  Loja do Jogador
-              </CardTitle>
-              <CardDescription className="text-sm">Compre itens para sua aventura.</CardDescription>
-          </CardHeader>
-          <CardContent>
-              <Button 
+        <PlayerStatsCard playerData={playerData} isLoading={loading && !!currentPlayerId && !playerData} />
+
+        <Accordion type="multiple" defaultValue={['player-actions']} className="w-full space-y-6">
+          <AccordionItem value="player-actions" className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden">
+            <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30">
+              <Activity size={24} className="mr-3" /> Ações do Jogador
+            </AccordionTrigger>
+            <AccordionContent className="p-4 sm:p-6">
+              <PlayerActionsCard
+                playerData={playerData}
+                currentPlayerId={currentPlayerId}
+                onAction={handlePlayerAction}
+                actionCooldownEndTimes={actionCooldownEndTimes}
+                timeLeftForAction={timeLeftForAction}
+                isActionInProgress={isActionInProgress}
+                currentActionLoading={currentActionLoading}
+                disabled={!playerData || !currentPlayerId || isActionInProgress}
+              />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="shop-link" className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden">
+            <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30">
+              <Store size={24} className="mr-3" /> Loja do Aventureiro
+            </AccordionTrigger>
+            <AccordionContent className="p-4 sm:p-6">
+               <Button 
                   onClick={() => router.push(`/loja?playerId=${currentPlayerId}`)} 
-                  className="w-full h-11 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md"
+                  className="w-full h-12 text-base bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md"
                   disabled={!currentPlayerId}
                   variant="secondary"
               >
+                  <ShoppingBag size={20} className="mr-2" />
                   Acessar Loja
               </Button>
-          </CardContent>
-        </Card>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     );
   }
 
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-10 sm:pt-16 bg-background text-foreground">
+    <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-10 sm:pt-12 bg-background text-foreground">
       
       <header className="mb-8 text-center sm:mb-10">
         <h1 className="flex items-center justify-center text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
@@ -456,6 +473,7 @@ function HomePageInternal() {
 }
 
 export default function HomePage() {
+  // Suspense Fallback para useSearchParams
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
@@ -467,5 +485,6 @@ export default function HomePage() {
     </Suspense>
   );
 }
+    
 
     
