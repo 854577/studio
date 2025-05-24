@@ -15,15 +15,14 @@ export default function PaymentPendingPage() {
   const { toast } = useToast();
 
   const playerId = searchParams.get('playerId');
-  const amount = searchParams.get('amount'); // Se você passou na back_url
+  const amount = searchParams.get('amount'); 
 
   useEffect(() => {
     toast({
       title: "Pagamento Pendente",
-      description: "Seu pagamento está pendente de confirmação. Você será notificado assim que for aprovado.",
+      description: "Seu pagamento está pendente de confirmação. Você será notificado assim que for aprovado e seu saldo atualizado.",
       duration: 8000,
     });
-    // Log para desenvolvimento/debug
     console.log("Página de Pagamento Pendente:");
     console.log("Player ID (param):", playerId);
     console.log("Amount (param):", amount);
@@ -43,11 +42,11 @@ export default function PaymentPendingPage() {
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-muted-foreground">
-            Assim que o pagamento for aprovado, seu saldo de ouro será atualizado.
+            Assim que o pagamento for aprovado, seu saldo (BRL) será atualizado.
             Isso pode levar algum tempo dependendo do método de pagamento (ex: boleto).
           </p>
           {playerId && <p className="text-sm">Jogador: <span className="font-mono">{playerId}</span></p>}
-          {amount && <p className="text-sm">Valor: <span className="font-mono">R$ {amount}</span></p>}
+          {amount && <p className="text-sm">Valor: <span className="font-mono">R$ {parseFloat(amount).toFixed(2)}</span></p>}
           
           <div className="mt-6">
             <Button asChild className="w-full sm:w-auto">

@@ -14,30 +14,21 @@ export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  // Parâmetros que podem vir do Mercado Pago ou da nossa preferência
   const paymentId = searchParams.get('payment_id');
   const status = searchParams.get('status');
-  const externalReference = searchParams.get('external_reference'); // Nosso playerId
+  const externalReference = searchParams.get('external_reference'); 
   const merchantOrderId = searchParams.get('merchant_order_id');
   
-  // Parâmetros que adicionamos na back_url
   const playerIdParam = searchParams.get('playerId');
   const amountParam = searchParams.get('amount');
 
   useEffect(() => {
-    // Aqui você NÃO deve creditar o ouro diretamente apenas baseado nesta página.
-    // Esta página é apenas um feedback visual para o usuário.
-    // A lógica de crédito REAL deve acontecer no seu webhook (`notification_url`)
-    // que é chamado diretamente pelo Mercado Pago de forma segura.
-
-    // Você pode exibir uma mensagem de sucesso mais detalhada.
     toast({
       title: "Pagamento em Processamento!",
       description: `Seu pagamento de R$ ${amountParam || 'N/A'} para ${playerIdParam || externalReference || 'jogador'} está sendo processado. O saldo será atualizado em breve se aprovado.`,
-      duration: 10000, // Duração maior para o usuário ler
+      duration: 10000, 
     });
 
-    // Log para desenvolvimento/debug
     console.log("Página de Sucesso de Pagamento:");
     console.log("Payment ID:", paymentId);
     console.log("Status:", status);
@@ -60,12 +51,12 @@ export default function PaymentSuccessPage() {
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-muted-foreground">
-            O seu saldo de ouro será atualizado em breve assim que o pagamento for confirmado.
+            O seu saldo (BRL) será atualizado em breve assim que o pagamento for confirmado.
             Isso pode levar alguns instantes.
           </p>
           {paymentId && <p className="text-sm">ID do Pagamento: <span className="font-mono">{paymentId}</span></p>}
-          {playerIdParam && <p className="text-sm">Jogador: <span className="font-mono">{playerIdParam}</span></p>}
-          {amountParam && <p className="text-sm">Valor: <span className="font-mono">R$ {amountParam}</span></p>}
+          {(playerIdParam || externalReference) && <p className="text-sm">Jogador: <span className="font-mono">{playerIdParam || externalReference}</span></p>}
+          {amountParam && <p className="text-sm">Valor Recarregado: <span className="font-mono">R$ {parseFloat(amountParam).toFixed(2)}</span></p>}
           
           <div className="mt-6">
             <Button asChild className="w-full sm:w-auto">

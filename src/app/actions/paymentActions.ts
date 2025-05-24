@@ -4,10 +4,6 @@
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import type { Player } from '@/types/player';
 
-// IMPORTANTE: Seu Access Token NUNCA deve ser exposto no frontend.
-// Configure-o como uma variável de ambiente no seu servidor.
-// Ex: Em um arquivo .env.local na raiz do projeto:
-// MP_ACCESS_TOKEN=SEU_ACCESS_TOKEN_AQUI
 const accessToken = process.env.MP_ACCESS_TOKEN;
 
 if (!accessToken) {
@@ -24,8 +20,8 @@ interface CreatePaymentPreferenceResult {
 
 export async function createPaymentPreference(
   playerId: string,
-  playerName: string | undefined, // Adicionado para descrição do item
-  amount: number
+  playerName: string | undefined,
+  amount: number // Amount in BRL
 ): Promise<CreatePaymentPreferenceResult> {
   if (!accessToken || accessToken === "FALLBACK_TOKEN_IF_NOT_SET_NEVER_USE_IN_PROD_WITHOUT_ENV") {
     return { error: 'A configuração do servidor para pagamentos está incompleta. Contate o administrador.' };
@@ -35,8 +31,6 @@ export async function createPaymentPreference(
     return { error: 'Dados inválidos para criar a preferência de pagamento.' };
   }
 
-  // Construa as URLs absolutas para back_urls e notification_url
-  // Em produção, use o domínio real do seu site.
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
 
   try {
@@ -44,32 +38,33 @@ export async function createPaymentPreference(
       body: {
         items: [
           {
-            id: `recharge-${playerId}-${Date.now()}`,
-            title: `Recarga de Ouro para ${playerName || playerId}`,
+            id: `recharge-saldo-${playerId}-${Date.now()}`,
+            title: `Recarga de Saldo para ${playerName || playerId}`,
             quantity: 1,
-            unit_price: amount,
-            currency_id: 'BRL', // Moeda (Real Brasileiro)
-            description: `Recarga de ${amount} BRL em ouro para o jogador ${playerName || playerId}`,
+            unit_price: amount, // Amount is already in BRL
+            currency_id: 'BRL', 
+            description: `Adiciona ${amount.toFixed(2)} BRL ao saldo do jogador ${playerName || playerId}`,
           },
         ],
-        payer: { // Opcional, mas pode ser útil
-          // email: "email_do_jogador@exemplo.com", // Se você tiver o email do jogador
+        payer: {
+          // email: "email_do_jogador@exemplo.com", 
         },
         back_urls: {
           success: `${baseUrl}/payment/success?playerId=${playerId}&amount=${amount}`,
           failure: `${baseUrl}/payment/failure?playerId=${playerId}`,
-          pending: `${baseUrl}/payment/pending?playerId=${playerId}`, // Opcional
+          pending: `${baseUrl}/payment/pending?playerId=${playerId}&amount=${amount}`,
         },
-        auto_return: 'approved', // Retorna automaticamente para a success URL se aprovado
-        notification_url: `${baseUrl}/api/payment-webhook`, // IMPORTANTE: Você precisará implementar este endpoint (webhook)
-        external_reference: playerId, // Referência externa para identificar o jogador no webhook
+        auto_return: 'approved',
+        notification_url: `${baseUrl}/api/payment-webhook`,
+        external_reference: playerId, 
       },
     });
 
-    if (preferenceData.init_point) {
+    if (preferenceData.id && preferenceData.init_point) { // Check for preferenceData.id as well
+      console.log('Preferência de pagamento criada com ID:', preferenceData.id);
       return { checkoutUrl: preferenceData.init_point };
     } else {
-      console.error('Mercado Pago API não retornou init_point:', preferenceData);
+      console.error('Mercado Pago API não retornou init_point ou ID da preferência:', preferenceData);
       return { error: 'Não foi possível iniciar o pagamento. Tente novamente mais tarde.' };
     }
   } catch (error) {

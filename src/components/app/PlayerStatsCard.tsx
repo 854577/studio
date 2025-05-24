@@ -1,7 +1,7 @@
 
 import type { Player } from '@/types/player';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles, Wallet } from 'lucide-react';
 
 interface PlayerStatItemProps {
   icon: React.ElementType;
@@ -15,7 +15,7 @@ const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, valu
     <Icon size={24} className={`mr-3 shrink-0 ${iconClassName || ''}`} />
     <div>
       <p className="font-semibold text-sm text-muted-foreground">{label}</p>
-      <p className="text-lg font-bold text-foreground">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+      <p className="text-lg font-bold text-foreground">{typeof value === 'number' && label !== "Saldo (BRL)" ? value.toLocaleString() : value}</p>
     </div>
   </div>
 );
@@ -35,11 +35,14 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
         {playerData.nome && <CardDescription className="mt-1">Displaying stats for {playerData.nome}</CardDescription>}
       </CardHeader>
       <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-        {playerData.vida !== undefined && (
-          <PlayerStatItem icon={Heart} label="Health" value={playerData.vida} iconClassName="text-destructive" />
+        {playerData.saldoBRL !== undefined && (
+          <PlayerStatItem icon={Wallet} label="Saldo (BRL)" value={playerData.saldoBRL.toFixed(2)} iconClassName="text-[hsl(var(--chart-2))]" />
         )}
         {playerData.ouro !== undefined && (
           <PlayerStatItem icon={CircleDollarSign} label="Ouro" value={playerData.ouro} iconClassName="text-[hsl(var(--chart-5))]" />
+        )}
+        {playerData.vida !== undefined && (
+          <PlayerStatItem icon={Heart} label="Health" value={playerData.vida} iconClassName="text-destructive" />
         )}
         {playerData.nivel !== undefined && (
           <PlayerStatItem icon={Star} label="Level" value={playerData.nivel} iconClassName="text-[hsl(var(--chart-4))]" />
@@ -55,7 +58,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
         )}
         {Object.entries(playerData)
           .filter(([key]) => 
-            !['nome', 'vida', 'ouro', 'dinheiro', 'nivel', 'xp', 'id', 'energia', 'mana'].includes(key) && 
+            !['nome', 'vida', 'ouro', 'dinheiro', 'nivel', 'xp', 'id', 'energia', 'mana', 'saldoBRL'].includes(key) && 
             playerData[key] !== undefined && 
             playerData[key] !== null && 
             String(playerData[key]).trim() !== ""
@@ -81,7 +84,7 @@ export const PlayerStatsSkeleton: React.FC = () => (
       <div className="h-4 bg-muted rounded w-1/2 mt-2"></div>
     </CardHeader>
     <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-      {[...Array(6)].map((_, i) => (
+      {[...Array(7)].map((_, i) => ( // Aumentado para 7 para incluir possível Saldo
         <div key={i} className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30">
           <div className="h-6 w-6 bg-muted rounded-full mr-3 shrink-0"></div>
           <div className="flex-grow">

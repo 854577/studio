@@ -10,7 +10,7 @@ import { Search, AlertCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard, { PlayerStatsSkeleton } from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
-import RechargeCard from '@/components/app/RechargeCard'; // Novo componente
+import RechargeCard from '@/components/app/RechargeCard';
 
 export type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 export const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
@@ -37,6 +37,39 @@ export default function HomePage() {
     treinar: null,
   });
 
+  // Efeito para buscar dados do jogador quando currentPlayerId muda (após uma busca bem sucedida)
+  // e também para recarregar os dados se o jogador já estiver definido (ex: após uma recarga de saldo)
+  useEffect(() => {
+    const fetchPlayerData = async (id: string) => {
+      setLoading(true); // Indicar carregamento ao re-buscar
+      try {
+        const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
+        if (!response.ok) {
+          throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
+        }
+        const allPlayersData: Record<string, Player> | null = await response.json();
+
+        if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[id]) {
+          setPlayerData(allPlayersData[id]);
+        } else {
+          // Se o jogador não for encontrado após uma recarga, pode ter sido um erro, ou o ID mudou.
+          // Mantemos o erro da busca original se houver, ou informamos que não foi encontrado.
+          if (!error) setError(`Player ID "${id}" not found or data format invalid.`);
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+        if (!error) setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (currentPlayerId) {
+      fetchPlayerData(currentPlayerId);
+    }
+  }, [currentPlayerId, error]); // Adicionado `error` para evitar loop se a busca inicial falhar.
+
+  // Efeito para carregar e gerenciar cooldowns
   useEffect(() => {
     if (typeof window !== 'undefined' && currentPlayerId) {
       const loadedCooldowns: Record<ActionType, number> = { trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 };
@@ -48,11 +81,13 @@ export default function HomePage() {
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
+      // Resetar cooldowns se não houver jogador atual
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
   }, [currentPlayerId]);
 
+  // Efeito para atualizar a exibição do tempo restante do cooldown
   useEffect(() => {
     const intervalIds: NodeJS.Timeout[] = [];
 
@@ -84,6 +119,7 @@ export default function HomePage() {
         intervalIds.push(id);
       } else {
          setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+         // Garantir limpeza do localStorage se o cooldown expirou e o item ainda existir
          if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
              localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -108,7 +144,7 @@ export default function HomePage() {
     setLoading(true);
     setError(null);
     setPlayerData(null);
-    setCurrentPlayerId(null); 
+    // setCurrentPlayerId(null); // Será definido após busca bem-sucedida
 
     try {
       const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
@@ -122,12 +158,15 @@ export default function HomePage() {
         setCurrentPlayerId(trimmedId); 
       } else if (allPlayersData === null || typeof allPlayersData !== 'object') {
         setError('Invalid data format received from API or no players found.');
+        setCurrentPlayerId(null);
       } else {
         setError(`Player ID "${trimmedId}" not found.`);
+        setCurrentPlayerId(null);
       }
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching data.');
+      setCurrentPlayerId(null);
     } finally {
       setLoading(false);
     }
@@ -156,7 +195,7 @@ export default function HomePage() {
     let goldEarned = 0;
     let xpEarned = 0;
     let actionTitle = "";
-    let updatedPlayerData = { ...playerData };
+    let updatedPlayerData = { ...playerData }; // Copia os dados atuais do jogador
 
     switch (actionType) {
       case 'trabalhar':
@@ -170,35 +209,41 @@ export default function HomePage() {
         actionTitle = "Boa pescaria!";
         break;
       case 'dormir':
+        // Dormir não dá ouro, apenas XP
         xpEarned = Math.floor(Math.random() * 10) + 1;   
         actionTitle = "Você descansou bem.";
         break;
       case 'treinar':
+        // Treinar não dá ouro, apenas XP
         xpEarned = Math.floor(Math.random() * 21) + 5; 
         actionTitle = "Treino concluído!";
         break;
     }
     
+    // Atualiza os dados do jogador localmente
     updatedPlayerData.ouro = (playerData.ouro || 0) + goldEarned;
     updatedPlayerData.xp = (playerData.xp || 0) + xpEarned;
     
-    setPlayerData(updatedPlayerData);
+    setPlayerData(updatedPlayerData); // Reflete a mudança na UI imediatamente
 
+    // Configura o cooldown
     const newCooldownEndTime = now + ACTION_COOLDOWN_DURATION;
     setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
     if (typeof window !== 'undefined') {
       localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
     }
 
+    // Notifica o usuário sobre a recompensa
     toast({
       title: actionTitle,
       description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP.`,
     });
 
+    // Tenta salvar os dados atualizados no Firebase
     try {
       const updatePath = `https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`;
       const response = await fetch(updatePath, {
-        method: 'PATCH',
+        method: 'PATCH', // PATCH atualiza apenas os campos fornecidos
         headers: {
           'Content-Type': 'application/json',
         },
@@ -206,11 +251,20 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
+        // Tenta obter mais detalhes do erro do Firebase
         const errorBody = await response.text();
         console.error('Firebase save error response body:', errorBody);
-        const errorData = JSON.parse(errorBody || '{}');
+        // Tenta parsear, mas pode falhar se não for JSON
+        let errorData = {};
+        try {
+          errorData = JSON.parse(errorBody);
+        } catch (parseError) {
+          console.warn('Could not parse Firebase error response as JSON:', parseError);
+          errorData = { message: errorBody || 'Unknown Firebase error structure.' };
+        }
         throw new Error(`Failed to save to Firebase: ${response.statusText} (status ${response.status}). Path: ${updatePath}. Details: ${JSON.stringify(errorData)}`);
       }
+      // Notifica o usuário sobre o sucesso do salvamento
       toast({
         title: "Progresso Salvo!",
         description: "Suas recompensas foram salvas no banco de dados.",
@@ -222,6 +276,8 @@ export default function HomePage() {
         description: `Não foi possível salvar os dados no Firebase. ${saveError instanceof Error ? saveError.message : 'Erro desconhecido.'}`,
         variant: "destructive",
       });
+      // Opcional: Reverter a atualização local se o salvamento falhar?
+      // setPlayerData(playerData); // Reverte para o estado anterior se o save falhar
     }
   };
 
@@ -248,7 +304,7 @@ export default function HomePage() {
           className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
           aria-label="Search Player"
         >
-          {loading ? (
+          {loading && !playerData ? ( // Mostra spinner apenas na busca inicial
             <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
           ) : (
             <Search size={20} />
@@ -265,12 +321,30 @@ export default function HomePage() {
         </Alert>
       )}
 
-      {loading && !error && <PlayerStatsSkeleton />}
-
-      {!loading && !error && playerData && (
+      {loading && !playerData && !error && <PlayerStatsSkeleton />} {/* Skeleton apenas na busca inicial e sem erro */}
+      
+      {!loading && playerData && !error && ( // Se não está carregando E tem dados E não tem erro
         <>
           <PlayerStatsCard playerData={playerData} />
           <PlayerActionsCard
+            onAction={handlePlayerAction}
+            timeLeftForAction={timeLeftForAction}
+            isDisabled={!playerData || !currentPlayerId} // Desabilita se não houver jogador
+          />
+          <RechargeCard 
+            playerId={currentPlayerId} 
+            playerName={playerData?.nome}
+            isDisabled={!playerData || !currentPlayerId} 
+          />
+        </>
+      )}
+       {loading && playerData && !error && ( // Se está carregando MAS JÁ TEM DADOS (ex: recarregando após recarga), mostra os dados atuais e um indicador sutil
+        <>
+          <div className="w-full max-w-lg text-center my-2">
+            <span className="text-sm text-muted-foreground italic">Atualizando dados...</span>
+          </div>
+          <PlayerStatsCard playerData={playerData} />
+           <PlayerActionsCard
             onAction={handlePlayerAction}
             timeLeftForAction={timeLeftForAction}
             isDisabled={!playerData || !currentPlayerId}

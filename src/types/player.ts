@@ -2,11 +2,12 @@
 export interface Player {
   nome?: string;
   vida?: number;
-  ouro?: number; // Field is 'ouro' in Firebase
+  ouro?: number; 
   nivel?: number;
   xp?: number;
   energia?: number;
   mana?: number;
+  saldoBRL?: number; // Novo campo para saldo em BRL
   // Allows for other potential fields from the API
   [key: string]: any; 
 }

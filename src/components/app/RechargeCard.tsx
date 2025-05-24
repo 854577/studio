@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { CreditCard, AlertCircle } from 'lucide-react';
+import { CreditCard, AlertCircle, Wallet } from 'lucide-react'; // Adicionado Wallet
 import { useToast } from "@/hooks/use-toast";
-import { createPaymentPreference } from '@/app/actions/paymentActions'; // Server Action
+import { createPaymentPreference } from '@/app/actions/paymentActions'; 
 
 interface RechargeCardProps {
   playerId: string | null;
@@ -38,12 +38,10 @@ const RechargeCard: React.FC<RechargeCardProps> = ({ playerId, playerName, isDis
       return;
     }
     
-    // Limitar o valor para evitar problemas, ex: mínimo R$1.00
     if (amount < 1) {
         setError("O valor mínimo para recarga é R$ 1,00.");
         return;
     }
-
 
     setIsLoading(true);
 
@@ -58,10 +56,7 @@ const RechargeCard: React.FC<RechargeCardProps> = ({ playerId, playerName, isDis
           variant: "destructive",
         });
       } else if (result.checkoutUrl) {
-        // Redirecionar para o checkout do Mercado Pago
         window.location.href = result.checkoutUrl;
-        // O Dialog não será fechado aqui, pois o usuário será redirecionado.
-        // Se o redirecionamento falhar, ele verá a mensagem de erro.
       } else {
         setError("Não foi possível obter a URL de checkout. Tente novamente.");
         toast({
@@ -80,8 +75,6 @@ const RechargeCard: React.FC<RechargeCardProps> = ({ playerId, playerName, isDis
       });
     } finally {
       setIsLoading(false);
-      // Não fechar o diálogo automaticamente em caso de erro, para o usuário ver a mensagem.
-      // Se houver sucesso com checkoutUrl, o redirecionamento acontece.
     }
   };
 
@@ -90,14 +83,14 @@ const RechargeCard: React.FC<RechargeCardProps> = ({ playerId, playerName, isDis
       <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
         <CardHeader>
           <CardTitle className="text-xl flex items-center">
-            <CreditCard className="mr-2 h-6 w-6 text-primary" />
-            Recarregar Ouro
+            <Wallet className="mr-2 h-6 w-6 text-primary" /> 
+            Recarregar Saldo
           </CardTitle>
-          <CardDescription>Adicione ouro à conta do jogador utilizando Mercado Pago.</CardDescription>
+          <CardDescription>Adicione saldo (BRL) à conta do jogador utilizando Mercado Pago.</CardDescription>
         </CardHeader>
         <CardContent>
           <Button
-            onClick={() => setIsDialogOpen(true)}
+            onClick={() => { setIsDialogOpen(true); setError(null); setRechargeAmount(''); }}
             disabled={isDisabled || !playerId}
             className="w-full py-3 text-base"
             variant="outline"
@@ -108,12 +101,18 @@ const RechargeCard: React.FC<RechargeCardProps> = ({ playerId, playerName, isDis
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) {
+            setError(null);
+            setRechargeAmount('');
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Recarregar Ouro</DialogTitle>
+            <DialogTitle>Recarregar Saldo (BRL)</DialogTitle>
             <DialogDescription>
-              Digite o valor que deseja recarregar para {playerName || 'o jogador selecionado'}. O pagamento será processado pelo Mercado Pago.
+              Digite o valor em BRL que deseja adicionar ao saldo de {playerName || 'o jogador selecionado'}. O pagamento será processado pelo Mercado Pago.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleRechargeSubmit}>
@@ -129,25 +128,25 @@ const RechargeCard: React.FC<RechargeCardProps> = ({ playerId, playerName, isDis
                   onChange={(e) => setRechargeAmount(e.target.value)}
                   placeholder="Ex: 10.00"
                   className="col-span-3"
-                  min="1" // Mínimo de R$1,00
-                  step="0.01" // Para centavos
+                  min="1" 
+                  step="0.01" 
                   required
                 />
               </div>
               {error && (
-                <div className="col-span-4 p-2 bg-destructive/10 border border-destructive/50 text-destructive text-sm rounded-md flex items-center">
-                   <AlertCircle className="h-4 w-4 mr-2 shrink-0" />
-                   {error}
+                <div className="col-span-4 p-3 bg-destructive/10 border border-destructive/50 text-destructive text-sm rounded-md flex items-start">
+                   <AlertCircle className="h-4 w-4 mr-2 mt-0.5 shrink-0" />
+                   <span className="flex-1">{error}</span>
                 </div>
               )}
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={() => { setError(null); setRechargeAmount(''); }}>
+                <Button type="button" variant="outline">
                   Cancelar
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={isLoading || !rechargeAmount.trim()}>
+              <Button type="submit" disabled={isLoading || !rechargeAmount.trim() || parseFloat(rechargeAmount) < 1}>
                 {isLoading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
                 ) : (
