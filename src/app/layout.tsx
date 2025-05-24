@@ -26,7 +26,15 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
+        <div className="star-layer-container">
+          <div id="stars-small" className="stars"></div>
+          <div id="stars-medium" className="stars"></div>
+          <div id="stars-large" className="stars"></div>
+        </div>
+        {/* Ensure main content is above stars and can manage its own background or be transparent */}
+        <div className="relative z-10 min-h-screen flex flex-col bg-transparent">
+          {children}
+        </div>
         <Toaster />
       </body>
     </html>
