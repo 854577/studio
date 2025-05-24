@@ -25,10 +25,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en"> {/* Removed className="" to potentially fix hydration error */}
+    <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
-        {/* Removed star background divs */}
-        <div className="relative z-10 min-h-screen"> {/* Ensure content is above any potential fixed/absolute background elements */}
+        <div className="relative z-10 min-h-screen">
           {children}
         </div>
         <Toaster />
