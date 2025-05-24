@@ -59,56 +59,44 @@ function HomePageContent() {
     const storedPlayerDataString = typeof window !== 'undefined' ? sessionStorage.getItem('playerData') : null;
 
     if (pidFromUrl) {
-      setPlayerIdInput(pidFromUrl); // Preenche o input com o ID da URL
+      setPlayerIdInput(pidFromUrl); 
 
-      if (storedPlayerId && storedPlayerDataString && pidFromUrl === storedPlayerId) {
-        // Tenta restaurar da sessionStorage se o ID da URL corresponder
-        try {
-          const parsedPlayerData: Player = JSON.parse(storedPlayerDataString);
-          // Verifica se os dados parseados são válidos e realmente correspondem ao ID
-          // (nome ou id, dependendo de como o ID é armazenado no objeto Player)
-          if (parsedPlayerData && (parsedPlayerData.nome === pidFromUrl || parsedPlayerData.id === pidFromUrl || Object.keys(parsedPlayerData).length > 0)) {
-            setCurrentPlayerId(pidFromUrl);
-            setPlayerData(parsedPlayerData);
-            setError(null);
-            // Não precisa de senha aqui, estamos restaurando uma "sessão"
-            return; // Sai do useEffect para evitar a lógica de limpeza abaixo
-          } else {
-            // Dados no storage são inválidos ou não correspondem, limpar storage
+      if (storedPlayerId && pidFromUrl === storedPlayerId) {
+        if (storedPlayerDataString) {
+          try {
+            const parsedPlayerData: Player = JSON.parse(storedPlayerDataString);
+            if (parsedPlayerData && (parsedPlayerData.nome === pidFromUrl || parsedPlayerData.id === pidFromUrl || Object.keys(parsedPlayerData).length > 0)) {
+              setCurrentPlayerId(pidFromUrl);
+              setPlayerData(parsedPlayerData);
+              setError(null);
+              return; 
+            } else {
+              if (typeof window !== 'undefined') {
+                sessionStorage.removeItem('currentPlayerId');
+                sessionStorage.removeItem('playerData');
+              }
+            }
+          } catch (e) {
+            console.error("Falha ao parsear playerData do sessionStorage", e);
             if (typeof window !== 'undefined') {
               sessionStorage.removeItem('currentPlayerId');
               sessionStorage.removeItem('playerData');
             }
           }
-        } catch (e) {
-          console.error("Failed to parse playerData from sessionStorage", e);
-          if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('currentPlayerId');
-            sessionStorage.removeItem('playerData');
-          }
         }
       }
 
-      // Se não restaurado da sessão, ou se o pidFromUrl é diferente do currentPlayerId logado
-      // precisamos de um novo login para o pidFromUrl.
-      // Limpa dados do jogador anterior e senha se o ID da URL for diferente do jogador logado.
       if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-        setPlayerData(null);
-        setPasswordInput(''); // Força nova entrada de senha para o novo ID
+        setPlayerData(null); 
+        setPasswordInput(''); 
         setError(null);
-        // Não resetar currentPlayerId aqui; será feito em handleSearch ou se a URL for limpa
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
         }
       }
-      // Se pidFromUrl === currentPlayerId mas não restaurou da sessão (ex: playerData era null no storage),
-      // o formulário será exibido pedindo senha (correto).
-      // Se currentPlayerId é null (primeira carga com pidFromUrl), o formulário é exibido (correto).
-
-    } else {
-      // Sem playerId na URL. Limpar tudo se havia um jogador logado.
-      if (currentPlayerId) { // Só limpa se havia alguém logado
+    } else { 
+      if (currentPlayerId) { 
         setPlayerIdInput('');
         setPasswordInput('');
         setCurrentPlayerId(null);
@@ -120,7 +108,7 @@ function HomePageContent() {
         }
       }
     }
-  }, [searchParams, currentPlayerId]); // Não incluir playerData para evitar loops se ele for setado aqui
+  }, [searchParams, currentPlayerId]); 
 
 
   useEffect(() => {
@@ -189,7 +177,8 @@ function HomePageContent() {
 
     if (!trimmedId) {
       setError('O nome do usuário não pode estar vazio.');
-      setPlayerData(null); setCurrentPlayerId(null); setPasswordInput('');
+      setPlayerData(null); setCurrentPlayerId(null); 
+      setPasswordInput('');
       if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
       return;
     }
@@ -201,7 +190,7 @@ function HomePageContent() {
 
     setLoading(true);
     setError(null);
-    setPlayerData(null); // Limpa dados antigos antes da nova busca
+    setPlayerData(null); 
 
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
@@ -211,7 +200,8 @@ function HomePageContent() {
         } else {
           throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
         }
-        setPlayerData(null); setCurrentPlayerId(null); setPasswordInput('');
+        setPlayerData(null); setCurrentPlayerId(null); 
+        setPasswordInput('');
         if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
         setLoading(false);
         return;
@@ -221,7 +211,7 @@ function HomePageContent() {
       if (fetchedPlayerData && fetchedPlayerData.senha !== undefined) {
         if (fetchedPlayerData.senha === trimmedPassword) {
           setPlayerData(fetchedPlayerData);
-          setError(null);
+          setError(null); // Sucesso no login
           setCurrentPlayerId(trimmedId);
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('currentPlayerId', trimmedId);
@@ -230,33 +220,28 @@ function HomePageContent() {
             currentUrl.searchParams.set('playerId', trimmedId);
             window.history.pushState({}, '', currentUrl.toString());
           }
+          // Não limpar passwordInput aqui em caso de sucesso
         } else {
           setError(`Nome de usuário ou senha inválidos.`);
           setPlayerData(null); setCurrentPlayerId(null);
+          setPasswordInput(''); // Limpar senha se a senha estiver incorreta
           if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
         }
       } else {
         setError(`Nome de usuário ou senha inválidos.`);
         setPlayerData(null); setCurrentPlayerId(null);
+        setPasswordInput(''); // Limpar senha se jogador não encontrado ou sem campo senha
         if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
       }
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido ao buscar dados.');
       setPlayerData(null); setCurrentPlayerId(null);
+      setPasswordInput(''); // Limpar senha em caso de erro de fetch
       if (typeof window !== 'undefined') { sessionStorage.removeItem('currentPlayerId'); sessionStorage.removeItem('playerData'); }
     } finally {
       setLoading(false);
-      // Limpar senha apenas se houver erro OU se os dados do jogador foram carregados mas a senha não bateu
-      // (não limpar se a busca falhou por ID não encontrado antes mesmo de checar a senha, ou se restaurado da sessão)
-      if (error || (playerData && fetchedPlayerData && fetchedPlayerData.senha !== trimmedPassword)) {
-        setPasswordInput('');
-      } else if (!error && !playerData && currentPlayerId) {
-        // Caso onde pidFromUrl restaurou currentPlayerId mas não playerData, então a senha é necessária.
-        // Não limpar a senha se ela foi digitada.
-      } else if (error && !playerData) { // Erro tipo 404, jogador nao existe
-        setPasswordInput('');
-      }
+      // O passwordInput só é limpo explicitamente nos casos de erro acima.
     }
   };
 
@@ -283,7 +268,7 @@ function HomePageContent() {
     setActiveActionAnimation(actionType);
 
     setTimeout(async () => {
-      if (!playerData || !currentPlayerId) {
+      if (!playerData || !currentPlayerId) { 
         console.error("Player data or ID became null during action processing.");
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
@@ -306,7 +291,7 @@ function HomePageContent() {
       updatedPlayerData.ouro = (playerData.ouro || 0) + goldEarned;
       updatedPlayerData.xp = (playerData.xp || 0) + xpEarned;
       setPlayerData(updatedPlayerData);
-      if (typeof window !== 'undefined') { // Atualiza sessionStorage também
+      if (typeof window !== 'undefined') { 
           sessionStorage.setItem('playerData', JSON.stringify(updatedPlayerData));
       }
 
@@ -355,42 +340,45 @@ function HomePageContent() {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2 tracking-tight">RPG himiko</h1>
       </header>
 
-      <form onSubmit={handleSearch} className="w-full max-w-md mb-8 flex flex-col gap-3">
-        <div className="flex items-stretch gap-2 sm:gap-3">
-            <Input
-              type="text"
-              value={playerIdInput}
-              onChange={(e) => setPlayerIdInput(e.target.value)}
-              placeholder="nome do usuário"
-              className="flex-grow text-base h-12"
-              aria-label="Nome do usuário Input"
-            />
-            <Button
-              type="submit"
-              disabled={loading || !playerIdInput.trim() || !passwordInput.trim()}
-              className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
-              aria-label="Search Player"
-            >
-              {loading && !playerData ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
-              ) : (
-                <Search size={20} />
-              )}
-              <span className="ml-2 hidden sm:inline">Buscar</span>
-            </Button>
-        </div>
-        <div className="relative flex items-center">
-            <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="password"
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              placeholder="senha"
-              className="flex-grow text-base h-12 pl-10"
-              aria-label="Password Input"
-            />
-        </div>
-      </form>
+      {/* Formulário de busca só aparece se não houver playerData válido */}
+      {(!playerData || error) && !loading && (
+        <form onSubmit={handleSearch} className="w-full max-w-md mb-8 flex flex-col gap-3">
+          <div className="flex items-stretch gap-2 sm:gap-3">
+              <Input
+                type="text"
+                value={playerIdInput}
+                onChange={(e) => setPlayerIdInput(e.target.value)}
+                placeholder="nome do usuário"
+                className="flex-grow text-base h-12"
+                aria-label="Nome do usuário Input"
+              />
+              <Button
+                type="submit"
+                disabled={loading || !playerIdInput.trim() || !passwordInput.trim()}
+                className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
+                aria-label="Search Player"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
+                ) : (
+                  <Search size={20} />
+                )}
+                <span className="ml-2 hidden sm:inline">Buscar</span>
+              </Button>
+          </div>
+          <div className="relative flex items-center">
+              <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="senha"
+                className="flex-grow text-base h-12 pl-10"
+                aria-label="Password Input"
+              />
+          </div>
+        </form>
+      )}
 
       {error && (
         <Alert variant="destructive" className="w-full max-w-md mb-8 shadow-lg">
@@ -400,7 +388,7 @@ function HomePageContent() {
         </Alert>
       )}
 
-      {loading && !playerData && !error && <PlayerStatsSkeleton />}
+      {loading && <PlayerStatsSkeleton />}
 
       {!loading && playerData && !error && currentPlayerId && (
         <>
@@ -429,37 +417,7 @@ function HomePageContent() {
           </Card>
         </>
       )}
-       {loading && playerData && !error && currentPlayerId && (
-        <>
-          <div className="w-full max-w-lg text-center my-2">
-            <span className="text-sm text-muted-foreground italic">Atualizando dados...</span>
-          </div>
-          <PlayerStatsCard playerData={playerData} />
-           <PlayerActionsCard
-            onAction={handlePlayerAction}
-            timeLeftForAction={timeLeftForAction}
-            actionConfig={actionConfig}
-            isDisabled={!playerData || !currentPlayerId || isActionInProgress}
-          />
-          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
-            <CardHeader>
-                <CardTitle className="text-xl flex items-center">
-                     <ShoppingBag size={24} className="mr-2 text-primary" />
-                    Loja do Jogador
-                </CardTitle>
-                <CardDescription>Compre itens e equipamentos para sua aventura.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button asChild className="w-full py-3 text-base" variant="outline" disabled>
-                    <Link href={`/loja?playerId=${currentPlayerId}`}>
-                        Acessar Loja (Carregando...)
-                    </Link>
-                </Button>
-            </CardContent>
-          </Card>
-        </>
-      )}
-
+      
       {activeActionAnimation && actionConfig[activeActionAnimation] && (
         <Dialog open={!!activeActionAnimation} onOpenChange={() => {setActiveActionAnimation(null); setIsActionInProgress(false);}}>
           <ShadDialogContent className="sm:max-w-[280px] p-6 flex flex-col items-center justify-center bg-card/95 backdrop-blur-sm shadow-2xl rounded-lg border-border/50">
@@ -487,7 +445,6 @@ function HomePageContent() {
   );
 }
 
-// Adiciona o componente Suspense para envolver HomePageContent
 export default function HomePage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Carregando...</div>}>
