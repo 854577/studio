@@ -171,7 +171,7 @@ function LojaContent() {
               {category.name}
             </AccordionTrigger>
             <AccordionContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
+              <div className="grid grid-cols-2 gap-4 p-2">
                 {category.items.map((item) => (
                   <Card key={item.name} className="flex flex-col justify-between shadow-md hover:shadow-lg transition-shadow">
                     <CardHeader className="pb-2">
