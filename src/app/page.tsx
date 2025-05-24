@@ -174,14 +174,14 @@ export default function HomePage() {
         break;
     }
     
-    const newDinheiro = (playerData.dinheiro || 0) + goldEarned;
+    const newOuro = (playerData.ouro || 0) + goldEarned;
     const newXp = (playerData.xp || 0) + xpEarned;
 
     setPlayerData(prevData => {
       if (!prevData) return null;
       return {
         ...prevData,
-        dinheiro: newDinheiro,
+        ouro: newOuro,
         xp: newXp,
       };
     });
@@ -193,7 +193,7 @@ export default function HomePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          dinheiro: newDinheiro,
+          ouro: newOuro,
           xp: newXp,
         }),
       });
@@ -221,7 +221,7 @@ export default function HomePage() {
       console.error('Detalhes do erro ao salvar no Firebase:', {
         message: err instanceof Error ? err.message : String(err),
         playerId: currentPlayerId,
-        dataAttemptedToSave: { dinheiro: newDinheiro, xp: newXp },
+        dataAttemptedToSave: { ouro: newOuro, xp: newXp },
         originalError: err
       });
       toast({
@@ -312,12 +312,12 @@ export default function HomePage() {
                   </div>
                 </div>
               )}
-              {playerData.dinheiro !== undefined && (
+              {playerData.ouro !== undefined && (
                 <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
                   <CircleDollarSign size={24} className="mr-3 text-foreground shrink-0" /> 
                   <div>
-                    <p className="font-semibold text-sm text-muted-foreground">Money</p>
-                    <p className="text-lg font-bold text-foreground">{playerData.dinheiro.toLocaleString()}</p>
+                    <p className="font-semibold text-sm text-muted-foreground">Ouro</p>
+                    <p className="text-lg font-bold text-foreground">{playerData.ouro.toLocaleString()}</p>
                   </div>
                 </div>
               )}
@@ -340,7 +340,7 @@ export default function HomePage() {
                 </div>
               )}
               {Object.entries(playerData)
-                .filter(([key]) => !['nome', 'vida', 'dinheiro', 'nivel', 'xp', 'id'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
+                .filter(([key]) => !['nome', 'vida', 'ouro', 'nivel', 'xp', 'id'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
                 .map(([key, value]) => (
                   <div key={key} className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg sm:col-span-2">
                     <Info size={24} className="mr-3 text-muted-foreground shrink-0" />
