@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles, Wallet, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { itemDetails } from '@/app/loja/lojaData'; // Importar itemDetails
+import { itemDetails } from '@/app/loja/lojaData';
 
 interface PlayerStatItemProps {
   icon: React.ElementType;
@@ -14,19 +14,18 @@ interface PlayerStatItemProps {
 }
 
 const formatNumberWithAbbreviation = (num: number): string => {
+  if (isNaN(num) || num === null) return String(num); // Handle non-numeric or null values
   if (Math.abs(num) < 1000) {
     return num.toLocaleString();
   }
-  const suffixes = ["", "K", "M", "B", "T"]; // Adicionado "T" para trilhões se necessário
+  const suffixes = ["", "K", "M", "B", "T"];
   const i = Math.floor(Math.log10(Math.abs(num)) / 3);
   
-  if (i >= suffixes.length) { // Caso o número seja maior que o último sufixo (Trilhões)
-    return num.toLocaleString(); // Retorna o número completo para evitar erros
+  if (i >= suffixes.length) {
+    return num.toLocaleString();
   }
 
   const shortValue = (num / Math.pow(1000, i));
-  
-  // Formatar para 1 casa decimal se não for inteiro, senão 0 casas decimais.
   const formattedValue = shortValue % 1 !== 0 ? shortValue.toFixed(1) : shortValue.toFixed(0);
   
   return formattedValue + suffixes[i];
@@ -34,11 +33,11 @@ const formatNumberWithAbbreviation = (num: number): string => {
 
 
 const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, value, iconClassName }) => (
-  <div className="flex items-center p-3 sm:p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50">
-    <Icon size={18} className={`mr-2 sm:mr-2.5 shrink-0 ${iconClassName || ''}`} />
+  <div className="flex items-center p-2 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50">
+    <Icon size={18} className={`mr-2 shrink-0 ${iconClassName || ''}`} />
     <div className="overflow-hidden">
-      <p className="font-semibold text-xs sm:text-sm text-muted-foreground truncate" title={label}>{label}</p>
-      <p className="text-sm sm:text-base font-bold text-foreground break-words" title={String(value)}>
+      <p className="font-semibold text-xs text-muted-foreground truncate" title={label}>{label}</p>
+      <p className="text-sm font-bold text-foreground break-words" title={String(value)}>
         {typeof value === 'number' ? formatNumberWithAbbreviation(value) : value}
       </p>
     </div>
@@ -62,36 +61,12 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
     let value: string | number = rawValue as string | number;
 
     switch (key) {
-      case 'vida':
-        icon = Heart;
-        label = 'Vida';
-        iconClassName = 'text-destructive';
-        break;
-      case 'ouro':
-        icon = CircleDollarSign;
-        label = 'Ouro';
-        iconClassName = 'text-[hsl(var(--chart-5))]';
-        break;
-      case 'nivel':
-        icon = Star;
-        label = 'Level';
-        iconClassName = 'text-[hsl(var(--chart-4))]';
-        break;
-      case 'xp':
-        icon = BarChart3;
-        label = 'Experience (XP)';
-        iconClassName = 'text-muted-foreground';
-        break;
-      case 'energia':
-        icon = Zap;
-        label = 'Energia';
-        iconClassName = 'text-[hsl(var(--chart-4))]';
-        break;
-      case 'mana':
-        icon = Sparkles;
-        label = 'Mana';
-        iconClassName = 'text-[hsl(var(--chart-1))]';
-        break;
+      case 'vida': icon = Heart; label = 'Vida'; iconClassName = 'text-destructive'; break;
+      case 'ouro': icon = CircleDollarSign; label = 'Ouro'; iconClassName = 'text-[hsl(var(--chart-5))]'; break;
+      case 'nivel': icon = Star; label = 'Level'; iconClassName = 'text-[hsl(var(--chart-4))]'; break;
+      case 'xp': icon = BarChart3; label = 'XP'; iconClassName = 'text-muted-foreground'; break;
+      case 'energia': icon = Zap; label = 'Energia'; iconClassName = 'text-[hsl(var(--chart-4))]'; break;
+      case 'mana': icon = Sparkles; label = 'Mana'; iconClassName = 'text-[hsl(var(--chart-1))]'; break;
     }
     return <PlayerStatItem key={key} icon={icon} label={label} value={value} iconClassName={iconClassName} />;
   }).filter(Boolean);
@@ -103,7 +78,6 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
       key !== 'senha' &&
       key !== 'id' &&
       key !== 'inventario' &&
-      key !== 'saldoBRL' && // Explicitamente ignorar saldoBRL aqui pois ele não deve estar nos 'outros stats'
       value !== undefined && 
       value !== null && 
       String(value).trim() !== ""
@@ -147,12 +121,12 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
           {playerData.nome && <CardDescription className="mt-1 text-sm sm:text-base truncate">Exibindo estatísticas para {playerData.nome}</CardDescription>}
         </div>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
+      <CardContent className="grid grid-cols-5 gap-1.5 p-2 sm:gap-2 sm:p-3">
         {mainStats}
         {otherStats}
         
         {inventoryArray.length > 0 && (
-          <CardTitle className="col-span-full mt-4 pt-4 border-t text-lg font-semibold text-primary">
+          <CardTitle className="col-span-full mt-3 mb-1 pt-3 border-t text-lg font-semibold text-primary">
             Inventário
           </CardTitle>
         )}
@@ -162,10 +136,10 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
           return (
             <div 
               key={itemName} 
-              className="flex flex-col items-center text-center p-3 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50"
+              className="flex flex-col items-center text-center p-2 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50"
               title={`${itemName} (x${quantity})`}
             >
-              <IconComponent size={28} className="mb-1.5 text-primary" />
+              <IconComponent size={24} className="mb-1 text-primary" />
               <p className="text-xs font-medium text-muted-foreground capitalize truncate w-full">{itemName}</p>
               <p className="text-sm font-bold text-foreground">x{String(quantity)}</p>
             </div>
@@ -185,14 +159,12 @@ export const PlayerStatsSkeleton: React.FC = () => (
         <Skeleton className="h-4 bg-muted rounded w-1/2 sm:w-32 mx-auto sm:mx-0" />
       </div>
     </CardHeader>
-    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
-      {[...Array(6)].map((_, i) => ( // Ajustar para o número de colunas do skeleton se necessário
-        <div key={i} className="flex items-center p-3 sm:p-4 bg-muted/50 rounded-lg border border-border/30">
-          <Skeleton className="h-5 w-5 bg-muted rounded-full mr-2 sm:mr-2.5 shrink-0" />
-          <div className="flex-grow overflow-hidden">
-            <Skeleton className="h-3.5 bg-muted rounded w-1/3 mb-1" />
-            <Skeleton className="h-4 bg-muted rounded w-1/2" />
-          </div>
+    <CardContent className="grid grid-cols-5 gap-1.5 p-2 sm:gap-2 sm:p-3">
+      {[...Array(10)].map((_, i) => ( 
+        <div key={i} className="flex flex-col items-center p-2 bg-muted/50 rounded-lg border border-border/30">
+          <Skeleton className="h-6 w-6 bg-muted rounded-md mb-1" />
+          <Skeleton className="h-3 bg-muted rounded w-10/12 mb-0.5" />
+          <Skeleton className="h-3.5 bg-muted rounded w-1/2" />
         </div>
       ))}
     </CardContent>
