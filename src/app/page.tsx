@@ -125,8 +125,8 @@ export default function HomePage() {
     }
   };
   
-  const handlePlayerAction = (actionType: ActionType) => {
-    if (!playerData || !playerData.nome) {
+  const handlePlayerAction = async (actionType: ActionType) => {
+    if (!playerData || !playerData.nome || !playerIdInput) {
       setError("Busque um jogador primeiro para realizar ações.");
       toast({
         title: "Erro",
@@ -167,25 +167,65 @@ export default function HomePage() {
         break;
     }
     
+    const newDinheiro = (playerData.dinheiro || 0) + goldEarned;
+    const newXp = (playerData.xp || 0) + xpEarned;
+
+    // Atualização visual imediata
     setPlayerData(prevData => {
       if (!prevData) return null;
       return {
         ...prevData,
-        dinheiro: (prevData.dinheiro || 0) + goldEarned,
-        xp: (prevData.xp || 0) + xpEarned,
+        dinheiro: newDinheiro,
+        xp: newXp,
       };
     });
 
+    // Salvar no Firebase
+    try {
+      const firebaseResponse = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${playerIdInput}.json`, {
+        method: 'PATCH', 
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dinheiro: newDinheiro,
+          xp: newXp,
+        }),
+      });
+
+      if (!firebaseResponse.ok) {
+        let errorDetail = firebaseResponse.statusText;
+        try {
+            const errorData = await firebaseResponse.json();
+            if (errorData && errorData.error) {
+                errorDetail = errorData.error;
+            }
+        } catch (e) {
+            // Ignora se não conseguir parsear o JSON do erro
+        }
+        throw new Error(`Falha ao salvar no Firebase: ${errorDetail} (status ${firebaseResponse.status})`);
+      }
+
+      toast({
+        title: actionTitle,
+        description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP. Dados salvos no servidor!`,
+      });
+
+    } catch (err) {
+      console.error('Firebase save error:', err);
+      toast({
+        title: "Erro ao Salvar no Servidor",
+        description: err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.",
+        variant: "destructive",
+      });
+    }
+
+    // Lógica de cooldown
     const newCooldownEndTime = now + ACTION_COOLDOWN_DURATION;
     setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
     if (typeof window !== 'undefined' && playerIdInput) {
       localStorage.setItem(`cooldown_${actionType}_${playerIdInput}`, newCooldownEndTime.toString());
     }
-
-    toast({
-      title: actionTitle,
-      description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP.`,
-    });
   };
 
   return (
@@ -339,3 +379,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
