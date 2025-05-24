@@ -1,11 +1,11 @@
 
 import type { LucideIcon } from 'lucide-react';
 import {
-  Sword, Axe, PocketKnife, Crosshair, Wand2, Shield, Shirt, VenetianMask,
-  HardHat, Footprints, Hand, Layers, CircleDollarSign, Diamond, Target,
-  BookOpen, Flame, Gem, Sigma, EyeOff, BookMarked, Medal, HelpCircle,
+  Sword, Axe, PocketKnife, Crosshair, Wand2, Shield, Shirt,
+  HardHat, Footprints, Hand, Layers, Diamond, Target,
+  BookOpen, Flame, Gem, Sigma, EyeOff, BookMarked, Medal,
   HeartPulse, BatteryCharging, Beef, IterationCw, BriefcaseMedical, GlassWater, ArrowRight, PaintBucket, Vegan,
-  Bird, Option, CloudDrizzle, KeyRound, Scroll, Hammer, Feather, Box, Zap, Sparkles, Package, ShoppingBasket, Tent
+  Bird, CloudDrizzle, KeyRound, Scroll, Hammer, Feather, Box, PawPrint
 } from 'lucide-react';
 
 export interface ShopItem {
@@ -25,29 +25,29 @@ const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
   "espada": { price: 80, icon: Sword },
   "machado": { price: 85, icon: Axe },
   "adaga": { price: 60, icon: PocketKnife },
-  "lança": { price: 75, icon: VenetianMask }, // Usando VenetianMask como placeholder para Lança
-  "arco": { price: 90, icon: Target }, // Usando Target como placeholder para Arco
+  "lança": { price: 75, icon: Crosshair }, // Melhorado
+  "arco": { price: 90, icon: Target },
   "cajado": { price: 100, icon: Wand2 },
   "katana": { price: 120, icon: Sword },
-  "tridente": { price: 110, icon: Target }, // Usando Target como placeholder
-  "foice": { price: 130, icon: Target }, // Usando Target como placeholder
-  "alabarda": { price: 140, icon: Target }, // Usando Target como placeholder
+  "tridente": { price: 110, icon: Crosshair }, // Melhorado
+  "foice": { price: 130, icon: Axe },       // Melhorado
+  "alabarda": { price: 140, icon: Axe },    // Melhorado
 
   // Armaduras
   "escudo": { price: 60, icon: Shield },
-  "capa": { price: 50, icon: Shirt }, // Usando Shirt como placeholder para Capa
-  "couraça": { price: 95, icon: Shield }, // Usando Shield para Couraça
+  "capa": { price: 50, icon: Shirt },
+  "couraça": { price: 95, icon: Shield },
   "elmo": { price: 70, icon: HardHat },
   "botas": { price: 40, icon: Footprints },
   "luvas": { price: 30, icon: Hand },
   "armadura leve": { price: 100, icon: Shirt },
-  "armadura pesada": { price: 140, icon: Shield }, // Usando Shield para Armadura Pesada
+  "armadura pesada": { price: 140, icon: Shield },
   "escama": { price: 85, icon: Layers },
-  "manto": { price: 60, icon: Shirt }, // Usando Shirt para Manto
+  "manto": { price: 60, icon: Shirt },
 
   // Itens Mágicos
   "anel mágico": { price: 200, icon: Gem },
-  "colar de mana": { price: 190, icon: CircleDollarSign }, // Usando CircleDollarSign para Colar (genérico)
+  "colar de mana": { price: 190, icon: Gem }, // Melhorado
   "livro antigo": { price: 180, icon: BookOpen },
   "orbe de fogo": { price: 210, icon: Flame },
   "gema azul": { price: 160, icon: Gem },
@@ -61,7 +61,7 @@ const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
   "poção de vida": { price: 30, icon: HeartPulse },
   "poção de energia": { price: 35, icon: BatteryCharging },
   "ração": { price: 20, icon: Beef },
-  "tocha": { price: 10, icon: Flame }, // Alterado de Torch para Flame
+  "tocha": { price: 10, icon: Flame },
   "corda": { price: 15, icon: IterationCw },
   "kit de primeiros socorros": { price: 50, icon: BriefcaseMedical },
   "água encantada": { price: 45, icon: GlassWater },
@@ -71,13 +71,13 @@ const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
 
   // Raros/Caros
   "grifo de guerra": { price: 1000, icon: Bird },
-  "cavalo de elite": { price: 900, icon: HelpCircle }, // HelpCircle como placeholder para cavalo
+  "cavalo de elite": { price: 900, icon: PawPrint }, // Melhorado
   "capa da sombra": { price: 850, icon: CloudDrizzle },
-  "espada flamejante": { price: 1200, icon: Flame }, // Usando Flame para espada flamejante
-  "armadura celestial": { price: 1500, icon: Sparkles }, // Usando Sparkles para armadura celestial
+  "espada flamejante": { price: 1200, icon: Sword },    // Melhorado
+  "armadura celestial": { price: 1500, icon: Shield },  // Melhorado
   "chave dourada": { price: 750, icon: KeyRound },
   "relíquia dos antigos": { price: 1300, icon: Scroll },
-  "elmo do trovão": { price: 1100, icon: Zap }, // Usando Zap para elmo do trovão
+  "elmo do trovão": { price: 1100, icon: HardHat }, // Melhorado
   "martelo divino": { price: 1400, icon: Hammer },
   "asa etérea": { price: 2000, icon: Feather },
 };
