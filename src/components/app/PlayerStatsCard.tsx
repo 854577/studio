@@ -14,17 +14,24 @@ interface PlayerStatItemProps {
 }
 
 const formatNumberWithAbbreviation = (num: number): string => {
-  if (num < 1000) {
+  if (Math.abs(num) < 1000) {
     return num.toLocaleString();
   }
-  const suffixes = ["", "K", "M", "B", "T"];
+  const suffixes = ["", "K", "M", "B", "T"]; // Adicionado "T" para trilhões se necessário
   const i = Math.floor(Math.log10(Math.abs(num)) / 3);
+  
+  if (i >= suffixes.length) { // Caso o número seja maior que o último sufixo (Trilhões)
+    return num.toLocaleString(); // Retorna o número completo para evitar erros
+  }
+
   const shortValue = (num / Math.pow(1000, i));
   
+  // Formatar para 1 casa decimal se não for inteiro, senão 0 casas decimais.
   const formattedValue = shortValue % 1 !== 0 ? shortValue.toFixed(1) : shortValue.toFixed(0);
   
   return formattedValue + suffixes[i];
 };
+
 
 const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, value, iconClassName }) => (
   <div className="flex items-center p-3 sm:p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50">
@@ -95,7 +102,8 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
       key !== 'nome' && 
       key !== 'senha' &&
       key !== 'id' &&
-      key !== 'inventario' && // Não exibir inventário aqui, pois terá seção própria
+      key !== 'inventario' &&
+      key !== 'saldoBRL' && // Explicitamente ignorar saldoBRL aqui pois ele não deve estar nos 'outros stats'
       value !== undefined && 
       value !== null && 
       String(value).trim() !== ""
@@ -139,7 +147,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
           {playerData.nome && <CardDescription className="mt-1 text-sm sm:text-base truncate">Exibindo estatísticas para {playerData.nome}</CardDescription>}
         </div>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
+      <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
         {mainStats}
         {otherStats}
         
@@ -177,8 +185,8 @@ export const PlayerStatsSkeleton: React.FC = () => (
         <Skeleton className="h-4 bg-muted rounded w-1/2 sm:w-32 mx-auto sm:mx-0" />
       </div>
     </CardHeader>
-    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
-      {[...Array(6)].map((_, i) => (
+    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
+      {[...Array(6)].map((_, i) => ( // Ajustar para o número de colunas do skeleton se necessário
         <div key={i} className="flex items-center p-3 sm:p-4 bg-muted/50 rounded-lg border border-border/30">
           <Skeleton className="h-5 w-5 bg-muted rounded-full mr-2 sm:mr-2.5 shrink-0" />
           <div className="flex-grow overflow-hidden">
@@ -192,4 +200,3 @@ export const PlayerStatsSkeleton: React.FC = () => (
 );
 
 export default PlayerStatsCard;
-
