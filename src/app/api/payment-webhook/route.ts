@@ -6,7 +6,7 @@ import { MercadoPagoConfig, Payment } from 'mercadopago';
 const accessToken = process.env.MP_ACCESS_TOKEN;
 
 if (!accessToken) {
-  console.error('ERRO CRÍTICO NO WEBHOOK: MP_ACCESS_TOKEN não está configurado.');
+  console.error('ERRO CRÍTICO NO WEBHOOK: MP_ACCESS_TOKEN não está configurado. Para desenvolvimento local, crie um arquivo .env.local na raiz do projeto e adicione MP_ACCESS_TOKEN=SEU_TOKEN_AQUI. Em produção, configure esta variável no seu ambiente de hospedagem.');
 }
 const client = new MercadoPagoConfig({ accessToken: accessToken || "FALLBACK_WEBHOOK_TOKEN" });
 const paymentInstance = new Payment(client);
@@ -15,8 +15,9 @@ export async function POST(request: NextRequest) {
   console.log('Webhook do Mercado Pago recebido!');
 
   if (!accessToken || accessToken === "FALLBACK_WEBHOOK_TOKEN") {
-    console.error('Webhook não pode processar: MP_ACCESS_TOKEN não está configurado no servidor. Verifique as variáveis de ambiente.');
-    return NextResponse.json({ error: 'MP_ACCESS_TOKEN não está configurado no servidor para o webhook. Verifique as variáveis de ambiente.' }, { status: 500 });
+    const errorMessage = 'Webhook não pode processar: MP_ACCESS_TOKEN não está configurado no servidor. Para desenvolvimento local, crie um arquivo .env.local na raiz do projeto e adicione MP_ACCESS_TOKEN=SEU_TOKEN_AQUI. Em produção, configure esta variável de ambiente no seu servidor de hospedagem.';
+    console.error(errorMessage);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 
   try {
@@ -72,8 +73,6 @@ export async function POST(request: NextRequest) {
             const updateResponse = await fetch(firebaseUpdateUrl, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                // IMPORTANTE: Certifique-se que suas regras do Firebase permitem escrita neste caminho
-                // para o servidor/função que executa este webhook.
                 body: JSON.stringify({ saldoBRL: parseFloat(newSaldo.toFixed(2)) }),
             });
 
@@ -86,8 +85,6 @@ export async function POST(request: NextRequest) {
             
         } catch (dbError) {
             console.error(`Erro ao interagir com o Firebase para o jogador ${playerId} no webhook:`, dbError);
-            // Mesmo que haja erro no DB, o Mercado Pago espera um 200 OK para não reenviar a notificação.
-            // Você deve ter um sistema de retry/logging robusto para essas falhas de DB.
             return NextResponse.json({ error: 'Erro interno ao atualizar banco de dados.', details: (dbError as Error).message }, { status: 200 });
         }
       } else {
@@ -110,4 +107,3 @@ export async function GET(request: NextRequest) {
   console.log("Webhook endpoint: GET request received (geralmente usado para verificação).");
   return NextResponse.json({ message: "Webhook endpoint is active. Use POST for notifications." });
 }
-
