@@ -6,7 +6,7 @@ import type { Player } from '@/types/player';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Briefcase, Fish, Bed, Dumbbell, Loader2 } from 'lucide-react';
-// import { actionConfig } from '@/app/page'; // Importar actionConfig // No longer needed here
+import { cn } from '@/lib/utils';
 
 type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 
@@ -43,7 +43,7 @@ const PlayerActionsCard: React.FC<PlayerActionsCardProps> = ({
   if (!playerData || !currentPlayerId) return null;
 
   return (
-    <Card className={`w-full max-w-4xl shadow-xl bg-card border-border/50 ${className}`}>
+    <Card className={cn("w-full max-w-4xl shadow-xl bg-card border-border/50 card-glow", className)}>
       <CardHeader className="pb-4">
         <CardTitle className="text-2xl font-semibold text-primary">Ações do Jogador</CardTitle>
         <CardDescription>Realize atividades para ganhar recompensas.</CardDescription>
@@ -65,10 +65,10 @@ const PlayerActionsCard: React.FC<PlayerActionsCardProps> = ({
                 onClick={() => onAction(actionType)}
                 disabled={isThisActionDisabled || isLoadingThisAction} 
                 variant={config.variant || "default"}
-                className="flex flex-col items-center justify-center w-full h-auto p-4 py-5 space-y-2.5 rounded-lg shadow-md min-h-[100px] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="flex flex-col items-center justify-center w-full h-auto p-4 py-6 space-y-2.5 rounded-lg shadow-md min-h-[110px] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:scale-105 transition-transform"
               >
                 {isLoadingThisAction ? (
-                  <Loader2 size={32} className="text-primary-foreground" />
+                  <Loader2 size={32} className="text-primary-foreground animate-spin" />
                 ) : (
                   <Icon size={32} className={isThisActionDisabled ? "text-muted-foreground" : "text-primary-foreground"} />
                 )}

@@ -15,8 +15,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 20%;
 
-    --primary: 330 100% 71%; /* Hot Pink */
-    --primary-foreground: 0 0% 100%; /* White (for contrast on pink) */
+    --primary: 0 80% 60%; /* Vibrant Red */
+    --primary-foreground: 0 0% 100%; /* White (for contrast on red) */
 
     --secondary: 180 70% 50%; /* Bright Teal/Cyan */
     --secondary-foreground: 0 0% 100%; /* White */
@@ -27,15 +27,15 @@
     --accent: 51 100% 60%; /* Bright Yellow */
     --accent-foreground: 0 0% 20%; /* Dark Gray (for contrast on yellow) */
 
-    --destructive: 0 84% 60%; /* Bright Red */
+    --destructive: 0 84% 60%; /* Bright Red (Standard destructive) */
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 87%; /* Light Gray border (DDDDDD) */
     --input: 0 0% 100%; /* White input background */
-    --ring: 330 100% 71%; /* Primary color for focus rings */
+    --ring: 0 80% 60%; /* Primary color (Vibrant Red) for focus rings */
     
     /* Chart colors for Memphis theme */
-    --chart-1: 330 100% 71%;  /* Hot Pink */
+    --chart-1: 0 80% 60%;  /* Vibrant Red (was Hot Pink) */
     --chart-2: 180 70% 50%;  /* Bright Teal */
     --chart-3: 51 100% 60%;   /* Bright Yellow */
     --chart-4: 130 60% 65%;  /* Pastel Green */
@@ -44,12 +44,12 @@
     /* Sidebar colors - can be adjusted to fit Memphis or kept more neutral */
     --sidebar-background: 0 0% 98%; 
     --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 330 100% 71%;
+    --sidebar-primary: 0 80% 60%; /* Vibrant Red */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 180 70% 50%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 87%;
-    --sidebar-ring: 330 100% 71%;
+    --sidebar-ring: 0 80% 60%; /* Vibrant Red */
   }
 
   .dark {
@@ -63,8 +63,8 @@
     --popover: 240 5% 15%; /* Similar to card or bg (#242426) */
     --popover-foreground: 0 0% 95%;
 
-    --primary: 330 100% 71%; /* Hot Pink (same as light) */
-    --primary-foreground: 0 0% 100%; /* White (for contrast on pink) */
+    --primary: 0 80% 60%; /* Vibrant Red */
+    --primary-foreground: 0 0% 100%; /* White (for contrast on red) */
 
     --secondary: 180 70% 50%; /* Bright Teal (same as light) */
     --secondary-foreground: 0 0% 100%; /* White */
@@ -75,15 +75,15 @@
     --accent: 51 100% 60%; /* Bright Yellow (same as light) */
     --accent-foreground: 0 0% 15%; /* Very Dark Gray/Black (for contrast on yellow) (#262626) */
 
-    --destructive: 0 84% 60%; /* Bright Red (same as light) */
+    --destructive: 0 84% 60%; /* Bright Red (Standard destructive) */
     --destructive-foreground: 0 0% 100%; /* White */
 
     --border: 240 5% 30%; /* Dark Gray border (#4A4A4D) */
     --input: 240 5% 22%; /* Darker input background (#363638) */
-    --ring: 330 100% 71%; /* Primary color for focus rings (same as light) */
+    --ring: 0 80% 60%; /* Primary color (Vibrant Red) for focus rings */
     
     /* Chart colors for Memphis theme (kept same as light, should contrast well) */
-    --chart-1: 330 100% 71%;
+    --chart-1: 0 80% 60%; /* Vibrant Red */
     --chart-2: 180 70% 50%;
     --chart-3: 51 100% 60%;
     --chart-4: 130 60% 65%;
@@ -92,12 +92,12 @@
     /* Sidebar colors for Memphis Dark */
     --sidebar-background: 240 6% 12%; 
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 330 100% 71%;
+    --sidebar-primary: 0 80% 60%; /* Vibrant Red */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 180 70% 50%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 240 5% 25%;
-    --sidebar-ring: 330 100% 71%;
+    --sidebar-ring: 0 80% 60%; /* Vibrant Red */
   }
 }
 
@@ -107,5 +107,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .card-glow {
+    box-shadow: 0 0 15px 4px hsla(var(--foreground), 0.12);
   }
 }

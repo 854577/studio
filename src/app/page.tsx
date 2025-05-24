@@ -10,10 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2 } from 'lucide-react';
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2, Briefcase, Fish, Bed, Dumbbell } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
+import { cn } from '@/lib/utils';
+
 
 const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
@@ -59,7 +61,7 @@ function HomePageInternal() {
   const [isActionInProgress, setIsActionInProgress] = useState<boolean>(false);
   const [currentActionLoading, setCurrentActionLoading] = useState<ActionType | null>(null);
 
- useEffect(() => {
+  useEffect(() => {
     const pidFromUrl = searchParams.get('playerId');
 
     if (pidFromUrl) {
@@ -71,20 +73,20 @@ function HomePageInternal() {
           const parsedData = JSON.parse(sessionPlayerData);
           setPlayerData(parsedData);
           setCurrentPlayerId(sessionPlayerId);
-          setPlayerIdInput(pidFromUrl); // Preenche o input para consistência visual
+          setPlayerIdInput(pidFromUrl);
         } catch (e) {
           console.error("Failed to parse session player data", e);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
-           if (currentPlayerId && pidFromUrl !== currentPlayerId) { // Se estava logado em outro e URL mudou
+           if (currentPlayerId && pidFromUrl !== currentPlayerId) { 
             setPasswordInput(''); 
             setPlayerData(null);
             setCurrentPlayerId(null);
+            setLoginError(null);
+            setError(null);
           }
         }
       } else {
-        // Se não há sessão ou a sessão não corresponde ao playerId da URL
-        // Limpa o estado do jogador anterior se o pidFromUrl for diferente
         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
           setPlayerData(null); 
           setCurrentPlayerId(null); 
@@ -92,11 +94,10 @@ function HomePageInternal() {
           setLoginError(null); 
           setError(null); 
         }
-        setPlayerIdInput(pidFromUrl); // Configura o input para nova busca, se necessário
+        setPlayerIdInput(pidFromUrl); 
       }
     } else {
-      // Se não há playerId na URL, considera logout
-      if (currentPlayerId) { // Só limpa se havia um jogador ativo
+      if (currentPlayerId) { 
         setPlayerData(null);
         setCurrentPlayerId(null);
         setPlayerIdInput('');
@@ -107,7 +108,7 @@ function HomePageInternal() {
         setError(null);
       }
     }
-  }, [searchParams, currentPlayerId]); // Adicionado currentPlayerId para reavaliar quando ele muda
+  }, [searchParams, currentPlayerId]); 
 
 
   useEffect(() => {
@@ -120,13 +121,12 @@ function HomePageInternal() {
           if (endTime > Date.now()) { 
             loadedCooldowns[action] = endTime;
           } else {
-            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); // Remove se expirado
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); 
           }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      // Limpa os cooldowns se não houver jogador logado
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
@@ -152,12 +152,12 @@ function HomePageInternal() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay(); // Atualiza imediatamente
-        const id = setInterval(updateDisplay, 1000); // E então a cada segundo
+        updateDisplay(); 
+        const id = setInterval(updateDisplay, 1000); 
         intervalIds.push(id);
       } else {
         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) { // Garante limpeza
+         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) { 
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
         }
       }
@@ -182,7 +182,7 @@ function HomePageInternal() {
     setLoginError(null);
     setError(null); 
     setPlayerData(null); 
-    setCurrentPlayerId(null); // Limpa o jogador atual antes da nova busca
+    setCurrentPlayerId(null); 
     
     try {
       const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
@@ -195,22 +195,21 @@ function HomePageInternal() {
         if (fetchedPlayerData.senha === passwordInput) {
           setPlayerData(fetchedPlayerData);
           setCurrentPlayerId(trimmedId);
-          // Só atualiza a URL se ela não corresponder ao jogador buscado
           if (searchParams.get('playerId') !== trimmedId) {
              window.history.pushState(null, '', `?playerId=${trimmedId}`);
           }
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(fetchedPlayerData));
-          // Não limpa passwordInput aqui para evitar pedir de novo se a busca for chamada por outro motivo
+          // Não limpar passwordInput aqui para manter consistência se handleSearch for chamado por outros motivos
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
-          setPasswordInput(''); // Limpa senha em caso de falha
+          setPasswordInput(''); 
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
         }
       } else {
         setLoginError('Nome de usuário ou senha inválidos.');
-        setPasswordInput(''); // Limpa senha
+        setPasswordInput(''); 
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
       }
@@ -218,7 +217,7 @@ function HomePageInternal() {
       console.error('Fetch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setLoginError(`Erro ao buscar dados: ${errorMessage}`);
-      setPasswordInput(''); // Limpa senha em caso de erro de fetch
+      setPasswordInput(''); 
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
     } finally {
@@ -242,14 +241,13 @@ function HomePageInternal() {
     setIsActionInProgress(true);
     setCurrentActionLoading(actionType); 
 
-    await new Promise(resolve => setTimeout(resolve, 300)); // Pequeno delay para o spinner aparecer
+    await new Promise(resolve => setTimeout(resolve, 300)); 
     
     setActiveActionAnimation(actionType);
-    setCurrentActionLoading(null); // Para de mostrar o spinner no botão, a animação do dialog assume
+    setCurrentActionLoading(null); 
 
     setTimeout(async () => {
-      // Re-validar playerData e currentPlayerId aqui
-      if (!currentPlayerId || !playerData) { // Se durante o timeout o estado mudou
+      if (!currentPlayerId || !playerData) { 
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
         const msg = !currentPlayerId ? "ID do jogador não encontrado." : "Dados do jogador não encontrados.";
@@ -258,7 +256,6 @@ function HomePageInternal() {
         return;
       }
 
-      // Busca os dados mais recentes do jogador antes de aplicar a ação
       let currentPlayerDataForAction: Player | null = null;
       try {
         const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`);
@@ -287,8 +284,8 @@ function HomePageInternal() {
       const newXp = (currentPlayerDataForAction.xp || 0) + xpEarned;
 
       const updatedLocalPlayerData = { ...currentPlayerDataForAction, ouro: newOuro, xp: newXp };
-      setPlayerData(updatedLocalPlayerData); // Atualiza o estado local imediatamente
-      sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData)); // Atualiza sessionStorage
+      setPlayerData(updatedLocalPlayerData); 
+      sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData)); 
 
 
       try {
@@ -297,7 +294,6 @@ function HomePageInternal() {
           body: JSON.stringify({ ouro: newOuro, xp: newXp }),
         });
         if (!firebaseResponse.ok) {
-          // Tenta obter mais detalhes do erro do Firebase
           let errorDetail = `Status: ${firebaseResponse.status} - ${firebaseResponse.statusText}`;
           try { const errorData = await firebaseResponse.json(); if (errorData && errorData.error) errorDetail = typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error); } catch (e) { /* ignore parsing error */ }
           throw new Error(`Falha ao salvar no Firebase: ${errorDetail}. Tentando salvar em rpgUsuarios/${currentPlayerId}.json`);
@@ -306,7 +302,6 @@ function HomePageInternal() {
       } catch (err) {
         console.error('Detalhes do erro ao salvar no Firebase:', { message: err instanceof Error ? err.message : String(err), playerId: currentPlayerId, dataAttemptedToSave: { ouro: newOuro, xp: newXp }, originalError: err });
         setError(err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor.");
-        // Não reverte a atualização local do ouro/xp para não frustrar o usuário, mas informa do erro.
         toast({ title: "Erro ao Salvar no Servidor", description: err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.", variant: "destructive" });
       }
 
@@ -317,24 +312,21 @@ function HomePageInternal() {
       setActiveActionAnimation(null);
       setIsActionInProgress(false);
 
-    }, 1200); // Duração da animação
+    }, 1200); 
   };
 
   const currentYear = new Date().getFullYear();
 
-  // Define o conteúdo a ser renderizado com base no estado
   let contentToRender;
 
   if (loading && !playerData && !loginError) {
-    // Estado de carregamento inicial, antes de qualquer dado ou erro de login
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow mt-10">
-        <Loader2 className="w-16 h-16 text-primary" />
+        <Loader2 className="w-16 h-16 text-primary animate-spin" />
         <p className="mt-4 text-lg text-muted-foreground">Buscando informações do jogador...</p>
       </div>
     );
   } else if (!playerData && !loading) { 
-    // Não está carregando e não tem dados do jogador = tela de login ou erro de login
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4">
         {loginError && (
@@ -344,7 +336,7 @@ function HomePageInternal() {
             <AlertDescription>{loginError}</AlertDescription>
           </Alert>
         )}
-        <Card className="w-full p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50">
+        <Card className={cn("w-full p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50 card-glow")}>
           <CardHeader className="p-0 pb-6 mb-6 text-center border-b border-border/30">
             <CardTitle className="text-3xl font-bold text-primary">Bem-vindo!</CardTitle>
             <CardDescription className="mt-1 text-muted-foreground">Acesse seu perfil para continuar.</CardDescription>
@@ -380,7 +372,7 @@ function HomePageInternal() {
                 aria-label="Buscar Jogador"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <Search size={20} />
                 )}
@@ -392,10 +384,9 @@ function HomePageInternal() {
       </div>
     );
   } else if (playerData && !loginError && !loading) { 
-    // Dados do jogador carregados com sucesso
     contentToRender = (
       <div className="w-full max-w-5xl px-2 space-y-8">
-         {error && ( // Erro geral PÓS-login (ex: falha ao salvar ação)
+         {error && ( 
           <Alert variant="destructive" className="w-full max-w-md mx-auto my-4 shadow-lg">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
@@ -405,7 +396,7 @@ function HomePageInternal() {
         <PlayerStatsCard playerData={playerData} isLoading={loading && !!currentPlayerId && !playerData} />
 
         <Accordion type="multiple" defaultValue={['player-actions']} className="w-full space-y-6">
-          <AccordionItem value="player-actions" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden">
+          <AccordionItem value="player-actions" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden card-glow">
             <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:[transform:rotate(0deg)]">
               <Gamepad2 size={24} className="mr-3 data-[state=open]:rotate-0" /> Ações do Jogador 
             </AccordionTrigger>
@@ -423,7 +414,7 @@ function HomePageInternal() {
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="shop-link" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden">
+          <AccordionItem value="shop-link" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden card-glow">
             <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:[transform:rotate(0deg)]">
                Loja do Aventureiro
             </AccordionTrigger>
@@ -442,17 +433,17 @@ function HomePageInternal() {
         </Accordion>
       </div>
     );
-  } else if (loading && playerData) { // Carregando uma nova ação ou atualização enquanto os dados do jogador já estão visíveis
-     contentToRender = ( // Mostra o perfil atual, mas talvez com um overlay de loading ou botões desabilitados. A lógica atual já desabilita botões.
+  } else if (loading && playerData) { 
+     contentToRender = ( 
       <div className="w-full max-w-5xl px-2 space-y-8">
-        <PlayerStatsCard playerData={playerData} isLoading={true} /> {/* Passa isLoading para o card mostrar skeletons internos se necessário */}
-         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4">
+        <PlayerStatsCard playerData={playerData} isLoading={true} /> 
+         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
             <div className="h-8 bg-muted rounded w-1/3 animate-pulse"></div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 {[...Array(4)].map((_,i) => <div key={i} className="h-20 bg-muted rounded animate-pulse"></div>)}
             </div>
         </div>
-         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4">
+         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
             <div className="h-8 bg-muted rounded w-1/3 animate-pulse"></div>
             <div className="h-12 bg-muted rounded w-full animate-pulse"></div>
         </div>
@@ -466,7 +457,7 @@ function HomePageInternal() {
       
       <header className="mb-8 text-center sm:mb-10">
         <h1 className="flex items-center justify-center text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
-          <Dices size={40} className="mr-3 text-primary shrink-0 sm:size-48 lg:size-52" />
+          <Dices size={40} className="mr-3 text-primary shrink-0 sm:mr-4 sm:size-12 lg:size-14" />
           <span className="text-muted-foreground">RPG</span>
           <span className="ml-2 text-primary">himiko</span>
         </h1>
@@ -478,12 +469,12 @@ function HomePageInternal() {
       
       {activeActionAnimation && actionConfig[activeActionAnimation] && (
         <Dialog open={!!activeActionAnimation} onOpenChange={(open) => { if(!open) setActiveActionAnimation(null); }}>
-          <DialogContent className="sm:max-w-[320px] p-8 bg-card border-border/50 rounded-lg shadow-2xl">
+          <DialogContent className="sm:max-w-[320px] p-8 bg-card border-border/50 rounded-lg shadow-2xl card-glow">
             <DialogHeader className="items-center text-center">
               <DialogTitle className="mb-4 text-2xl font-semibold text-primary">{actionConfig[activeActionAnimation].modalTitle}</DialogTitle>
             </DialogHeader>
             <div className="flex justify-center text-primary">
-              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 80, strokeWidth: 1.5})}
+              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 80, strokeWidth: 1.5, className: "animate-pulse"})}
             </div>
           </DialogContent>
         </Dialog>
@@ -498,13 +489,12 @@ function HomePageInternal() {
   );
 }
 
-import { Briefcase, Fish, Bed, Dumbbell } from 'lucide-react'; // Necessário para actionConfig
 
 export default function HomePage() {
   return (
-    <Suspense fallback={ // Fallback para o Suspense de useSearchParams
+    <Suspense fallback={ 
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Loader2 className="w-16 h-16 text-primary" />
+        <Loader2 className="w-16 h-16 text-primary animate-spin" />
         <p className="mt-4 text-lg text-muted-foreground">Carregando aplicação...</p>
       </div>
     }>
@@ -512,6 +502,4 @@ export default function HomePage() {
     </Suspense>
   );
 }
-    
-
     
