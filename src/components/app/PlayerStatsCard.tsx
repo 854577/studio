@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles, Wallet, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { itemDetails } from '@/app/loja/lojaData';
+import { itemDetails } from '@/app/loja/lojaData'; // Importar itemDetails
 
 interface PlayerStatItemProps {
   icon: React.ElementType;
@@ -14,7 +14,7 @@ interface PlayerStatItemProps {
 }
 
 const formatNumberWithAbbreviation = (num: number): string => {
-  if (isNaN(num) || num === null) return String(num); // Handle non-numeric or null values
+  if (isNaN(num) || num === null) return String(num); 
   if (Math.abs(num) < 1000) {
     return num.toLocaleString();
   }
@@ -121,30 +121,36 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
           {playerData.nome && <CardDescription className="mt-1 text-sm sm:text-base truncate">Exibindo estatísticas para {playerData.nome}</CardDescription>}
         </div>
       </CardHeader>
-      <CardContent className="grid grid-cols-5 gap-1.5 p-2 sm:gap-2 sm:p-3">
-        {mainStats}
-        {otherStats}
+      <CardContent className="p-2 sm:p-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+          {mainStats}
+          {otherStats}
+        </div>
         
         {inventoryArray.length > 0 && (
-          <CardTitle className="col-span-full mt-3 mb-1 pt-3 border-t text-lg font-semibold text-primary">
-            Inventário
-          </CardTitle>
-        )}
-        {inventoryArray.map(([itemName, quantity]) => {
-          const itemDetail = itemDetails[itemName.toLowerCase()];
-          const IconComponent = itemDetail ? itemDetail.icon : Package;
-          return (
-            <div 
-              key={itemName} 
-              className="flex flex-col items-center text-center p-2 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50"
-              title={`${itemName} (x${quantity})`}
-            >
-              <IconComponent size={24} className="mb-1 text-primary" />
-              <p className="text-xs font-medium text-muted-foreground capitalize truncate w-full">{itemName}</p>
-              <p className="text-sm font-bold text-foreground">x{String(quantity)}</p>
+          <>
+            <CardTitle className="mt-3 mb-1 pt-3 border-t text-lg font-semibold text-primary">
+              Inventário
+            </CardTitle>
+            <div className="grid grid-cols-5 gap-1.5">
+              {inventoryArray.map(([itemName, quantity]) => {
+                const itemDetail = itemDetails[itemName.toLowerCase()];
+                const IconComponent = itemDetail ? itemDetail.icon : Package;
+                return (
+                  <div 
+                    key={itemName} 
+                    className="flex flex-col items-center text-center p-2 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50"
+                    title={`${itemName} (x${quantity})`}
+                  >
+                    <IconComponent size={24} className="mb-1 text-primary" />
+                    <p className="text-xs font-medium text-muted-foreground capitalize truncate w-full">{itemName}</p>
+                    <p className="text-sm font-bold text-foreground">x{String(quantity)}</p>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -159,14 +165,26 @@ export const PlayerStatsSkeleton: React.FC = () => (
         <Skeleton className="h-4 bg-muted rounded w-1/2 sm:w-32 mx-auto sm:mx-0" />
       </div>
     </CardHeader>
-    <CardContent className="grid grid-cols-5 gap-1.5 p-2 sm:gap-2 sm:p-3">
-      {[...Array(10)].map((_, i) => ( 
-        <div key={i} className="flex flex-col items-center p-2 bg-muted/50 rounded-lg border border-border/30">
-          <Skeleton className="h-6 w-6 bg-muted rounded-md mb-1" />
-          <Skeleton className="h-3 bg-muted rounded w-10/12 mb-0.5" />
-          <Skeleton className="h-3.5 bg-muted rounded w-1/2" />
-        </div>
-      ))}
+    <CardContent className="p-2 sm:p-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+        {[...Array(6)].map((_, i) => ( 
+          <div key={i} className="flex flex-col items-center p-2 bg-muted/50 rounded-lg border border-border/30">
+            <Skeleton className="h-6 w-6 bg-muted rounded-md mb-1" />
+            <Skeleton className="h-3 bg-muted rounded w-10/12 mb-0.5" />
+            <Skeleton className="h-3.5 bg-muted rounded w-1/2" />
+          </div>
+        ))}
+      </div>
+      <Skeleton className="h-6 w-1/3 mt-4 mb-2 bg-muted rounded" /> 
+      <div className="grid grid-cols-5 gap-1.5">
+        {[...Array(5)].map((_, i) => (
+          <div key={`inv-skel-${i}`} className="flex flex-col items-center p-2 bg-muted/50 rounded-lg border border-border/30">
+            <Skeleton className="h-6 w-6 bg-muted rounded-md mb-1" />
+            <Skeleton className="h-3 bg-muted rounded w-10/12 mb-0.5" />
+            <Skeleton className="h-3.5 bg-muted rounded w-1/2" />
+          </div>
+        ))}
+      </div>
     </CardContent>
   </Card>
 );
