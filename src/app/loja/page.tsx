@@ -36,7 +36,7 @@ function LojaContent() {
       }
       const data: Player | null = await response.json();
       if (data) {
-        setPlayerData({ ...data, nome: data.nome || id }); 
+        setPlayerData({ ...data, nome: data.nome || id });
       } else {
         setError(`Jogador com ID "${id}" não encontrado.`);
         setPlayerData(null);
@@ -77,17 +77,18 @@ function LojaContent() {
     if (result.success) {
       toast({ title: "Compra Realizada!", description: result.message });
       if (result.updatedPlayer) {
-        setPlayerData(result.updatedPlayer); 
+        setPlayerData(result.updatedPlayer);
         sessionStorage.setItem('playerData', JSON.stringify(result.updatedPlayer));
       } else {
+        // Re-fetch player data if updatedPlayer is not returned to ensure UI consistency
         fetchPlayerData(playerId);
       }
     } else {
       toast({ title: "Erro na Compra", description: result.message, variant: "destructive" });
     }
   };
-  
-  if (loading) {
+
+  if (loading && !playerData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background text-foreground">
         <Loader2 className="w-16 h-16 text-primary" />
@@ -142,13 +143,13 @@ function LojaContent() {
       <Accordion type="multiple" className="w-full space-y-6">
         {shopCategoriesData.map((category) => (
           <AccordionItem value={category.name} key={category.name} className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden">
-            <AccordionTrigger className="px-6 py-4 text-2xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30">
+            <AccordionTrigger className="px-6 py-4 text-2xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:rotate-0">
               {category.name}
             </AccordionTrigger>
             <AccordionContent className="p-4 sm:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {category.items.map((item) => (
-                  <Card key={item.name} className="flex flex-col overflow-hidden shadow-md bg-card/80 border-border/50 hover:shadow-xl hover:border-primary transition-all duration-200">
+                  <Card key={item.name} className="flex flex-col overflow-hidden shadow-md bg-card/80 border-border/50 hover:shadow-xl hover:border-primary transition-shadow duration-200">
                     <CardHeader className="items-center p-4 sm:p-5 text-center">
                       <item.icon size={48} className={cn("mb-3", item.color || "text-primary")} />
                       <CardTitle className="text-xl font-semibold truncate" title={item.name}>{item.name}</CardTitle>
@@ -163,7 +164,7 @@ function LojaContent() {
                         className="w-full mt-auto text-base h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md"
                       >
                         {purchasingItemId === item.name ? (
-                          <Loader2 className="w-5 h-5 mr-2 " />
+                          <Loader2 className="w-5 h-5 mr-2" />
                         ) : (
                           <ShoppingCart className="w-5 h-5 mr-2" />
                         )}
@@ -194,7 +195,7 @@ export default function LojaPage() {
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Loader2 className="w-16 h-16 " />
+        <Loader2 className="w-16 h-16" />
         <p className="mt-6 text-xl text-muted-foreground">Carregando...</p>
       </div>
     }>
