@@ -1,11 +1,10 @@
 
 'use client';
 
-import React from 'react';
 import type { Player } from '@/types/player';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Zap, Sparkles, Package, Wallet } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Zap, Sparkles, Wallet, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { itemDetails } from '@/app/loja/lojaData'; 
 
@@ -36,7 +35,7 @@ const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, valu
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center p-2 space-y-1.5 text-center rounded-lg bg-card/70 border border-border/30 shadow-md min-h-[70px] overflow-hidden">
+    <div className="flex flex-col items-center justify-center p-2 space-y-1.5 text-center rounded-lg bg-card/70 border border-border/30 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200">
       <Icon size={22} className={iconColor || 'text-primary'} />
       <p className="text-[11px] font-medium text-muted-foreground truncate w-full" title={label}>{label}</p>
       <p className="text-xs font-semibold text-foreground break-words w-full" title={String(value)}>
@@ -64,7 +63,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
         </CardHeader>
         <CardContent className="p-2 sm:p-3">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-            {[...Array(7)].map((_, index) => ( // 7 for main stats
+            {[...Array(7)].map((_, index) => ( 
               <PlayerStatItem key={`skel-stat-${index}`} icon={User} label="Carregando" value="0" isLoading={true} />
             ))}
           </div>
@@ -85,7 +84,15 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 
   if (!playerData) return null;
 
+  const personalizedInitial = "H";
+  let fallbackName = personalizedInitial + "?";
+  if (playerData.nome && playerData.nome.length > 0) {
+    fallbackName = personalizedInitial + playerData.nome.substring(0, 1).toUpperCase();
+  }
+
+
   const mainStats = [
+    { icon: Wallet, label: 'Saldo (BRL)', value: playerData.saldoBRL !== undefined ? playerData.saldoBRL.toFixed(2) : 'N/A', color: 'text-green-500' },
     { icon: Heart, label: 'Vida', value: playerData.vida, color: 'text-destructive' },
     { icon: CircleDollarSign, label: 'Ouro', value: playerData.ouro, color: 'text-[hsl(var(--chart-5))]' },
     { icon: Star, label: 'Level', value: playerData.nivel, color: 'text-[hsl(var(--chart-4))]' },
@@ -94,7 +101,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
     { icon: Sparkles, label: 'Mana', value: playerData.mana, color: 'text-[hsl(var(--chart-1))]' },
   ];
 
-  const ignoredKeys = ['nome', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana', 'senha', 'id', 'inventario'];
+  const ignoredKeys = ['nome', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana', 'senha', 'id', 'inventario', 'saldoBRL', 'dinheiro'];
   const otherStats = Object.entries(playerData)
     .filter(([key]) => !ignoredKeys.includes(key.toLowerCase()) && playerData[key] !== undefined && playerData[key] !== null && playerData[key] !== '')
     .map(([key, value]) => {
@@ -117,7 +124,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
       <CardHeader className="flex flex-col items-center gap-4 p-4 text-center border-b sm:flex-row sm:p-6 sm:text-left border-border/30">
         <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-primary shadow-lg">
           <AvatarImage src={`https://placehold.co/120x120.png`} alt={playerData.nome || 'Avatar'} data-ai-hint="character avatar"/>
-          <AvatarFallback className="text-3xl">{playerData.nome ? playerData.nome.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
+          <AvatarFallback className="text-3xl">{fallbackName}</AvatarFallback>
         </Avatar>
         <div className="mt-2 sm:mt-0">
           <CardTitle className="text-3xl sm:text-4xl font-bold text-primary break-words">{playerData.nome || 'Nome Desconhecido'}</CardTitle>
@@ -144,7 +151,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
                 const itemDetail = itemDetails[itemName.toLowerCase()];
                 const IconComponent = itemDetail ? itemDetail.icon : Package;
                 return (
-                  <div key={itemName} className="flex flex-col items-center justify-center p-2 space-y-1 text-center rounded-lg bg-card/70 border border-border/30 shadow-md min-h-[70px] overflow-hidden">
+                  <div key={itemName} className="flex flex-col items-center justify-center p-2 space-y-1 text-center rounded-lg bg-card/70 border border-border/30 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200">
                     <IconComponent size={22} className={itemDetail?.color || 'text-accent'} />
                     <p className="text-[11px] font-medium text-muted-foreground capitalize truncate w-full" title={itemName}>{itemName}</p>
                     <p className="text-xs font-semibold text-foreground">x{quantity}</p>
@@ -160,3 +167,5 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 };
 
 export default PlayerStatsCard;
+
+    
