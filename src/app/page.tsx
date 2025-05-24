@@ -116,7 +116,7 @@ export default function HomePage() {
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             {playerData.vida !== undefined && (
               <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                <Heart size={24} className="mr-3 text-primary shrink-0" />
+                <Heart size={24} className="mr-3 text-destructive shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Health</p>
                   <p className="text-lg font-bold text-foreground">{playerData.vida}</p>
@@ -125,7 +125,7 @@ export default function HomePage() {
             )}
             {playerData.dinheiro !== undefined && (
               <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                <CircleDollarSign size={24} className="mr-3 text-accent shrink-0" />
+                <CircleDollarSign size={24} className="mr-3 text-foreground shrink-0" /> 
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Money</p>
                   <p className="text-lg font-bold text-foreground">{playerData.dinheiro.toLocaleString()}</p>
@@ -134,7 +134,7 @@ export default function HomePage() {
             )}
             {playerData.nivel !== undefined && (
               <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                <Star size={24} className="mr-3 text-accent shrink-0" />
+                <Star size={24} className="mr-3 text-foreground shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Level</p>
                   <p className="text-lg font-bold text-foreground">{playerData.nivel}</p>
