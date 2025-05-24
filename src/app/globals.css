@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -62,8 +58,8 @@ body {
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%; /* Cinza mais claro para texto muted */
 
-    --accent: 240 4.8% 95.9%; /* Cinza claro para accent (pode ser um azul sutil também) */
-    --accent-foreground: 240 5.9% 10%;
+    --accent: 240 4.8% 15.9%; /* Cinza escuro para accent, alinhado com Vercel */
+    --accent-foreground: 0 0% 98%; /* Texto claro para accent escuro */
 
     --destructive: 0 62.8% 30.6%; /* Vermelho escuro para destructive */
     --destructive-foreground: 0 0% 98%;
@@ -96,5 +92,6 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    /* font-family: Arial, Helvetica, sans-serif; REMOVIDO para usar Geist */
   }
 }

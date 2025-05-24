@@ -100,14 +100,14 @@ export default function HomePage() {
     if (!trimmedId) {
       setError('Player ID cannot be empty.');
       setPlayerData(null);
-      setCurrentPlayerId(null); // Reset currentPlayerId
+      setCurrentPlayerId(null); 
       return;
     }
 
     setLoading(true);
     setError(null);
     setPlayerData(null);
-    setCurrentPlayerId(null); // Reset currentPlayerId before new search
+    setCurrentPlayerId(null); 
 
     try {
       const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
@@ -118,7 +118,7 @@ export default function HomePage() {
 
       if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[trimmedId]) {
         setPlayerData(allPlayersData[trimmedId]);
-        setCurrentPlayerId(trimmedId); // Set currentPlayerId on successful search
+        setCurrentPlayerId(trimmedId); 
       } else if (allPlayersData === null || typeof allPlayersData !== 'object') {
         setError('Invalid data format received from API or no players found.');
       } else {
@@ -206,8 +206,14 @@ export default function HomePage() {
                 errorDetail = typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error);
             }
         } catch (e) {
-            // Ignora se não conseguir parsear o JSON do erro
+          console.warn("Could not parse Firebase error response JSON", e)
         }
+        console.error('Firebase save error details:', {
+            message: `Falha ao salvar no Firebase: ${errorDetail}.`,
+            path: `rpgUsuarios/${currentPlayerId}`,
+            status: firebaseResponse.status,
+            statusText: firebaseResponse.statusText,
+        });
         throw new Error(`Falha ao salvar no Firebase: ${errorDetail}. Por favor, verifique as regras de segurança do seu Firebase Realtime Database para garantir que a escrita está permitida para o caminho 'rpgUsuarios/${currentPlayerId}'.`);
       }
 
@@ -217,7 +223,6 @@ export default function HomePage() {
       });
 
     } catch (err) {
-      // Log mais detalhado para o console do desenvolvedor
       console.error('Detalhes do erro ao salvar no Firebase:', {
         message: err instanceof Error ? err.message : String(err),
         playerId: currentPlayerId,
@@ -361,7 +366,7 @@ export default function HomePage() {
               </CardTitle>
               <CardDescription>Realize ações para ganhar recompensas.</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {(['trabalhar', 'pescar', 'dormir'] as ActionType[]).map((action) => {
                 const Icon = action === 'trabalhar' ? Briefcase : action === 'pescar' ? Fish : Bed;
                 const currentCooldown = timeLeftForAction[action];
@@ -371,14 +376,12 @@ export default function HomePage() {
                     key={action}
                     onClick={() => handlePlayerAction(action)}
                     disabled={isDisabled}
-                    className="w-full py-4 text-sm sm:text-base flex flex-col h-auto sm:flex-row sm:py-3 sm:items-center sm:justify-center"
+                    className="w-full py-4 text-sm flex flex-col items-center justify-center h-auto min-h-[5rem]"
                     variant={isDisabled ? "secondary" : "default"}
                   >
-                    <Icon className={`mr-0 mb-1 sm:mr-2 sm:mb-0 h-5 w-5 ${isDisabled ? 'text-muted-foreground' : ''}`} />
-                    <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
-                      <span className="font-semibold">{action.charAt(0).toUpperCase() + action.slice(1)}</span>
-                      {isDisabled && <span className="text-xs text-muted-foreground">({currentCooldown})</span>}
-                    </div>
+                    <Icon className={`mb-1 h-6 w-6 ${isDisabled ? 'text-muted-foreground' : ''}`} />
+                    <span className="font-semibold">{action.charAt(0).toUpperCase() + action.slice(1)}</span>
+                    {isDisabled && <span className="text-xs text-muted-foreground mt-0.5">({currentCooldown})</span>}
                   </Button>
                 );
               })}
@@ -389,5 +392,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
