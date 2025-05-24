@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className=""> {/* Removed "dark" class to default to light theme */}
+    <html lang="en"> {/* Removed className="" to potentially fix hydration error */}
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
         {/* Removed star background divs */}
         <div className="relative z-10 min-h-screen"> {/* Ensure content is above any potential fixed/absolute background elements */}
