@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, type FormEvent } from 'react';
@@ -62,9 +63,9 @@ export default function HomePage() {
           type="text"
           value={playerIdInput}
           onChange={(e) => setPlayerIdInput(e.target.value)}
-          placeholder="Enter Player ID (e.g., HimikoChan)"
+          placeholder="nome do usuário"
           className="flex-grow text-base h-12"
-          aria-label="Player ID Input"
+          aria-label="Nome do usuário Input"
         />
         <Button 
           type="submit" 
@@ -109,7 +110,7 @@ export default function HomePage() {
           <CardHeader className="pb-4">
             <CardTitle className="text-2xl sm:text-3xl text-primary flex items-center">
               <User size={30} className="mr-3 shrink-0" />
-              {playerData.nome || `Player ID: ${playerIdInput.trim()}`}
+              {playerData.nome}
             </CardTitle>
             {playerData.nome && <CardDescription className="mt-1">Displaying stats for {playerData.nome}</CardDescription>}
           </CardHeader>
