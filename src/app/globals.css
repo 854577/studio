@@ -104,28 +104,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-@layer utilities {
-  .animated-rgb-border {
-    position: relative; /* Necessário para o posicionamento do ::before */
-    /* O Card do ShadCN já tem borda e bg-card. Vamos garantir que o ::before fique por cima ou em volta */
-    z-index: 0; /* Para criar um contexto de empilhamento */
-  }
-
-  .animated-rgb-border::before {
-    content: '';
-    position: absolute;
-    top: -2px; left: -2px; right: -2px; bottom: -2px; /* Cobre a área da borda */
-    background: linear-gradient(90deg, hsl(0, 100%, 50%), hsl(40, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(240, 100%, 50%), hsl(280, 100%, 50%), hsl(300, 100%, 50%), hsl(0, 100%, 50%));
-    background-size: 300% 100%; /* Aumenta o tamanho para permitir o movimento do gradiente */
-    border-radius: inherit; /* Herda o border-radius do elemento pai (Card) */
-    animation: rgb-border-flow 4s linear infinite;
-    z-index: -1; /* Coloca o pseudo-elemento atrás do conteúdo do Card */
-    filter: blur(1px); /* Suaviza um pouco o brilho */
-  }
-
-  @keyframes rgb-border-flow {
-    0% { background-position: 0% center; }
-    100% { background-position: 300% center; }
-  }
-}

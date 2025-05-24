@@ -307,10 +307,7 @@ export default function HomePage() {
 
       {playerData && !loading && !error && (
         <>
-          <Card className={cn(
-            "w-full max-w-lg shadow-2xl bg-card border-border/50 relative overflow-hidden",
-            "animated-rgb-border"
-            )}>
+          <Card className="w-full max-w-lg shadow-2xl bg-card border-border/50 relative overflow-hidden">
             <CardHeader className="pb-4">
               <CardTitle className="text-2xl sm:text-3xl text-primary flex items-center">
                 <User size={30} className="mr-3 shrink-0 text-primary" />
@@ -387,10 +384,7 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          <Card className={cn(
-            "w-full max-w-lg mt-8 shadow-xl bg-card border-border/50 relative overflow-hidden",
-             "animated-rgb-border"
-            )}>
+          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50 relative overflow-hidden">
             <CardHeader>
               <CardTitle className="text-xl flex items-center">
                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 lucide lucide-gamepad-2"><line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect width="20" height="12" x="2" y="6" rx="2"/><path d="M6 18h4"/><path d="M14 18h4"/></svg>
