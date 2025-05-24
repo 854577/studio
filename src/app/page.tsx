@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Heart, CircleDollarSign, Star, User, BarChart3, Search, AlertCircle, Info, Briefcase, Fish, Bed, Zap, Sparkles, Dumbbell } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { cn } from '@/lib/utils';
 
 export default function HomePage() {
   const [playerIdInput, setPlayerIdInput] = useState<string>('');
@@ -211,13 +212,14 @@ export default function HomePage() {
         } catch (e) {
           console.warn("Could not parse Firebase error response JSON", e)
         }
+        const errorMessage = `Falha ao salvar no Firebase: ${errorDetail}. Verifique as regras de segurança do seu Firebase Realtime Database para 'rpgUsuarios/${currentPlayerId}'.`;
         console.error('Firebase save error details:', {
-            message: `Falha ao salvar no Firebase: ${errorDetail}.`,
+            message: errorMessage,
             path: `rpgUsuarios/${currentPlayerId}`,
             status: firebaseResponse.status,
             statusText: firebaseResponse.statusText,
         });
-        throw new Error(`Falha ao salvar no Firebase: ${errorDetail}. Por favor, verifique as regras de segurança do seu Firebase Realtime Database para garantir que a escrita está permitida para o caminho 'rpgUsuarios/${currentPlayerId}'.`);
+        throw new Error(errorMessage);
       }
 
       toast({
@@ -259,13 +261,16 @@ export default function HomePage() {
           value={playerIdInput}
           onChange={(e) => setPlayerIdInput(e.target.value)}
           placeholder="nome do usuário"
-          className="flex-grow text-base h-12"
+          className={cn(
+            "flex-grow text-base h-12",
+            "input-focus-rgb-ring" 
+          )}
           aria-label="Nome do usuário Input"
         />
         <Button 
           type="submit" 
           disabled={loading || !playerIdInput.trim()} 
-          className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
+          className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6 transition-transform duration-200 ease-in-out hover:scale-[1.03]"
           aria-label="Search Player"
         >
           {loading ? (
@@ -304,7 +309,10 @@ export default function HomePage() {
 
       {playerData && !loading && !error && (
         <>
-          <Card className="w-full max-w-lg shadow-2xl bg-card border border-border/50">
+          <Card className={cn(
+            "w-full max-w-lg shadow-2xl bg-card border-border/50 relative overflow-hidden",
+            playerData && "animated-rgb-border"
+            )}>
             <CardHeader className="pb-4">
               <CardTitle className="text-2xl sm:text-3xl text-primary flex items-center">
                 <User size={30} className="mr-3 shrink-0 text-primary" />
@@ -381,7 +389,10 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
+          <Card className={cn(
+            "w-full max-w-lg mt-8 shadow-xl bg-card border-border/50 relative overflow-hidden",
+             playerData && "animated-rgb-border"
+            )}>
             <CardHeader>
               <CardTitle className="text-xl flex items-center">
                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 lucide lucide-gamepad-2"><line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect width="20" height="12" x="2" y="6" rx="2"/><path d="M6 18h4"/><path d="M14 18h4"/></svg>
@@ -399,7 +410,7 @@ export default function HomePage() {
                     key={action}
                     onClick={() => handlePlayerAction(action)}
                     disabled={isDisabled}
-                    className="w-full py-6 text-sm flex flex-col items-center justify-center h-auto min-h-[7rem]"
+                    className="w-full py-6 text-sm flex flex-col items-center justify-center h-auto min-h-[7rem] transition-transform duration-200 ease-in-out hover:scale-[1.03] disabled:transform-none"
                     variant={isDisabled ? "secondary" : "default"}
                   >
                     <Icon className={`mb-2 h-8 w-8 ${isDisabled ? 'text-muted-foreground' : ''}`} />
@@ -415,3 +426,4 @@ export default function HomePage() {
     </div>
   );
 }
+
