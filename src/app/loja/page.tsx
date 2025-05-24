@@ -80,6 +80,7 @@ function LojaContent() {
         setPlayerData(result.updatedPlayer); 
         sessionStorage.setItem('playerData', JSON.stringify(result.updatedPlayer));
       } else {
+        // Se updatedPlayer não for retornado, recarregar os dados para refletir a mudança no ouro.
         fetchPlayerData(playerId);
       }
     } else {
@@ -127,7 +128,7 @@ function LojaContent() {
   }
 
   return (
-    <div className="container py-10 mx-auto max-w-6xl px-4">
+    <div className="container py-10 mx-auto max-w-6xl px-4 animate-in fade-in-0 duration-500">
       <header className="mb-10 text-center border-b pb-6 border-border/30">
         <h1 className="flex items-center justify-center mb-3 text-5xl font-extrabold tracking-tight text-primary sm:text-6xl">
           <ShoppingBasket size={50} className="mr-4" /> Loja do Aventureiro
@@ -139,7 +140,7 @@ function LojaContent() {
         </div>
       </header>
 
-      <Accordion type="multiple" collapsible className="w-full space-y-6">
+      <Accordion type="multiple" className="w-full space-y-6">
         {shopCategoriesData.map((category) => (
           <AccordionItem value={category.name} key={category.name} className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden">
             <AccordionTrigger className="px-6 py-4 text-2xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30">
