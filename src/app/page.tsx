@@ -289,18 +289,55 @@ export default function HomePage() {
       )}
 
       {loading && !error && (
-         <Card className="w-full max-w-lg shadow-2xl animate-pulse bg-card border border-border/50">
-          <CardHeader className="pb-4">
-            <div className="h-8 bg-muted rounded w-3/4"></div>
-            <div className="h-4 bg-muted rounded w-1/2 mt-2"></div>
+         <Card className="w-full max-w-lg shadow-2xl animate-pulse bg-card border-border/50">
+          <CardHeader className="pb-4 p-6">
+            <div className="h-7 bg-muted rounded w-3/5 mb-3"></div> {/* Placeholder para o título (nome do jogador) */}
+            <div className="h-4 bg-muted rounded w-4/5"></div> {/* Placeholder para a descrição */}
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
-            <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
-            <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
-            <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
-             <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
-            <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6 pt-2">
+            {/* Placeholders para 6 itens de estatísticas */}
+            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
+              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
+              <div>
+                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
+                <div className="h-5 bg-muted rounded w-12"></div>
+              </div>
+            </div>
+            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
+              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
+              <div>
+                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
+                <div className="h-5 bg-muted rounded w-12"></div>
+              </div>
+            </div>
+            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
+              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
+              <div>
+                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
+                <div className="h-5 bg-muted rounded w-12"></div>
+              </div>
+            </div>
+            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
+              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
+              <div>
+                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
+                <div className="h-5 bg-muted rounded w-12"></div>
+              </div>
+            </div>
+            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
+              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
+              <div>
+                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
+                <div className="h-5 bg-muted rounded w-12"></div>
+              </div>
+            </div>
+            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
+              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
+              <div>
+                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
+                <div className="h-5 bg-muted rounded w-12"></div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -418,4 +455,3 @@ export default function HomePage() {
     </div>
   );
 }
-
