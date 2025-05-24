@@ -42,26 +42,37 @@ body {
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 287 20% 9%; /* #1A121D */
+    --foreground: 287 10% 88%; /* #E0DDE3 */
+
+    --card: 287 18% 12%; /* #221A25 */
+    --card-foreground: 287 10% 88%;
+
+    --popover: 287 20% 9%;
+    --popover-foreground: 287 10% 88%;
+
+    --primary: 281 45% 53%; /* #A050BE */
+    --primary-foreground: 287 10% 95%; /* #F1EFF2 */
+
+    --secondary: 287 15% 20%; /* #3A2F3F */
+    --secondary-foreground: 287 10% 88%;
+
+    --muted: 287 15% 25%; /* #4A3F4F */
+    --muted-foreground: 287 10% 65%; /* #A8A2AC */
+
+    --accent: 159 45% 53%; /* #50BE98 */
+    --accent-foreground: 287 20% 10%; /* #1C141F, dark text for accent background */
+
+    --destructive: 0 72% 51%; /* Default ShadCN destructive red */
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+
+    --border: 287 15% 18%; /* #302635 */
+    --input: 287 15% 15%; /* #2B222F */
+    --ring: 159 45% 60%; /* Slightly lighter accent for rings for visibility */
+    
+    /* Keeping chart and sidebar colors from default dark theme for now */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
