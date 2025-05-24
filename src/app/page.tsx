@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, AlertCircle, ShoppingBag, KeyRound, Briefcase, Fish, Bed, Dumbbell, UserRound } from 'lucide-react'; // Adicionado UserRound
-import { Label } from '@/components/ui/label'; // Adicionado Label
+import { Search, AlertCircle, ShoppingBag, KeyRound, Briefcase, Fish, Bed, Dumbbell, UserRound } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard, { PlayerStatsSkeleton } from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
@@ -486,9 +486,6 @@ function HomePageContent() {
         <p className="text-sm text-muted-foreground">
           &copy; {currentYear} Yuri Draco. Todos os direitos reservados.
         </p>
-        <p className="text-xs text-muted-foreground mt-2">
-          AVISO: A verificação de senha neste protótipo é apenas para demonstração e não é segura para uso em produção.
-        </p>
       </footer>
     </div>
   );
@@ -501,3 +498,4 @@ export default function HomePage() {
     </Suspense>
   );
 }
+
