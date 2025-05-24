@@ -1,8 +1,17 @@
 
+import type { LucideIcon } from 'lucide-react';
+import {
+  Sword, Axe, PocketKnife, Crosshair, Wand2, Shield, Shirt, VenetianMask,
+  Helmet, Footprints, Hand, Layers, CircleDollarSign, Diamond, Target,
+  Ring, BookOpen, Flame, Gem, Sigma, EyeOff, BookMarked, Medal, HelpCircle,
+  HeartPulse, BatteryCharging, Beef, Torch, IterationCw, BriefcaseMedical, GlassWater, ArrowRight, PaintBucket, Vegan,
+  Bird, Option, CloudDrizzle, KeyRound, Scroll, Hammer, Feather, Box, Zap, Sparkles, Package, ShoppingBasket, Tent
+} from 'lucide-react';
+
 export interface ShopItem {
   name: string;
   price: number;
-  icon?: React.ElementType; // Opcional: para ícones no futuro
+  icon: LucideIcon;
 }
 
 export interface ShopCategory {
@@ -10,33 +19,103 @@ export interface ShopCategory {
   items: ShopItem[];
 }
 
-export const itemPrices: Record<string, number> = {
-  "espada": 80, "machado": 85, "adaga": 60, "lança": 75, "arco": 90, "cajado": 100, "katana": 120, "tridente": 110, "foice": 130, "alabarda": 140,
-  "escudo": 60, "capa": 50, "couraça": 95, "elmo": 70, "botas": 40, "luvas": 30, "armadura leve": 100, "armadura pesada": 140, "escama": 85, "manto": 60,
-  "anel mágico": 200, "colar de mana": 190, "livro antigo": 180, "orbe de fogo": 210, "gema azul": 160, "runas": 170, "poção de invisibilidade": 220, "tomo arcano": 230, "cristal sagrado": 250, "talismã": 240,
-  "poção de vida": 30, "poção de energia": 35, "ração": 20, "tocha": 10, "corda": 15, "kit de primeiros socorros": 50, "água encantada": 45, "flechas": 25, "óleo de arma": 40, "bálsamo": 30,
-  "grifo de guerra": 1000, "cavalo de elite": 900, "capa da sombra": 850, "espada flamejante": 1200, "armadura celestial": 1500, "chave dourada": 750, "relíquia dos antigos": 1300, "elmo do trovão": 1100, "martelo divino": 1400, "asa etérea": 2000
+// Mapeamento de nomes de itens para seus ícones e preços
+const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
+  // Armas
+  "espada": { price: 80, icon: Sword },
+  "machado": { price: 85, icon: Axe },
+  "adaga": { price: 60, icon: PocketKnife },
+  "lança": { price: 75, icon: VenetianMask }, // Usando VenetianMask como placeholder para Lança
+  "arco": { price: 90, icon: Target }, // Usando Target como placeholder para Arco
+  "cajado": { price: 100, icon: Wand2 },
+  "katana": { price: 120, icon: Sword },
+  "tridente": { price: 110, icon: Target }, // Usando Target como placeholder
+  "foice": { price: 130, icon: Target }, // Usando Target como placeholder
+  "alabarda": { price: 140, icon: Target }, // Usando Target como placeholder
+
+  // Armaduras
+  "escudo": { price: 60, icon: Shield },
+  "capa": { price: 50, icon: Shirt }, // Usando Shirt como placeholder para Capa
+  "couraça": { price: 95, icon: Shield }, // Usando Shield para Couraça
+  "elmo": { price: 70, icon: Helmet },
+  "botas": { price: 40, icon: Footprints },
+  "luvas": { price: 30, icon: Hand },
+  "armadura leve": { price: 100, icon: Shirt },
+  "armadura pesada": { price: 140, icon: Shield }, // Usando Shield para Armadura Pesada
+  "escama": { price: 85, icon: Layers },
+  "manto": { price: 60, icon: Shirt }, // Usando Shirt para Manto
+
+  // Itens Mágicos
+  "anel mágico": { price: 200, icon: Ring },
+  "colar de mana": { price: 190, icon: CircleDollarSign }, // Usando CircleDollarSign para Colar (genérico)
+  "livro antigo": { price: 180, icon: BookOpen },
+  "orbe de fogo": { price: 210, icon: Flame },
+  "gema azul": { price: 160, icon: Gem },
+  "runas": { price: 170, icon: Sigma },
+  "poção de invisibilidade": { price: 220, icon: EyeOff },
+  "tomo arcano": { price: 230, icon: BookMarked },
+  "cristal sagrado": { price: 250, icon: Diamond },
+  "talismã": { price: 240, icon: Medal },
+
+  // Suprimentos
+  "poção de vida": { price: 30, icon: HeartPulse },
+  "poção de energia": { price: 35, icon: BatteryCharging },
+  "ração": { price: 20, icon: Beef },
+  "tocha": { price: 10, icon: Torch },
+  "corda": { price: 15, icon: IterationCw },
+  "kit de primeiros socorros": { price: 50, icon: BriefcaseMedical },
+  "água encantada": { price: 45, icon: GlassWater },
+  "flechas": { price: 25, icon: ArrowRight },
+  "óleo de arma": { price: 40, icon: PaintBucket },
+  "bálsamo": { price: 30, icon: Vegan },
+
+  // Raros/Caros
+  "grifo de guerra": { price: 1000, icon: Bird },
+  "cavalo de elite": { price: 900, icon: HelpCircle }, // HelpCircle como placeholder para cavalo
+  "capa da sombra": { price: 850, icon: CloudDrizzle },
+  "espada flamejante": { price: 1200, icon: Flame }, // Usando Flame para espada flamejante
+  "armadura celestial": { price: 1500, icon: Sparkles }, // Usando Sparkles para armadura celestial
+  "chave dourada": { price: 750, icon: KeyRound },
+  "relíquia dos antigos": { price: 1300, icon: Scroll },
+  "elmo do trovão": { price: 1100, icon: Zap }, // Usando Zap para elmo do trovão
+  "martelo divino": { price: 1400, icon: Hammer },
+  "asa etérea": { price: 2000, icon: Feather },
+};
+
+// Helper para criar um ShopItem a partir do nome
+const createShopItem = (name: string): ShopItem => {
+  const detail = itemDetails[name];
+  if (!detail) {
+    console.warn(`Detalhes não encontrados para o item: ${name}. Usando ícone padrão.`);
+    return { name, price: 0, icon: Box }; // Fallback para item não encontrado
+  }
+  return { name, price: detail.price, icon: detail.icon };
 };
 
 export const shopCategoriesData: ShopCategory[] = [
   {
     name: "Armas",
-    items: ['espada', 'machado', 'adaga', 'lança', 'arco', 'cajado', 'katana', 'tridente', 'foice', 'alabarda'].map(name => ({ name, price: itemPrices[name] }))
+    items: ['espada', 'machado', 'adaga', 'lança', 'arco', 'cajado', 'katana', 'tridente', 'foice', 'alabarda'].map(createShopItem)
   },
   {
     name: "Armaduras",
-    items: ['escudo', 'capa', 'couraça', 'elmo', 'botas', 'luvas', 'armadura leve', 'armadura pesada', 'escama', 'manto'].map(name => ({ name, price: itemPrices[name] }))
+    items: ['escudo', 'capa', 'couraça', 'elmo', 'botas', 'luvas', 'armadura leve', 'armadura pesada', 'escama', 'manto'].map(createShopItem)
   },
   {
     name: "Itens Mágicos",
-    items: ['anel mágico', 'colar de mana', 'livro antigo', 'orbe de fogo', 'gema azul', 'runas', 'poção de invisibilidade', 'tomo arcano', 'cristal sagrado', 'talismã'].map(name => ({ name, price: itemPrices[name] }))
+    items: ['anel mágico', 'colar de mana', 'livro antigo', 'orbe de fogo', 'gema azul', 'runas', 'poção de invisibilidade', 'tomo arcano', 'cristal sagrado', 'talismã'].map(createShopItem)
   },
   {
     name: "Suprimentos",
-    items: ['poção de vida', 'poção de energia', 'ração', 'tocha', 'corda', 'kit de primeiros socorros', 'água encantada', 'flechas', 'óleo de arma', 'bálsamo'].map(name => ({ name, price: itemPrices[name] }))
+    items: ['poção de vida', 'poção de energia', 'ração', 'tocha', 'corda', 'kit de primeiros socorros', 'água encantada', 'flechas', 'óleo de arma', 'bálsamo'].map(createShopItem)
   },
   {
     name: "Raros/Caros",
-    items: ['grifo de guerra', 'cavalo de elite', 'capa da sombra', 'espada flamejante', 'armadura celestial', 'chave dourada', 'relíquia dos antigos', 'elmo do trovão', 'martelo divino', 'asa etérea'].map(name => ({ name, price: itemPrices[name] }))
+    items: ['grifo de guerra', 'cavalo de elite', 'capa da sombra', 'espada flamejante', 'armadura celestial', 'chave dourada', 'relíquia dos antigos', 'elmo do trovão', 'martelo divino', 'asa etérea'].map(createShopItem)
   }
 ];
+
+// Exportar itemPrices para manter compatibilidade se shopActions o usar diretamente
+export const itemPrices: Record<string, number> = Object.fromEntries(
+  Object.entries(itemDetails).map(([name, { price }]) => [name, price])
+);

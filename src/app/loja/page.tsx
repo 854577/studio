@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from "@/hooks/use-toast";
-import { CircleDollarSign, ShoppingCart, ChevronLeft, Coins, Warehouse } from 'lucide-react';
+import { CircleDollarSign, ShoppingCart, ChevronLeft, Coins, Warehouse, Package, Gem } from 'lucide-react'; // Adicionado Package e Gem
 import { Skeleton } from '@/components/ui/skeleton';
 
 function LojaContent() {
@@ -26,19 +26,17 @@ function LojaContent() {
 
   const fetchPlayerData = async (id: string) => {
     setIsLoadingPlayer(true);
-    setPlayerData(null); // Limpa dados antigos antes de buscar novos
+    setPlayerData(null); 
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${id}.json`);
       if (!response.ok) {
-        // Mesmo que !response.ok, pode ser que o Firebase tenha retornado algo útil, mas vamos tratar como erro de rede/servidor aqui.
-        // Se o jogador não existe, o Firebase retorna 200 OK com null no corpo.
         throw new Error(`Erro ao buscar dados do jogador. Status: ${response.status}`);
       }
       const data: Player | null = await response.json();
-      if (!data) { // Firebase retorna null para nós não existentes
+      if (!data) { 
          throw new Error(`Jogador com ID "${id}" não encontrado.`);
       }
-      setPlayerData({ ...data, nome: data.nome || id }); // Garante que playerData tenha um nome
+      setPlayerData({ ...data, nome: data.nome || id }); 
     } catch (error) {
       console.error("Erro ao buscar dados do jogador:", error);
       toast({
@@ -46,7 +44,7 @@ function LojaContent() {
         description: error instanceof Error ? error.message : "Não foi possível carregar dados do jogador.",
         variant: "destructive",
       });
-      setPlayerData(null); // Garante que não há dados de jogador se a busca falhar
+      setPlayerData(null); 
     } finally {
       setIsLoadingPlayer(false);
     }
@@ -57,7 +55,7 @@ function LojaContent() {
       fetchPlayerData(playerId);
     } else {
       setIsLoadingPlayer(false);
-      setPlayerData(null); // Se não há playerId, não há jogador para carregar
+      setPlayerData(null); 
       toast({
         title: "Loja Indisponível",
         description: "Nenhum ID de jogador fornecido para acessar a loja.",
@@ -65,7 +63,7 @@ function LojaContent() {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerId]); // A função toast é estável e não precisa ser incluída aqui
+  }, [playerId]); 
 
   const handlePurchase = async (item: ShopItem) => {
     if (!playerId || !playerData) {
@@ -86,9 +84,8 @@ function LojaContent() {
         title: "Compra Realizada!",
         description: result.message,
       });
-      // Atualizar dados do jogador localmente
       setPlayerData(prevData => {
-        if (!prevData) return null; // Segurança caso prevData seja null
+        if (!prevData) return null; 
         return {
           ...prevData,
           ouro: result.newOuro,
@@ -101,7 +98,6 @@ function LojaContent() {
         description: result.message,
         variant: "destructive",
       });
-       // Se a falha for por jogador não encontrado no backend, atualiza o frontend
        if (result.message.includes("não encontrado")) {
         setPlayerData(null);
       }
@@ -110,21 +106,25 @@ function LojaContent() {
   
   const currentYear = new Date().getFullYear();
 
-  if (isLoadingPlayer && !playerData) { // Mostra Skeleton apenas se estiver carregando E não houver dados ainda
+  if (isLoadingPlayer && !playerData) { 
     return (
       <div className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-8 pt-12">
         <Skeleton className="h-10 w-48 mb-2" />
         <Skeleton className="h-6 w-64 mb-8" />
         <div className="w-full max-w-2xl space-y-4">
           <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!playerId || !playerData) { // Se, após o carregamento, não houver playerId ou playerData
+  if (!playerId || !playerData) { 
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 text-center">
         <Warehouse size={64} className="mb-4 text-muted-foreground" />
@@ -145,7 +145,7 @@ function LojaContent() {
     <div className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-8 pt-12">
       <header className="mb-8 text-center">
         <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2 tracking-tight flex items-center justify-center">
-          <ShoppingCart size={40} className="mr-3" /> Loja do Jogador
+          <ShoppingBasket size={40} className="mr-3" /> Loja do Aventureiro
         </h1>
         <p className="text-muted-foreground">Bem-vindo(a) à loja, {playerData.nome || playerId}!</p>
       </header>
@@ -171,31 +171,37 @@ function LojaContent() {
               {category.name}
             </AccordionTrigger>
             <AccordionContent>
-              <div className="grid grid-cols-2 gap-4 p-2">
-                {category.items.map((item) => (
-                  <Card key={item.name} className="flex flex-col justify-between shadow-md hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg capitalize">{item.name}</CardTitle>
-                      <CardDescription>Preço: {item.price.toLocaleString()} Ouro</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Button
-                        onClick={() => handlePurchase(item)}
-                        disabled={isPurchasing === item.name || (playerData.ouro || 0) < item.price}
-                        className="w-full"
-                        variant={(playerData.ouro || 0) < item.price ? "secondary": "default"}
-                      >
-                        {isPurchasing === item.name ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
-                        ) : (
-                          <>
-                            <ShoppingCart size={18} className="mr-2" /> Comprar
-                          </>
-                        )}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2">
+                {category.items.map((item) => {
+                  const IconComponent = item.icon || Package; // Fallback para ícone Package
+                  return (
+                    <Card key={item.name} className="flex flex-col justify-between shadow-md hover:shadow-lg transition-shadow">
+                      <CardHeader className="pb-3 pt-4 items-center text-center">
+                        <IconComponent size={36} className="mb-2 text-primary" />
+                        <CardTitle className="text-lg capitalize">{item.name}</CardTitle>
+                        <CardDescription className="text-sm">
+                          Preço: {item.price.toLocaleString()} <span className="text-xs">Ouro</span>
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-2">
+                        <Button
+                          onClick={() => handlePurchase(item)}
+                          disabled={isPurchasing === item.name || (playerData.ouro || 0) < item.price}
+                          className="w-full"
+                          variant={(playerData.ouro || 0) < item.price ? "secondary": "default"}
+                        >
+                          {isPurchasing === item.name ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
+                          ) : (
+                            <>
+                              <ShoppingCart size={18} className="mr-2" /> Comprar
+                            </>
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -217,7 +223,6 @@ function LojaContent() {
   );
 }
 
-// Adicionando Suspense Boundary para useSearchParams
 export default function LojaPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background text-foreground p-6 text-xl">Carregando loja...</div>}>
@@ -225,4 +230,3 @@ export default function LojaPage() {
     </Suspense>
   );
 }
-
