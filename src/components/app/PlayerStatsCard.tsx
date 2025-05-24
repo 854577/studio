@@ -2,7 +2,7 @@
 import type { Player } from '@/types/player';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles, Wallet } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface PlayerStatItemProps {
@@ -13,11 +13,11 @@ interface PlayerStatItemProps {
 }
 
 const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, value, iconClassName }) => (
-  <div className="flex items-center p-3 sm:p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md hover:border-primary/50">
-    <Icon size={22} className={`mr-2.5 sm:mr-3 shrink-0 ${iconClassName || ''}`} />
-    <div className="overflow-hidden"> {/* Adicionado overflow-hidden para conter o texto */}
+  <div className="flex items-center p-3 sm:p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50">
+    <Icon size={20} className={`mr-2 sm:mr-2.5 shrink-0 ${iconClassName || ''}`} />
+    <div className="overflow-hidden">
       <p className="font-semibold text-xs sm:text-sm text-muted-foreground truncate">{label}</p>
-      <p className="text-base sm:text-lg font-bold text-foreground break-words"> {/* Adicionado break-words */}
+      <p className="text-sm sm:text-base font-bold text-foreground break-words">
         {typeof value === 'number' ? value.toLocaleString() : value}
       </p>
     </div>
@@ -29,7 +29,7 @@ interface PlayerStatsCardProps {
 }
 
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
-  const orderedKeys: (keyof Player)[] = ['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
+  const orderedKeys: (keyof Player)[] = ['saldoBRL', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
   
   const mainStats = orderedKeys.map(key => {
     if (playerData[key] === undefined || playerData[key] === null) return null;
@@ -40,6 +40,12 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
     let value: string | number = playerData[key] as string | number;
 
     switch (key) {
+      case 'saldoBRL':
+        icon = Wallet;
+        label = 'Saldo (BRL)';
+        value = (playerData.saldoBRL ?? 0).toFixed(2);
+        iconClassName = 'text-green-500'; // Consistent color for BRL
+        break;
       case 'vida':
         icon = Heart;
         label = 'Vida';
@@ -85,7 +91,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
       !orderedKeys.includes(key as keyof Player) &&
       key !== 'nome' && 
       key !== 'senha' &&
-      key !== 'id' && 
+      key !== 'id' &&
       value !== undefined && 
       value !== null && 
       String(value).trim() !== ""
@@ -109,22 +115,22 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
   return (
     <Card className="w-full shadow-2xl bg-card border border-border/50 overflow-hidden">
       <CardHeader className="pb-4 flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
-        <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-primary/50">
+        <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-primary/50 shrink-0">
           <AvatarImage 
             src={`https://placehold.co/128x128.png?text=${(playerData.nome || 'P').charAt(0).toUpperCase()}`} 
             alt={playerData.nome || 'Player Avatar'}
-            data-ai-hint="abstract geometric" 
+            data-ai-hint="abstract geometric"
           />
           <AvatarFallback><User size={40} /></AvatarFallback>
         </Avatar>
-        <div className="text-center sm:text-left overflow-hidden"> {/* Adicionado overflow-hidden */}
-          <CardTitle className="text-2xl sm:text-3xl font-bold text-primary break-all">
+        <div className="text-center sm:text-left overflow-hidden">
+          <CardTitle className="text-2xl sm:text-3xl font-bold text-primary break-words">
             {playerData.nome || 'Jogador Desconhecido'}
           </CardTitle>
           {playerData.nome && <CardDescription className="mt-1 text-sm sm:text-base truncate">Exibindo estatísticas para {playerData.nome}</CardDescription>}
         </div>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
+      <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
         {mainStats}
         {otherStats}
       </CardContent>
@@ -141,13 +147,13 @@ export const PlayerStatsSkeleton: React.FC = () => (
         <Skeleton className="h-4 bg-muted rounded w-1/2 sm:w-32 mx-auto sm:mx-0" />
       </div>
     </CardHeader>
-    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
+    <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
       {[...Array(6)].map((_, i) => (
         <div key={i} className="flex items-center p-3 sm:p-4 bg-muted/50 rounded-lg border border-border/30">
-          <Skeleton className="h-6 w-6 bg-muted rounded-full mr-2.5 sm:mr-3 shrink-0" />
+          <Skeleton className="h-5 w-5 bg-muted rounded-full mr-2 sm:mr-2.5 shrink-0" />
           <div className="flex-grow overflow-hidden">
-            <Skeleton className="h-4 bg-muted rounded w-1/3 mb-1" />
-            <Skeleton className="h-5 bg-muted rounded w-1/2" />
+            <Skeleton className="h-3.5 bg-muted rounded w-1/3 mb-1" />
+            <Skeleton className="h-4 bg-muted rounded w-1/2" />
           </div>
         </div>
       ))}
