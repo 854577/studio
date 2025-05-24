@@ -1,19 +1,94 @@
 
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import type { Player } from '@/types/player';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Search, AlertCircle, Info } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Search, AlertCircle, Info, Briefcase, Fish, Bed } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 
 export default function HomePage() {
   const [playerIdInput, setPlayerIdInput] = useState<string>('');
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  type ActionType = 'trabalhar' | 'pescar' | 'dormir';
+  const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
+
+  const [actionCooldownEndTimes, setActionCooldownEndTimes] = useState<Record<ActionType, number>>({
+    trabalhar: 0,
+    pescar: 0,
+    dormir: 0,
+  });
+
+  const [timeLeftForAction, setTimeLeftForAction] = useState<Record<ActionType, string | null>>({
+    trabalhar: null,
+    pescar: null,
+    dormir: null,
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && playerIdInput) {
+      const loadedCooldowns: Record<ActionType, number> = { trabalhar: 0, pescar: 0, dormir: 0 };
+      (['trabalhar', 'pescar', 'dormir'] as ActionType[]).forEach(action => {
+        const endTime = localStorage.getItem(`cooldown_${action}_${playerIdInput}`);
+        if (endTime) {
+          loadedCooldowns[action] = parseInt(endTime, 10);
+        }
+      });
+      setActionCooldownEndTimes(loadedCooldowns);
+    } else {
+      setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0 });
+      setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null });
+    }
+  }, [playerIdInput]);
+
+  useEffect(() => {
+    const intervalIds: NodeJS.Timeout[] = [];
+
+    (['trabalhar', 'pescar', 'dormir'] as ActionType[]).forEach(action => {
+      const endTime = actionCooldownEndTimes[action];
+      
+      const updateDisplay = () => {
+        const now = Date.now();
+        const remainingTime = endTime - now;
+
+        if (remainingTime > 0) {
+          const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
+          const seconds = Math.floor((remainingTime / 1000) % 60);
+          setTimeLeftForAction(prev => ({
+            ...prev,
+            [action]: `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+          }));
+        } else {
+          setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+          if (playerIdInput && localStorage.getItem(`cooldown_${action}_${playerIdInput}`)) {
+             localStorage.removeItem(`cooldown_${action}_${playerIdInput}`);
+          }
+        }
+      };
+
+      if (endTime > Date.now()) {
+        updateDisplay(); 
+        const id = setInterval(updateDisplay, 1000);
+        intervalIds.push(id);
+      } else {
+         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+         if (playerIdInput && localStorage.getItem(`cooldown_${action}_${playerIdInput}`)) {
+             localStorage.removeItem(`cooldown_${action}_${playerIdInput}`);
+          }
+      }
+    });
+
+    return () => {
+      intervalIds.forEach(clearInterval);
+    };
+  }, [actionCooldownEndTimes, playerIdInput]);
 
   const handleSearch = async (event: FormEvent) => {
     event.preventDefault();
@@ -48,6 +123,69 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handlePlayerAction = (actionType: ActionType) => {
+    if (!playerData || !playerData.nome) {
+      setError("Busque um jogador primeiro para realizar ações.");
+      toast({
+        title: "Erro",
+        description: "Busque um jogador primeiro para realizar ações.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const now = Date.now();
+    if (actionCooldownEndTimes[actionType] > now) {
+      toast({
+        title: "Ação em Cooldown",
+        description: `Você precisa esperar ${timeLeftForAction[actionType]} para ${actionType} novamente.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let goldEarned = 0;
+    let xpEarned = 0;
+    let actionTitle = "";
+
+    switch (actionType) {
+      case 'trabalhar':
+        goldEarned = Math.floor(Math.random() * 41) + 10; 
+        xpEarned = Math.floor(Math.random() * 16) + 5;   
+        actionTitle = "Você trabalhou duro!";
+        break;
+      case 'pescar':
+        goldEarned = Math.floor(Math.random() * 26) + 5;  
+        xpEarned = Math.floor(Math.random() * 13) + 3;   
+        actionTitle = "Boa pescaria!";
+        break;
+      case 'dormir':
+        xpEarned = Math.floor(Math.random() * 10) + 1;   
+        actionTitle = "Você descansou bem.";
+        break;
+    }
+    
+    setPlayerData(prevData => {
+      if (!prevData) return null;
+      return {
+        ...prevData,
+        dinheiro: (prevData.dinheiro || 0) + goldEarned,
+        xp: (prevData.xp || 0) + xpEarned,
+      };
+    });
+
+    const newCooldownEndTime = now + ACTION_COOLDOWN_DURATION;
+    setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
+    if (typeof window !== 'undefined' && playerIdInput) {
+      localStorage.setItem(`cooldown_${actionType}_${playerIdInput}`, newCooldownEndTime.toString());
+    }
+
+    toast({
+      title: actionTitle,
+      description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP.`,
+    });
   };
 
   return (
@@ -105,64 +243,98 @@ export default function HomePage() {
       )}
 
       {playerData && !loading && !error && (
-        <Card className="w-full max-w-lg shadow-2xl bg-card border border-border/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-2xl sm:text-3xl text-primary flex items-center">
-              <User size={30} className="mr-3 shrink-0 text-primary" />
-              {playerData.nome}
-            </CardTitle>
-            {playerData.nome && <CardDescription className="mt-1">Displaying stats for {playerData.nome}</CardDescription>}
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            {playerData.vida !== undefined && (
-              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                <Heart size={24} className="mr-3 text-destructive shrink-0" />
-                <div>
-                  <p className="font-semibold text-sm text-muted-foreground">Health</p>
-                  <p className="text-lg font-bold text-foreground">{playerData.vida}</p>
-                </div>
-              </div>
-            )}
-            {playerData.dinheiro !== undefined && (
-              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                <CircleDollarSign size={24} className="mr-3 text-foreground shrink-0" /> 
-                <div>
-                  <p className="font-semibold text-sm text-muted-foreground">Money</p>
-                  <p className="text-lg font-bold text-foreground">{playerData.dinheiro.toLocaleString()}</p>
-                </div>
-              </div>
-            )}
-            {playerData.nivel !== undefined && (
-              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                <Star size={24} className="mr-3 text-foreground shrink-0" />
-                <div>
-                  <p className="font-semibold text-sm text-muted-foreground">Level</p>
-                  <p className="text-lg font-bold text-foreground">{playerData.nivel}</p>
-                </div>
-              </div>
-            )}
-            {playerData.xp !== undefined && (
-              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                <BarChart3 size={24} className="mr-3 text-muted-foreground shrink-0" />
-                <div>
-                  <p className="font-semibold text-sm text-muted-foreground">Experience (XP)</p>
-                  <p className="text-lg font-bold text-foreground">{playerData.xp.toLocaleString()}</p>
-                </div>
-              </div>
-            )}
-            {Object.entries(playerData)
-              .filter(([key]) => !['nome', 'vida', 'dinheiro', 'nivel', 'xp', 'id'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
-              .map(([key, value]) => (
-                <div key={key} className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg sm:col-span-2">
-                  <Info size={24} className="mr-3 text-muted-foreground shrink-0" />
+        <>
+          <Card className="w-full max-w-lg shadow-2xl bg-card border border-border/50">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-2xl sm:text-3xl text-primary flex items-center">
+                <User size={30} className="mr-3 shrink-0 text-primary" />
+                {playerData.nome}
+              </CardTitle>
+              {playerData.nome && <CardDescription className="mt-1">Displaying stats for {playerData.nome}</CardDescription>}
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              {playerData.vida !== undefined && (
+                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
+                  <Heart size={24} className="mr-3 text-destructive shrink-0" />
                   <div>
-                    <p className="font-semibold text-sm text-muted-foreground capitalize">{key.replace(/_/g, ' ').toLowerCase()}</p>
-                    <p className="text-lg font-bold text-foreground">{String(value)}</p>
+                    <p className="font-semibold text-sm text-muted-foreground">Health</p>
+                    <p className="text-lg font-bold text-foreground">{playerData.vida}</p>
                   </div>
                 </div>
-              ))}
-          </CardContent>
-        </Card>
+              )}
+              {playerData.dinheiro !== undefined && (
+                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
+                  <CircleDollarSign size={24} className="mr-3 text-foreground shrink-0" /> 
+                  <div>
+                    <p className="font-semibold text-sm text-muted-foreground">Money</p>
+                    <p className="text-lg font-bold text-foreground">{playerData.dinheiro.toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
+              {playerData.nivel !== undefined && (
+                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
+                  <Star size={24} className="mr-3 text-foreground shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm text-muted-foreground">Level</p>
+                    <p className="text-lg font-bold text-foreground">{playerData.nivel}</p>
+                  </div>
+                </div>
+              )}
+              {playerData.xp !== undefined && (
+                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
+                  <BarChart3 size={24} className="mr-3 text-muted-foreground shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm text-muted-foreground">Experience (XP)</p>
+                    <p className="text-lg font-bold text-foreground">{playerData.xp.toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
+              {Object.entries(playerData)
+                .filter(([key]) => !['nome', 'vida', 'dinheiro', 'nivel', 'xp', 'id'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
+                .map(([key, value]) => (
+                  <div key={key} className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg sm:col-span-2">
+                    <Info size={24} className="mr-3 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="font-semibold text-sm text-muted-foreground capitalize">{key.replace(/_/g, ' ').toLowerCase()}</p>
+                      <p className="text-lg font-bold text-foreground">{String(value)}</p>
+                    </div>
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+
+          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 lucide lucide-gamepad-2"><line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect width="20" height="12" x="2" y="6" rx="2"/><path d="M6 18h4"/><path d="M14 18h4"/></svg>
+                Ações do Jogador
+              </CardTitle>
+              <CardDescription>Realize ações para ganhar recompensas.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {(['trabalhar', 'pescar', 'dormir'] as ActionType[]).map((action) => {
+                const Icon = action === 'trabalhar' ? Briefcase : action === 'pescar' ? Fish : Bed;
+                const currentCooldown = timeLeftForAction[action];
+                const isDisabled = !!currentCooldown;
+                return (
+                  <Button
+                    key={action}
+                    onClick={() => handlePlayerAction(action)}
+                    disabled={isDisabled}
+                    className="w-full py-4 text-sm sm:text-base flex flex-col h-auto sm:flex-row sm:py-3 sm:items-center sm:justify-center"
+                    variant={isDisabled ? "secondary" : "default"}
+                  >
+                    <Icon className={`mr-0 mb-1 sm:mr-2 sm:mb-0 h-5 w-5 ${isDisabled ? 'text-muted-foreground' : ''}`} />
+                    <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+                      <span className="font-semibold">{action.charAt(0).toUpperCase() + action.slice(1)}</span>
+                      {isDisabled && <span className="text-xs text-muted-foreground">({currentCooldown})</span>}
+                    </div>
+                  </Button>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );
