@@ -52,49 +52,52 @@
     --sidebar-ring: 330 100% 71%;
   }
 
-  .dark { /* Keeping dark theme variables, but the default will be light */
-    --background: 240 10% 3.9%; 
-    --foreground: 0 0% 98%; 
+  .dark {
+    /* Memphis Dark Theme */
+    --background: 240 6% 10%; /* Very Dark Gray/Blueish (#17171A) */
+    --foreground: 0 0% 95%; /* Off-White (#F2F2F2) */
 
-    --card: 240 10% 10%; 
-    --card-foreground: 0 0% 98%;
+    --card: 240 5% 18%; /* Dark Gray, slightly lighter than bg (#2B2B2E) */
+    --card-foreground: 0 0% 95%; /* Off-White */
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 240 5% 15%; /* Similar to card or bg (#242426) */
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 0 0% 98%; 
-    --primary-foreground: 240 5.9% 10%; 
+    --primary: 330 100% 71%; /* Hot Pink (same as light) */
+    --primary-foreground: 0 0% 100%; /* White (for contrast on pink) */
 
-    --secondary: 240 3.7% 15.9%; 
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 180 70% 50%; /* Bright Teal (same as light) */
+    --secondary-foreground: 0 0% 100%; /* White */
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%; 
+    --muted: 240 5% 25%; /* Medium Dark Gray (#3D3D40) */
+    --muted-foreground: 0 0% 65%; /* Light Gray for muted text (#A6A6A6) */
 
-    --accent: 240 4.8% 15.9%; 
-    --accent-foreground: 0 0% 98%; 
+    --accent: 51 100% 60%; /* Bright Yellow (same as light) */
+    --accent-foreground: 0 0% 15%; /* Very Dark Gray/Black (for contrast on yellow) (#262626) */
 
-    --destructive: 0 62.8% 30.6%; 
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%; /* Bright Red (same as light) */
+    --destructive-foreground: 0 0% 100%; /* White */
 
-    --border: 240 3.7% 15.9%; 
-    --input: 240 3.7% 15.9%; 
-    --ring: 240 4.9% 83.9%; 
+    --border: 240 5% 30%; /* Dark Gray border (#4A4A4D) */
+    --input: 240 5% 22%; /* Darker input background (#363638) */
+    --ring: 330 100% 71%; /* Primary color for focus rings (same as light) */
     
-    --chart-1: 200 90% 55%; 
-    --chart-2: 220 85% 65%; 
-    --chart-3: 240 5% 50%;  
-    --chart-4: 43 74% 66%;    
-    --chart-5: 270 70% 60%; 
+    /* Chart colors for Memphis theme (kept same as light, should contrast well) */
+    --chart-1: 330 100% 71%;
+    --chart-2: 180 70% 50%;
+    --chart-3: 51 100% 60%;
+    --chart-4: 130 60% 65%;
+    --chart-5: 30 100% 70%;
 
-    --sidebar-background: 240 10% 4.5%; 
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 240 5.9% 10%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 12%;
-    --sidebar-ring: 240 4.9% 83.9%;
+    /* Sidebar colors for Memphis Dark */
+    --sidebar-background: 240 6% 12%; 
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 330 100% 71%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 180 70% 50%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 5% 25%;
+    --sidebar-ring: 330 100% 71%;
   }
 }
 
@@ -104,16 +107,5 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* overflow-x: hidden; /* Removed to prevent conflict if star background is completely removed */
   }
 }
-
-/* Remove star background styles */
-/* #stars-small, #stars-medium, #stars-large { ... } */
-/* #stars-small::before, #stars-medium::before, #stars-large::before { ... } */
-/* @keyframes animStarUp { ... } */
-
-/* Remove animated RGB border styles */
-/* .animated-rgb-border-thin { ... } */
-/* .animated-rgb-border-thin::before { ... } */
-/* @keyframes gradientShift { ... } */
