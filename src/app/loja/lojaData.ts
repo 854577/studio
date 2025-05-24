@@ -2,7 +2,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Sword, Axe, PocketKnife, Crosshair, Wand2, Shield, Shirt, VenetianMask,
-  HardHat, Footprints, Hand, Layers, CircleDollarSign, Diamond, Target,
+  HardHat, Footprints, Hand, Layers, CircleDollarSign, Diamond, Target, Fish, // Added Fish here
   BookOpen, Flame, Gem, Sigma, EyeOff, BookMarked, Medal, HelpCircle,
   HeartPulse, BatteryCharging, Beef, IterationCw, BriefcaseMedical, GlassWater, ArrowRight, PaintBucket, Vegan,
   Bird, Option, CloudDrizzle, KeyRound, Scroll, Hammer, Feather, Box, Zap, Sparkles, Package, ShoppingBasket, Tent,
@@ -230,3 +230,4 @@ export const shopCategoriesData: ShopCategory[] = [
     ],
   },
 ];
+
