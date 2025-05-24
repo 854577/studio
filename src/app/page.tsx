@@ -12,7 +12,7 @@ import { Search, AlertCircle, ShoppingBag, KeyRound } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard, { PlayerStatsSkeleton } from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
-import RechargeCard from '@/components/app/RechargeCard';
+// import RechargeCard from '@/components/app/RechargeCard'; // Removido
 import { Dialog, DialogContent as ShadDialogContent, DialogHeader as ShadDialogHeader, DialogTitle as ShadDialogTitle } from '@/components/ui/dialog';
 import { Briefcase, Fish, Bed, Dumbbell } from 'lucide-react'; 
 import Link from 'next/link'; 
@@ -29,7 +29,7 @@ export const actionConfig: Record<ActionType, { label: string; icon: React.Eleme
 
 export default function HomePage() {
   const [playerIdInput, setPlayerIdInput] = useState<string>('');
-  const [passwordInput, setPasswordInput] = useState<string>(''); // Novo estado para senha
+  const [passwordInput, setPasswordInput] = useState<string>('');
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -58,27 +58,20 @@ export default function HomePage() {
     const pid = params.get('playerId');
     if (pid) {
       setPlayerIdInput(pid);
-      // Não vamos disparar a busca automaticamente aqui, pois agora precisamos da senha.
-      // O usuário precisará digitar a senha e clicar em buscar.
     }
   }, []);
 
 
   useEffect(() => {
-    // Este useEffect é apenas para recarregar dados se currentPlayerId mudar.
-    // A busca inicial com senha é feita em handleSearch.
     const fetchPlayerDataOnIdChange = async (id: string) => {
-      // Se já temos dados e o ID não mudou, não faz nada aqui.
-      // Esta função seria mais útil se quiséssemos atualizar os dados periodicamente
-      // ou se outra ação na página alterasse o currentPlayerId e precisássemos de novos dados.
-      // Por agora, a busca principal é controlada pelo handleSearch.
+      // Lógica para buscar dados do jogador se necessário ao mudar currentPlayerId
+      // Esta função pode ser usada para auto-refresh ou se o ID mudar por outra ação.
     };
 
-    if (currentPlayerId && playerData) { // Somente se já temos um jogador e queremos "refrescar"
-      // fetchPlayerDataOnIdChange(currentPlayerId); 
-      // Comentado por enquanto para evitar buscas repetidas sem necessidade com a senha.
+    if (currentPlayerId && !playerData) { // Se temos um ID mas não dados (ex: após limpar por erro de senha)
+      // handleSearch(); // Poderia chamar handleSearch se a senha não fosse necessária para um re-fetch automático
     }
-  }, [currentPlayerId, playerData]); // Dependências intencionais
+  }, [currentPlayerId, playerData]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && currentPlayerId) {
@@ -147,7 +140,7 @@ export default function HomePage() {
     if (event) event.preventDefault(); 
     
     const trimmedId = playerIdInput.trim();
-    const trimmedPassword = passwordInput.trim(); // Senha digitada
+    const trimmedPassword = passwordInput.trim();
 
     if (!trimmedId) {
       setError('O nome do usuário não pode estar vazio.');
@@ -160,7 +153,6 @@ export default function HomePage() {
       setError('A senha não pode estar vazia.');
       setPlayerData(null);
       setCurrentPlayerId(null);
-      // Não limpar playerIdInput aqui, apenas a senha
       setPasswordInput('');
       return;
     }
@@ -171,30 +163,26 @@ export default function HomePage() {
 
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
-      // Não limpar input de senha aqui ainda, esperar o resultado da busca
       
       if (!response.ok) {
          if (response.status === 404 || (await response.clone().json()) === null) { 
-          setError(`Nome de usuário ou senha inválidos.`); // Mensagem genérica
+          setError(`Nome de usuário ou senha inválidos.`);
         } else {
           throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
         }
         setPlayerData(null);
         setCurrentPlayerId(null);
-        setPasswordInput(''); // Limpar senha em caso de erro de rede também
+        setPasswordInput('');
         setLoading(false);
         return;
       }
       const fetchedPlayerData: Player | null = await response.json();
 
       if (fetchedPlayerData && fetchedPlayerData.senha !== undefined) {
-        // **AVISO DE SEGURANÇA: Comparação de senha em texto plano no frontend.**
-        // **Isto NÃO é seguro para um aplicativo de produção.**
         if (fetchedPlayerData.senha === trimmedPassword) {
           setPlayerData(fetchedPlayerData);
           setError(null); 
-          setCurrentPlayerId(trimmedId); // Definir ID do jogador atual apenas com sucesso
-          // Atualizar URL com playerId se a busca for bem-sucedida
+          setCurrentPlayerId(trimmedId);
           if (typeof window !== 'undefined') {
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('playerId', trimmedId);
@@ -206,7 +194,7 @@ export default function HomePage() {
           setCurrentPlayerId(null);
         }
       } else {
-        setError(`Nome de usuário ou senha inválidos.`); // Jogador não encontrado ou não tem campo senha
+        setError(`Nome de usuário ou senha inválidos.`);
         setPlayerData(null);
         setCurrentPlayerId(null);
       }
@@ -217,7 +205,7 @@ export default function HomePage() {
       setCurrentPlayerId(null);
     } finally {
       setLoading(false);
-      setPasswordInput(''); // Limpar campo de senha após a tentativa
+      setPasswordInput('');
     }
   };
   
@@ -272,12 +260,10 @@ export default function HomePage() {
           actionToastTitle = "Boa pescaria!";
           break;
         case 'dormir':
-          // goldEarned = 0; // Dormir não dá ouro
           xpEarned = randomReward();   
           actionToastTitle = "Você descansou bem.";
           break;
         case 'treinar':
-          // goldEarned = 0; // Treinar não dá ouro
           xpEarned = randomReward(); 
           actionToastTitle = "Treino concluído!";
           break;
@@ -379,7 +365,7 @@ export default function HomePage() {
               value={passwordInput}
               onChange={(e) => setPasswordInput(e.target.value)}
               placeholder="senha"
-              className="flex-grow text-base h-12 pl-10" // Aumentado o padding left para o ícone
+              className="flex-grow text-base h-12 pl-10"
               aria-label="Password Input"
             />
         </div>
@@ -404,11 +390,11 @@ export default function HomePage() {
             actionConfig={actionConfig} 
             isDisabled={!playerData || !currentPlayerId || isActionInProgress} 
           />
-          <RechargeCard 
+          {/* <RechargeCard 
             playerId={currentPlayerId} 
             playerName={playerData?.nome}
             isDisabled={!playerData || !currentPlayerId} 
-          />
+          /> */}
           <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
             <CardHeader>
                 <CardTitle className="text-xl flex items-center">
@@ -439,11 +425,11 @@ export default function HomePage() {
             actionConfig={actionConfig} 
             isDisabled={!playerData || !currentPlayerId || isActionInProgress}
           />
-          <RechargeCard 
+          {/* <RechargeCard 
             playerId={currentPlayerId} 
             playerName={playerData?.nome}
             isDisabled={!playerData || !currentPlayerId} 
-          />
+          /> */}
           <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
             <CardHeader>
                 <CardTitle className="text-xl flex items-center">

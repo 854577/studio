@@ -1,7 +1,7 @@
 
 import type { Player } from '@/types/player';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles, Wallet } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles } from 'lucide-react'; // Removido Wallet
 
 interface PlayerStatItemProps {
   icon: React.ElementType;
@@ -15,7 +15,7 @@ const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, valu
     <Icon size={24} className={`mr-3 shrink-0 ${iconClassName || ''}`} />
     <div>
       <p className="font-semibold text-sm text-muted-foreground">{label}</p>
-      <p className="text-lg font-bold text-foreground">{typeof value === 'number' && label !== "Saldo (BRL)" ? value.toLocaleString() : value}</p>
+      <p className="text-lg font-bold text-foreground">{typeof value === 'number' ? value.toLocaleString() : value}</p>
     </div>
   </div>
 );
@@ -25,7 +25,8 @@ interface PlayerStatsCardProps {
 }
 
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
-  const orderedKeys: (keyof Player)[] = ['saldoBRL', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
+  // Ordem desejada: Vida, Ouro, Level, XP, depois Energia, Mana. SaldoBRL foi removido.
+  const orderedKeys: (keyof Player)[] = ['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
   
   const mainStats = orderedKeys.map(key => {
     if (playerData[key] === undefined || playerData[key] === null) return null;
@@ -36,12 +37,6 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
     let value: string | number = String(playerData[key]);
 
     switch (key) {
-      case 'saldoBRL':
-        icon = Wallet;
-        label = 'Saldo (BRL)';
-        value = (playerData.saldoBRL ?? 0).toFixed(2);
-        iconClassName = 'text-[hsl(var(--chart-2))]';
-        break;
       case 'vida':
         icon = Heart;
         label = 'Vida';
@@ -86,7 +81,10 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
     .filter(([key]) => 
       !orderedKeys.includes(key as keyof Player) &&
       key !== 'nome' && 
-      key !== 'senha' && // Explicitly filter out 'senha'
+      key !== 'senha' &&
+      key !== 'id' && // Não mostrar o ID do jogador
+      key !== 'dinheiro' && // Não mostrar campo 'dinheiro' se existir
+      key !== 'saldoBRL' && // Não mostrar campo 'saldoBRL'
       playerData[key] !== undefined && 
       playerData[key] !== null && 
       String(playerData[key]).trim() !== ""
@@ -131,7 +129,7 @@ export const PlayerStatsSkeleton: React.FC = () => (
       <div className="h-4 bg-muted rounded w-1/2 mt-2"></div>
     </CardHeader>
     <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-      {[...Array(7)].map((_, i) => ( 
+      {[...Array(6)].map((_, i) => ( // Ajustado para 6 itens principais após remover saldoBRL
         <div key={i} className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30">
           <div className="h-6 w-6 bg-muted rounded-full mr-3 shrink-0"></div>
           <div className="flex-grow">

@@ -7,9 +7,9 @@ export interface Player {
   xp?: number;
   energia?: number;
   mana?: number;
-  saldoBRL?: number; 
+  // saldoBRL?: number; // Removido
   inventario?: Record<string, number>;
-  senha?: string; // Campo para a senha (para prototipagem)
-  // Allows for other potential fields from the API
+  senha?: string;
+  id?: string; // Campo para ID, caso seja retornado pela API
   [key: string]: any; 
 }

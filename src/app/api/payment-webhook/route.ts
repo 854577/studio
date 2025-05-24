@@ -1,109 +1,476 @@
+'use client';
 
-// src/app/api/payment-webhook/route.ts
-import { NextResponse, type NextRequest } from 'next/server';
-import { MercadoPagoConfig, Payment } from 'mercadopago';
+import React from 'react'; 
+import { useState, type FormEvent, useEffect } from 'react';
+import type { Player } from '@/types/player';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Search, AlertCircle, ShoppingBag, KeyRound } from 'lucide-react'; 
+import { useToast } from "@/hooks/use-toast";
+import PlayerStatsCard, { PlayerStatsSkeleton } from '@/components/app/PlayerStatsCard';
+import PlayerActionsCard from '@/components/app/PlayerActionsCard';
+// import RechargeCard from '@/components/app/RechargeCard'; // Removido
+import { Dialog, DialogContent as ShadDialogContent, DialogHeader as ShadDialogHeader, DialogTitle as ShadDialogTitle } from '@/components/ui/dialog';
+import { Briefcase, Fish, Bed, Dumbbell } from 'lucide-react'; 
+import Link from 'next/link'; 
 
-const accessToken = process.env.MP_ACCESS_TOKEN;
+export type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
+export const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 
-if (!accessToken) {
-  console.error('ERRO CRÍTICO NO WEBHOOK: MP_ACCESS_TOKEN não está configurado. Para desenvolvimento local, crie um arquivo .env.local na raiz do projeto e adicione MP_ACCESS_TOKEN=SEU_TOKEN_AQUI. Em produção, configure esta variável no seu ambiente de hospedagem.');
-}
-const client = new MercadoPagoConfig({ accessToken: accessToken || "FALLBACK_WEBHOOK_TOKEN" });
-const paymentInstance = new Payment(client);
+export const actionConfig: Record<ActionType, { label: string; icon: React.ElementType; modalTitle: string }> = {
+  trabalhar: { label: 'Trabalhar', icon: Briefcase, modalTitle: 'Trabalhando...' },
+  pescar: { label: 'Pescar', icon: Fish, modalTitle: 'Pescando...' },
+  dormir: { label: 'Dormir', icon: Bed, modalTitle: 'Descansando...' },
+  treinar: { label: 'Treinar', icon: Dumbbell, modalTitle: 'Treinando...' },
+};
 
-export async function POST(request: NextRequest) {
-  console.log('Webhook do Mercado Pago recebido!');
+export default function HomePage() {
+  const [playerIdInput, setPlayerIdInput] = useState<string>('');
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
+  const [playerData, setPlayerData] = useState<Player | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  if (!accessToken || accessToken === "FALLBACK_WEBHOOK_TOKEN") {
-    const errorMessage = 'Webhook não pode processar: MP_ACCESS_TOKEN não está configurado no servidor. Para desenvolvimento local, crie um arquivo .env.local na raiz do projeto e adicione MP_ACCESS_TOKEN=SEU_TOKEN_AQUI. Em produção, configure esta variável de ambiente no seu servidor de hospedagem.';
-    console.error(errorMessage);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
+  const [actionCooldownEndTimes, setActionCooldownEndTimes] = useState<Record<ActionType, number>>({
+    trabalhar: 0,
+    pescar: 0,
+    dormir: 0,
+    treinar: 0,
+  });
 
-  try {
-    const body = await request.json();
-    console.log('Corpo do Webhook:', JSON.stringify(body, null, 2));
+  const [timeLeftForAction, setTimeLeftForAction] = useState<Record<ActionType, string | null>>({
+    trabalhar: null,
+    pescar: null,
+    dormir: null,
+    treinar: null,
+  });
 
-    const topic = body.type; 
-    const paymentId = body.data?.id;
+  const [activeActionAnimation, setActiveActionAnimation] = useState<ActionType | null>(null);
+  const [isActionInProgress, setIsActionInProgress] = useState<boolean>(false);
 
-    if (topic === 'payment' && paymentId) {
-      console.log(`Processando notificação de pagamento para o ID: ${paymentId}`);
-      
-      const paymentDetails = await paymentInstance.get({ id: paymentId });
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pid = params.get('playerId');
+    if (pid) {
+      setPlayerIdInput(pid);
+    }
+  }, []);
 
-      console.log('Detalhes do Pagamento Obtidos do MP:', JSON.stringify(paymentDetails, null, 2));
 
-      if (paymentDetails && paymentDetails.status === 'approved') {
-        const playerId = paymentDetails.external_reference;
-        const paidAmount = paymentDetails.transaction_amount; // Valor efetivamente pago em BRL
+  useEffect(() => {
+    const fetchPlayerDataOnIdChange = async (id: string) => {
+      // Lógica para buscar dados do jogador se necessário ao mudar currentPlayerId
+      // Esta função pode ser usada para auto-refresh ou se o ID mudar por outra ação.
+    };
 
-        if (!playerId) {
-          console.error('Player ID (external_reference) não encontrado nos detalhes do pagamento.');
-          // Ainda retornar 200 OK para o MP não reenviar, mas logar o erro.
-          return NextResponse.json({ error: 'Player ID não encontrado nos dados do pagamento.' }, { status: 200 });
+    if (currentPlayerId && !playerData) { // Se temos um ID mas não dados (ex: após limpar por erro de senha)
+      // handleSearch(); // Poderia chamar handleSearch se a senha não fosse necessária para um re-fetch automático
+    }
+  }, [currentPlayerId, playerData]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && currentPlayerId) {
+      const loadedCooldowns: Record<ActionType, number> = { trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 };
+      (Object.keys(actionConfig) as ActionType[]).forEach(action => {
+        const endTimeString = localStorage.getItem(`cooldown_${action}_${currentPlayerId}`);
+        if (endTimeString) {
+          const endTime = parseInt(endTimeString, 10);
+          if (endTime > Date.now()) { 
+            loadedCooldowns[action] = endTime;
+          } else { 
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+          }
         }
-        if (typeof paidAmount !== 'number' || paidAmount <= 0) {
-            console.error(`Valor pago inválido (${paidAmount}) para o pagamento ID: ${paymentId}.`);
-            return NextResponse.json({ error: 'Valor pago inválido.' }, { status: 200 });
-        }
-
-        console.log(`Pagamento APROVADO para Player ID: ${playerId}, Valor: ${paidAmount} BRL`);
-
-        const firebaseUpdateUrl = `https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${playerId}.json`;
-        
-        try {
-            const playerResponse = await fetch(firebaseUpdateUrl);
-            if (!playerResponse.ok) {
-                const errorText = await playerResponse.text();
-                console.error(`Falha ao buscar dados do jogador ${playerId} do Firebase: ${playerResponse.status} ${playerResponse.statusText}`, errorText);
-                throw new Error(`Falha ao buscar dados do jogador ${playerId} do Firebase: ${playerResponse.statusText}`);
-            }
-            const playerData = await playerResponse.json();
-            // Se playerData for null (jogador não existe), não podemos prosseguir
-            if (playerData === null) {
-                 console.error(`Jogador com ID ${playerId} não encontrado no Firebase. Não é possível creditar saldo.`);
-                 // Responder 200 OK para o MP, mas logar o problema.
-                 return NextResponse.json({ error: `Jogador ${playerId} não encontrado no Firebase.` }, { status: 200 });
-            }
-
-            const currentSaldo = playerData?.saldoBRL || 0;
-            const newSaldo = currentSaldo + paidAmount;
-
-            const updateResponse = await fetch(firebaseUpdateUrl, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ saldoBRL: parseFloat(newSaldo.toFixed(2)) }),
-            });
-
-            if (!updateResponse.ok) {
-                const errorBody = await updateResponse.text();
-                console.error(`Falha ao atualizar saldoBRL para ${playerId} no Firebase: ${updateResponse.statusText}`, errorBody);
-                throw new Error(`Falha ao atualizar saldoBRL no Firebase: ${updateResponse.statusText}`);
-            }
-            console.log(`Saldo BRL atualizado para Player ID: ${playerId}. Novo saldo: ${newSaldo.toFixed(2)}`);
-            
-        } catch (dbError) {
-            console.error(`Erro ao interagir com o Firebase para o jogador ${playerId} no webhook:`, dbError);
-            return NextResponse.json({ error: 'Erro interno ao atualizar banco de dados.', details: (dbError as Error).message }, { status: 200 });
-        }
-      } else {
-        console.log(`Status do pagamento ${paymentId}: ${paymentDetails?.status}. Não 'approved'. Nenhuma ação de crédito de saldo.`);
-      }
+      });
+      setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      console.log('Notificação não relacionada a um pagamento ou ID do pagamento ausente. Tipo:', topic, "ID:", paymentId);
+      setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
+      setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
+    }
+  }, [currentPlayerId]);
+
+  useEffect(() => {
+    const intervalIds: NodeJS.Timeout[] = [];
+
+    (Object.keys(actionConfig) as ActionType[]).forEach(action => {
+      const endTime = actionCooldownEndTimes[action];
+      
+      const updateDisplay = () => {
+        const now = Date.now();
+        const remainingTime = endTime - now;
+
+        if (remainingTime > 0) {
+          const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
+          const seconds = Math.floor((remainingTime / 1000) % 60);
+          setTimeLeftForAction(prev => ({
+            ...prev,
+            [action]: `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+          }));
+        } else {
+          setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+          if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
+             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+          }
+        }
+      };
+
+      if (endTime > Date.now()) {
+        updateDisplay(); 
+        const id = setInterval(updateDisplay, 1000);
+        intervalIds.push(id);
+      } else {
+         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
+             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+          }
+      }
+    });
+
+    return () => {
+      intervalIds.forEach(clearInterval);
+    };
+  }, [actionCooldownEndTimes, currentPlayerId]);
+
+  const handleSearch = async (event?: FormEvent) => { 
+    if (event) event.preventDefault(); 
+    
+    const trimmedId = playerIdInput.trim();
+    const trimmedPassword = passwordInput.trim();
+
+    if (!trimmedId) {
+      setError('O nome do usuário não pode estar vazio.');
+      setPlayerData(null);
+      setCurrentPlayerId(null);
+      setPasswordInput('');
+      return;
+    }
+    if (!trimmedPassword) {
+      setError('A senha não pode estar vazia.');
+      setPlayerData(null);
+      setCurrentPlayerId(null);
+      setPasswordInput('');
+      return;
     }
 
-    return NextResponse.json({ received: true }, { status: 200 });
+    setLoading(true);
+    setError(null);
+    setPlayerData(null); 
 
-  } catch (error) {
-    console.error('Erro FATAL ao processar webhook do Mercado Pago:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido.';
-    return NextResponse.json({ error: 'Erro interno ao processar webhook', details: errorMessage }, { status: 200 }); // Ou 500, mas MP pode reenviar.
-  }
-}
+    try {
+      const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
+      
+      if (!response.ok) {
+         if (response.status === 404 || (await response.clone().json()) === null) { 
+          setError(`Nome de usuário ou senha inválidos.`);
+        } else {
+          throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
+        }
+        setPlayerData(null);
+        setCurrentPlayerId(null);
+        setPasswordInput('');
+        setLoading(false);
+        return;
+      }
+      const fetchedPlayerData: Player | null = await response.json();
 
-export async function GET(request: NextRequest) {
-  console.log("Webhook endpoint: GET request received (geralmente usado para verificação).");
-  return NextResponse.json({ message: "Webhook endpoint is active. Use POST for notifications." });
+      if (fetchedPlayerData && fetchedPlayerData.senha !== undefined) {
+        if (fetchedPlayerData.senha === trimmedPassword) {
+          setPlayerData(fetchedPlayerData);
+          setError(null); 
+          setCurrentPlayerId(trimmedId);
+          if (typeof window !== 'undefined') {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('playerId', trimmedId);
+            window.history.pushState({}, '', currentUrl.toString());
+          }
+        } else {
+          setError(`Nome de usuário ou senha inválidos.`);
+          setPlayerData(null);
+          setCurrentPlayerId(null);
+        }
+      } else {
+        setError(`Nome de usuário ou senha inválidos.`);
+        setPlayerData(null);
+        setCurrentPlayerId(null);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido ao buscar dados.');
+      setPlayerData(null);
+      setCurrentPlayerId(null);
+    } finally {
+      setLoading(false);
+      setPasswordInput('');
+    }
+  };
+  
+  const handlePlayerAction = async (actionType: ActionType) => {
+    if (!playerData || !currentPlayerId || isActionInProgress) {
+      toast({
+        title: "Erro",
+        description: isActionInProgress ? "Aguarde a ação atual terminar." : "Busque um jogador primeiro para realizar ações.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const now = Date.now();
+    if (actionCooldownEndTimes[actionType] > now) {
+      toast({
+        title: "Ação em Cooldown",
+        description: `Você precisa esperar ${timeLeftForAction[actionType]} para ${actionConfig[actionType].label.toLowerCase()} novamente.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsActionInProgress(true);
+    setActiveActionAnimation(actionType);
+
+    setTimeout(async () => {
+      if (!playerData || !currentPlayerId) { 
+        console.error("Player data or ID became null during action processing.");
+        setActiveActionAnimation(null);
+        setIsActionInProgress(false);
+        toast({ title: "Erro", description: "Dados do jogador não disponíveis para completar a ação. Tente novamente.", variant: "destructive" });
+        return;
+      }
+
+      let goldEarned = 0;
+      let xpEarned = 0;
+      let actionToastTitle = "";
+      let updatedPlayerData = { ...playerData }; 
+
+      const randomReward = () => Math.floor(Math.random() * (500 - 100 + 1)) + 100;
+
+      switch (actionType) {
+        case 'trabalhar':
+          goldEarned = randomReward(); 
+          xpEarned = randomReward();   
+          actionToastTitle = "Você trabalhou duro!";
+          break;
+        case 'pescar':
+          goldEarned = randomReward();  
+          xpEarned = randomReward();   
+          actionToastTitle = "Boa pescaria!";
+          break;
+        case 'dormir':
+          xpEarned = randomReward();   
+          actionToastTitle = "Você descansou bem.";
+          break;
+        case 'treinar':
+          xpEarned = randomReward(); 
+          actionToastTitle = "Treino concluído!";
+          break;
+      }
+      
+      updatedPlayerData.ouro = (playerData.ouro || 0) + goldEarned;
+      updatedPlayerData.xp = (playerData.xp || 0) + xpEarned;
+      
+      setPlayerData(updatedPlayerData);
+
+      const newCooldownEndTime = Date.now() + ACTION_COOLDOWN_DURATION;
+      setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
+      }
+
+      toast({
+        title: actionToastTitle,
+        description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP.`,
+      });
+
+      try {
+        const updatePath = `https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`;
+        const response = await fetch(updatePath, {
+          method: 'PATCH', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ouro: updatedPlayerData.ouro, xp: updatedPlayerData.xp }),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text(); 
+          console.error('Firebase save error response body:', errorBody);
+          let errorData = {};
+          try {
+            errorData = JSON.parse(errorBody); 
+          } catch (parseError) {
+            console.warn('Could not parse Firebase error response as JSON:', parseError);
+            errorData = { message: errorBody || 'Unknown Firebase error structure.' };
+          }
+          throw new Error(`Falha ao salvar no Firebase: ${response.statusText} (status ${response.status}). Caminho: ${updatePath}. Detalhes: ${JSON.stringify(errorData)}`);
+        }
+        toast({
+          title: "Progresso Salvo!",
+          description: "Suas recompensas foram salvas no banco de dados.",
+        });
+      } catch (saveError) {
+        console.error('Firebase save error:', saveError);
+        toast({
+          title: "Erro ao Salvar",
+          description: `Não foi possível salvar os dados no Firebase. ${saveError instanceof Error ? saveError.message : 'Erro desconhecido.'}. Verifique as regras de segurança do Firebase e o console para mais detalhes.`,
+          variant: "destructive",
+          duration: 7000, 
+        });
+      } finally {
+        setActiveActionAnimation(null);
+        setIsActionInProgress(false);
+      }
+    }, 1500); 
+  };
+
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <div className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-8 pt-12 sm:pt-20">
+      <header className="mb-10 sm:mb-12 text-center">
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2 tracking-tight">RPG himiko</h1>
+      </header>
+
+      <form onSubmit={handleSearch} className="w-full max-w-md mb-8 flex flex-col gap-3">
+        <div className="flex items-stretch gap-2 sm:gap-3">
+            <Input
+              type="text"
+              value={playerIdInput}
+              onChange={(e) => setPlayerIdInput(e.target.value)}
+              placeholder="nome do usuário"
+              className="flex-grow text-base h-12"
+              aria-label="Nome do usuário Input"
+            />
+            <Button 
+              type="submit" 
+              disabled={loading || !playerIdInput.trim() || !passwordInput.trim()} 
+              className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
+              aria-label="Search Player"
+            >
+              {loading && !playerData ? ( 
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
+              ) : (
+                <Search size={20} />
+              )}
+              <span className="ml-2 hidden sm:inline">Buscar</span>
+            </Button>
+        </div>
+        <div className="relative flex items-center">
+            <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              placeholder="senha"
+              className="flex-grow text-base h-12 pl-10"
+              aria-label="Password Input"
+            />
+        </div>
+      </form>
+
+      {error && (
+        <Alert variant="destructive" className="w-full max-w-md mb-8 shadow-lg">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erro</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {loading && !playerData && !error && <PlayerStatsSkeleton />}
+      
+      {!loading && playerData && !error && currentPlayerId && (
+        <>
+          <PlayerStatsCard playerData={playerData} />
+          <PlayerActionsCard
+            onAction={handlePlayerAction}
+            timeLeftForAction={timeLeftForAction}
+            actionConfig={actionConfig} 
+            isDisabled={!playerData || !currentPlayerId || isActionInProgress} 
+          />
+          {/* <RechargeCard 
+            playerId={currentPlayerId} 
+            playerName={playerData?.nome}
+            isDisabled={!playerData || !currentPlayerId} 
+          /> */}
+          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
+            <CardHeader>
+                <CardTitle className="text-xl flex items-center">
+                    <ShoppingBag size={24} className="mr-2 text-primary" />
+                    Loja do Jogador
+                </CardTitle>
+                <CardDescription>Compre itens e equipamentos para sua aventura.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild className="w-full py-3 text-base" variant="outline">
+                    <Link href={`/loja?playerId=${currentPlayerId}`}>
+                        Acessar Loja
+                    </Link>
+                </Button>
+            </CardContent>
+          </Card>
+        </>
+      )}
+       {loading && playerData && !error && currentPlayerId && ( 
+        <>
+          <div className="w-full max-w-lg text-center my-2">
+            <span className="text-sm text-muted-foreground italic">Atualizando dados...</span>
+          </div>
+          <PlayerStatsCard playerData={playerData} />
+           <PlayerActionsCard
+            onAction={handlePlayerAction}
+            timeLeftForAction={timeLeftForAction}
+            actionConfig={actionConfig} 
+            isDisabled={!playerData || !currentPlayerId || isActionInProgress}
+          />
+          {/* <RechargeCard 
+            playerId={currentPlayerId} 
+            playerName={playerData?.nome}
+            isDisabled={!playerData || !currentPlayerId} 
+          /> */}
+          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
+            <CardHeader>
+                <CardTitle className="text-xl flex items-center">
+                     <ShoppingBag size={24} className="mr-2 text-primary" />
+                    Loja do Jogador
+                </CardTitle>
+                <CardDescription>Compre itens e equipamentos para sua aventura.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild className="w-full py-3 text-base" variant="outline" disabled>
+                    <Link href={`/loja?playerId=${currentPlayerId}`}>
+                        Acessar Loja (Carregando...)
+                    </Link>
+                </Button>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {activeActionAnimation && actionConfig[activeActionAnimation] && (
+        <Dialog open={!!activeActionAnimation} onOpenChange={() => {setActiveActionAnimation(null); setIsActionInProgress(false);}}>
+          <ShadDialogContent className="sm:max-w-[280px] p-6 flex flex-col items-center justify-center bg-card/95 backdrop-blur-sm shadow-2xl rounded-lg border-border/50">
+            <ShadDialogHeader className="mb-3">
+              <ShadDialogTitle className="text-center text-xl font-semibold text-primary">
+                {actionConfig[activeActionAnimation].modalTitle}
+              </ShadDialogTitle>
+            </ShadDialogHeader>
+            <div className="animate-pulse text-primary">
+              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 72, strokeWidth: 1.5 })}
+            </div>
+          </ShadDialogContent>
+        </Dialog>
+      )}
+      
+      <footer className="w-full max-w-lg mt-12 pt-8 border-t border-border/30 text-center">
+        <p className="text-sm text-muted-foreground">
+          &copy; {currentYear} Yuri Draco. Todos os direitos reservados.
+        </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          AVISO: A verificação de senha neste protótipo é apenas para demonstração e não é segura para uso em produção.
+        </p>
+      </footer>
+    </div>
+  );
 }
