@@ -5,9 +5,9 @@ import React from 'react';
 import type { Player } from '@/types/player';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Zap, Sparkles, Package } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Zap, Sparkles, Package, Wallet } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { itemDetails } from '@/app/loja/lojaData'; // Importar itemDetails
+import { itemDetails } from '@/app/loja/lojaData'; 
 
 interface PlayerStatItemProps {
   icon: React.ElementType;
@@ -28,16 +28,16 @@ const formatNumber = (num: number | undefined): string => {
 const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, value, iconColor, isLoading }) => {
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center p-2 space-y-1 rounded-lg bg-card/50 border border-border/30 shadow-md min-h-[70px]">
-        <Skeleton className="w-6 h-6 rounded-full" />
-        <Skeleton className="w-12 h-3" />
-        <Skeleton className="w-8 h-4" />
+      <div className="flex flex-col items-center justify-center p-2.5 space-y-1.5 rounded-lg bg-card/70 border border-border/30 shadow-md min-h-[80px]">
+        <Skeleton className="w-7 h-7 rounded-full" />
+        <Skeleton className="w-16 h-3.5" />
+        <Skeleton className="w-10 h-4" />
       </div>
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center p-2 space-y-1 text-center rounded-lg bg-card/50 border border-border/30 shadow-md hover:shadow-lg transition-shadow duration-200 min-h-[70px] overflow-hidden">
-      <Icon size={20} className={iconColor || 'text-primary'} />
+    <div className="flex flex-col items-center justify-center p-2.5 space-y-1.5 text-center rounded-lg bg-card/70 border border-border/30 shadow-md hover:shadow-lg transition-shadow duration-200 min-h-[80px] overflow-hidden">
+      <Icon size={24} className={iconColor || 'text-primary'} />
       <p className="text-xs font-medium text-muted-foreground truncate w-full" title={label}>{label}</p>
       <p className="text-sm font-semibold text-foreground break-words w-full" title={String(value)}>
         {typeof value === 'number' ? formatNumber(value) : (value || 'N/A')}
@@ -54,24 +54,30 @@ interface PlayerStatsCardProps {
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading }) => {
   if (isLoading) {
     return (
-      <Card className="w-full max-w-4xl mb-8 shadow-2xl bg-card border-border/50 animate-in fade-in-0 slide-in-from-top-8 duration-500">
-        <CardHeader className="flex flex-row items-center gap-4 p-4 sm:p-6">
-          <Skeleton className="w-16 h-16 rounded-full sm:w-20 sm:h-20" />
+      <Card className="w-full max-w-4xl mb-8 shadow-2xl bg-card border-border/50">
+        <CardHeader className="flex flex-col items-center gap-4 p-4 text-center sm:flex-row sm:p-6 sm:text-left">
+          <Skeleton className="w-20 h-20 rounded-full sm:w-24 sm:h-24" />
           <div className="space-y-2">
-            <Skeleton className="w-32 h-6 sm:w-48" />
-            <Skeleton className="w-24 h-4 sm:w-32" />
+            <Skeleton className="w-40 h-7 sm:w-56" />
+            <Skeleton className="w-32 h-5 sm:w-40" />
           </div>
         </CardHeader>
         <CardContent className="p-2 sm:p-3">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2">
+          {/* Skeleton para estatísticas */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
             {[...Array(6)].map((_, index) => (
-              <PlayerStatItem key={`skel-stat-${index}`} icon={User} label="Loading" value="0" isLoading={true} />
+              <PlayerStatItem key={`skel-stat-${index}`} icon={User} label="Carregando" value="0" isLoading={true} />
             ))}
           </div>
-          <Skeleton className="w-1/3 h-5 mt-4 ml-1 sm:ml-0" /> {/* Placeholder for "Outras Informações" or "Inventário" title */}
-          <div className="grid grid-cols-5 gap-1.5 mt-1.5 sm:gap-2">
+          {/* Skeleton para inventário */}
+          <Skeleton className="w-1/2 h-6 mt-4 mb-2 ml-1 sm:ml-0" /> 
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
              {[...Array(5)].map((_, index) => (
-              <PlayerStatItem key={`skel-inv-${index}`} icon={User} label="Loading" value="0" isLoading={true} />
+              <div key={`skel-inv-${index}`} className="flex flex-col items-center justify-center p-2 space-y-1 rounded-lg bg-card/70 border border-border/30 shadow-md min-h-[70px]">
+                <Skeleton className="w-6 h-6 rounded-md" />
+                <Skeleton className="w-12 h-3" />
+                <Skeleton className="w-8 h-3" />
+              </div>
             ))}
           </div>
         </CardContent>
@@ -82,6 +88,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
   if (!playerData) return null;
 
   const mainStats = [
+    { icon: Wallet, label: 'Saldo BRL', value: playerData.saldoBRL !== undefined ? playerData.saldoBRL.toFixed(2) : undefined, color: 'text-green-500'},
     { icon: Heart, label: 'Vida', value: playerData.vida, color: 'text-destructive' },
     { icon: CircleDollarSign, label: 'Ouro', value: playerData.ouro, color: 'text-[hsl(var(--chart-5))]' },
     { icon: Star, label: 'Level', value: playerData.nivel, color: 'text-[hsl(var(--chart-4))]' },
@@ -90,7 +97,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
     { icon: Sparkles, label: 'Mana', value: playerData.mana, color: 'text-[hsl(var(--chart-1))]' },
   ];
 
-  const ignoredKeys = ['nome', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana', 'senha', 'id', 'dinheiro', 'inventario'];
+  const ignoredKeys = ['nome', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana', 'senha', 'id', 'dinheiro', 'inventario', 'saldoBRL'];
   const otherStats = Object.entries(playerData)
     .filter(([key]) => !ignoredKeys.includes(key.toLowerCase()) && playerData[key] !== undefined && playerData[key] !== null && playerData[key] !== '')
     .map(([key, value]) => {
@@ -99,7 +106,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
         displayValue = value.split('@s.whatsapp.net')[0];
       }
       return {
-        icon: User, // Generic icon for other stats
+        icon: User, 
         label: key.charAt(0).toUpperCase() + key.slice(1),
         value: displayValue,
         color: 'text-foreground'
@@ -110,19 +117,19 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 
   return (
     <Card className="w-full max-w-4xl mb-8 overflow-hidden shadow-2xl bg-card border-border/50">
-      <CardHeader className="flex flex-row items-center gap-4 p-4 sm:p-6">
-        <Avatar className="w-16 h-16 sm:w-20 sm:h-20 border-2 border-primary">
-          <AvatarImage src={`https://placehold.co/100x100.png`} alt={playerData.nome || 'Avatar'} data-ai-hint="character avatar" />
-          <AvatarFallback>{playerData.nome ? playerData.nome.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
+      <CardHeader className="flex flex-col items-center gap-4 p-4 text-center border-b sm:flex-row sm:p-6 sm:text-left border-border/30">
+        <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-primary shadow-lg">
+          <AvatarImage src={`https://placehold.co/120x120.png`} alt={playerData.nome || 'Avatar'} data-ai-hint="character avatar" />
+          <AvatarFallback className="text-3xl">{playerData.nome ? playerData.nome.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
         </Avatar>
-        <div>
-          <CardTitle className="text-2xl sm:text-3xl font-bold text-primary break-all">{playerData.nome || 'Nome Desconhecido'}</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">Perfil do Jogador</CardDescription>
+        <div className="mt-2 sm:mt-0">
+          <CardTitle className="text-3xl sm:text-4xl font-bold text-primary break-words">{playerData.nome || 'Nome Desconhecido'}</CardTitle>
+          <CardDescription className="mt-1 text-base text-muted-foreground">Perfil Detalhado do Jogador</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="p-2 sm:p-3">
+      <CardContent className="p-3 sm:p-4">
         {(mainStats.length > 0 || otherStats.length > 0) && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
             {mainStats.map(stat => stat.value !== undefined && (
               <PlayerStatItem key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} iconColor={stat.color} />
             ))}
@@ -134,16 +141,16 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 
         {inventoryItems.length > 0 && (
           <>
-            <h3 className="col-span-full text-lg font-semibold text-primary mb-1.5 sm:mb-2 px-1 sm:px-0">Inventário</h3>
+            <h3 className="col-span-full text-xl font-semibold text-primary mb-2 sm:mb-3 px-1 sm:px-0 border-t border-border/30 pt-4">Inventário</h3>
             <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
               {inventoryItems.map(([itemName, quantity]) => {
                 const itemDetail = itemDetails[itemName.toLowerCase()];
                 const IconComponent = itemDetail ? itemDetail.icon : Package;
                 return (
-                  <div key={itemName} className="flex flex-col items-center justify-center p-2 space-y-1 text-center rounded-lg bg-card/50 border border-border/30 shadow-md hover:shadow-lg transition-shadow duration-200 min-h-[70px] overflow-hidden">
-                    <IconComponent size={20} className={itemDetail?.color || 'text-primary'} />
-                    <p className="text-xs font-medium text-muted-foreground capitalize truncate w-full" title={itemName}>{itemName}</p>
-                    <p className="text-sm font-semibold text-foreground">x{quantity}</p>
+                  <div key={itemName} className="flex flex-col items-center justify-center p-2 space-y-1 text-center rounded-lg bg-card/70 border border-border/30 shadow-md hover:shadow-lg transition-shadow duration-200 min-h-[70px] overflow-hidden">
+                    <IconComponent size={22} className={itemDetail?.color || 'text-accent'} />
+                    <p className="text-[11px] font-medium text-muted-foreground capitalize truncate w-full" title={itemName}>{itemName}</p>
+                    <p className="text-xs font-semibold text-foreground">x{quantity}</p>
                   </div>
                 );
               })}
@@ -156,3 +163,5 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 };
 
 export default PlayerStatsCard;
+
+    

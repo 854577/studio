@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices } from 'lucide-react';
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
@@ -17,11 +17,11 @@ import PlayerActionsCard from '@/components/app/PlayerActionsCard';
 const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 
-const actionConfig: Record<ActionType, { icon: React.ElementType, goldRange: [number, number], xpRange: [number, number], title: string, modalTitle: string }> = {
-  trabalhar: { icon: UserRound, goldRange: [100, 500], xpRange: [100, 500], title: "Você trabalhou duro!", modalTitle: "Trabalhando..." }, // Placeholder icon
-  pescar: { icon: UserRound, goldRange: [100, 500], xpRange: [100, 500], title: "Boa pescaria!", modalTitle: "Pescando..." }, // Placeholder icon
-  dormir: { icon: UserRound, goldRange: [0, 0], xpRange: [100, 500], title: "Você descansou bem.", modalTitle: "Descansando..." }, // Placeholder icon
-  treinar: { icon: UserRound, goldRange: [0, 0], xpRange: [100, 500], title: "Treino intenso!", modalTitle: "Treinando..." }, // Placeholder icon
+export const actionConfig: Record<ActionType, { icon: React.ElementType, goldRange: [number, number], xpRange: [number, number], title: string, modalTitle: string }> = {
+  trabalhar: { icon: UserRound, goldRange: [100, 500], xpRange: [100, 500], title: "Você trabalhou duro!", modalTitle: "Trabalhando..." },
+  pescar: { icon: UserRound, goldRange: [100, 500], xpRange: [100, 500], title: "Boa pescaria!", modalTitle: "Pescando..." },
+  dormir: { icon: UserRound, goldRange: [0, 0], xpRange: [100, 500], title: "Você descansou bem.", modalTitle: "Descansando..." },
+  treinar: { icon: UserRound, goldRange: [0, 0], xpRange: [100, 500], title: "Treino intenso!", modalTitle: "Treinando..." },
 };
 
 
@@ -35,8 +35,8 @@ function HomePageInternal() {
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null); // Erros gerais (pós-login)
-  const [loginError, setLoginError] = useState<string | null>(null); // Erros específicos de login
+  const [error, setError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
 
   const [actionCooldownEndTimes, setActionCooldownEndTimes] = useState<Record<ActionType, number>>({
@@ -48,6 +48,7 @@ function HomePageInternal() {
 
   const [activeActionAnimation, setActiveActionAnimation] = useState<ActionType | null>(null);
   const [isActionInProgress, setIsActionInProgress] = useState<boolean>(false);
+  const [currentActionLoading, setCurrentActionLoading] = useState<ActionType | null>(null);
 
  useEffect(() => {
     const pidFromUrl = searchParams.get('playerId');
@@ -62,31 +63,25 @@ function HomePageInternal() {
           setPlayerData(parsedData);
           setCurrentPlayerId(sessionPlayerId);
           setPlayerIdInput(pidFromUrl);
-          // Não limpar a senha aqui se estamos restaurando a sessão
         } catch (e) {
           console.error("Failed to parse session player data", e);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
-          // Limpar senha se a restauração da sessão falhar e o ID da URL é diferente do jogador carregado (se houver)
           if (currentPlayerId && pidFromUrl !== currentPlayerId) {
             setPasswordInput('');
           }
         }
       } else {
-        // Se o ID da URL é diferente do jogador atual (e havia um jogador atual), é um novo contexto de login
         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
           setPlayerData(null);
           setCurrentPlayerId(null);
-          setPasswordInput(''); // Limpar senha para novo login
+          setPasswordInput(''); 
           setLoginError(null);
           setError(null);
-        } else if (!currentPlayerId) { // Se não havia jogador atual, apenas preenche o input de ID
-           // Não limpar a senha aqui, pode ser uma tentativa de login direto via URL
         }
         setPlayerIdInput(pidFromUrl);
       }
     } else {
-      // Se não há playerId na URL, limpar tudo, incluindo a senha, se havia um jogador logado
       if (currentPlayerId) {
         setPlayerData(null);
         setCurrentPlayerId(null);
@@ -98,7 +93,7 @@ function HomePageInternal() {
         setError(null);
       }
     }
-  }, [searchParams, currentPlayerId]); // Adicionado currentPlayerId aqui para reavaliar se ele mudar externamente
+  }, [searchParams, currentPlayerId]);
 
 
   useEffect(() => {
@@ -117,7 +112,6 @@ function HomePageInternal() {
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      // Limpa os cooldowns se não houver jogador logado
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
@@ -143,11 +137,10 @@ function HomePageInternal() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay(); // Chamada inicial para exibir o tempo sem esperar 1 segundo
+        updateDisplay();
         const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
-         // Garante que, se o cooldown já expirou no carregamento, ele seja limpo visualmente e do localStorage
         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
@@ -163,18 +156,16 @@ function HomePageInternal() {
 
     if (!trimmedId || !passwordInput) {
       setLoginError('Nome de usuário e senha são obrigatórios.');
-      setPlayerData(null); // Garante que dados antigos não sejam exibidos
+      setPlayerData(null); 
       setCurrentPlayerId(null);
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
-      // Não limpar passwordInput aqui, o usuário pode querer corrigir.
       return;
     }
 
     setLoading(true);
     setLoginError(null);
     setError(null); 
-    // Não limpar playerData e currentPlayerId aqui para evitar piscar a UI se já estiver logado e for erro de senha
     
     try {
       const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
@@ -187,7 +178,6 @@ function HomePageInternal() {
         if (fetchedPlayerData.senha === passwordInput) {
           setPlayerData(fetchedPlayerData);
           setCurrentPlayerId(trimmedId);
-          // Não limpar passwordInput aqui, o formulário vai sumir
           if (searchParams.get('playerId') !== trimmedId) {
              window.history.pushState(null, '', `?playerId=${trimmedId}`);
           }
@@ -198,7 +188,7 @@ function HomePageInternal() {
           setLoginError('Nome de usuário ou senha inválidos.');
           setPlayerData(null); 
           setCurrentPlayerId(null);
-          setPasswordInput(''); // Limpar senha em caso de falha
+          setPasswordInput(''); 
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
         }
@@ -206,7 +196,7 @@ function HomePageInternal() {
         setLoginError('Nome de usuário ou senha inválidos.');
         setPlayerData(null);
         setCurrentPlayerId(null);
-        setPasswordInput(''); // Limpar senha em caso de falha
+        setPasswordInput('');
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
       }
@@ -216,7 +206,7 @@ function HomePageInternal() {
       setLoginError(`Erro ao buscar dados: ${errorMessage}`);
       setPlayerData(null);
       setCurrentPlayerId(null);
-      setPasswordInput(''); // Limpar senha em caso de falha
+      setPasswordInput(''); 
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
     } finally {
@@ -238,13 +228,17 @@ function HomePageInternal() {
     }
     
     setIsActionInProgress(true);
-    setActiveActionAnimation(actionType);
+    setCurrentActionLoading(actionType); // Define qual ação está carregando
 
-    // Simula a duração da animação e depois processa a ação
+
+    // Curto timeout para o spinner do botão aparecer antes do modal
+    await new Promise(resolve => setTimeout(resolve, 300)); 
+    
+    setActiveActionAnimation(actionType);
+    setCurrentActionLoading(null); // Reseta o spinner do botão
+
     setTimeout(async () => {
-      // Refetch playerData to ensure we have the latest before calculating rewards
-      // This also acts as a check if playerData became null during animation
-      if (!currentPlayerId) { // Checagem adicional
+      if (!currentPlayerId) { 
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
         setError("ID do jogador não encontrado. Por favor, faça login novamente.");
@@ -258,7 +252,7 @@ function HomePageInternal() {
         if (!response.ok) throw new Error('Falha ao buscar dados atualizados do jogador.');
         currentPlayerDataForAction = await response.json();
 
-        if (!currentPlayerDataForAction) { // Se o jogador foi deletado ou algo assim
+        if (!currentPlayerDataForAction) { 
           throw new Error('Não foi possível encontrar os dados atualizados do jogador.');
         }
 
@@ -280,7 +274,7 @@ function HomePageInternal() {
       const newXp = (currentPlayerDataForAction.xp || 0) + xpEarned;
 
       const updatedLocalPlayerData = { ...currentPlayerDataForAction, ouro: newOuro, xp: newXp };
-      setPlayerData(updatedLocalPlayerData); // Atualiza localmente primeiro para feedback rápido
+      setPlayerData(updatedLocalPlayerData); 
       sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData));
 
 
@@ -297,8 +291,6 @@ function HomePageInternal() {
         toast({ title: config.title, description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP. Dados salvos no servidor!` });
       } catch (err) {
         console.error('Detalhes do erro ao salvar no Firebase:', { message: err instanceof Error ? err.message : String(err), playerId: currentPlayerId, dataAttemptedToSave: { ouro: newOuro, xp: newXp }, originalError: err });
-        // O estado local já foi atualizado, então o usuário vê as recompensas.
-        // A mensagem de erro informa sobre a falha no salvamento no servidor.
         setError(err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor.");
         toast({ title: "Erro ao Salvar no Servidor", description: err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.", variant: "destructive" });
       }
@@ -310,62 +302,66 @@ function HomePageInternal() {
       setActiveActionAnimation(null);
       setIsActionInProgress(false);
 
-    }, 1500); // Duração da animação em milissegundos
+    }, 1200); // Reduzido um pouco a duração da animação do modal
   };
 
   const currentYear = new Date().getFullYear();
 
-  // Determina o conteúdo a ser renderizado
   let contentToRender;
-  if (loading && !playerData) {
-    contentToRender = <PlayerStatsCard isLoading={true} />;
+  if (loading && !playerData && !loginError) { // Estado de carregamento inicial, antes de tentar logar
+    contentToRender = (
+      <div className="flex flex-col items-center justify-center flex-grow">
+        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+        <p className="mt-4 text-lg text-muted-foreground">Buscando informações...</p>
+      </div>
+    );
   } else if (!playerData && !loading) { // Formulário de Login
     contentToRender = (
-      <>
+      <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4 animate-in fade-in-0 slide-in-from-top-8 duration-500">
         {loginError && (
-          <Alert variant="destructive" className="w-full max-w-md mb-6 shadow-lg">
+          <Alert variant="destructive" className="w-full mb-6 shadow-lg">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Erro de Login</AlertTitle>
             <AlertDescription>{loginError}</AlertDescription>
           </Alert>
         )}
-        <Card className="w-full max-w-md p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50 animate-in fade-in-0 slide-in-from-top-8 duration-500">
-          <CardHeader className="p-0 pb-4 mb-4 text-center border-b">
-            <CardTitle className="text-2xl text-primary">Bem-vindo!</CardTitle>
-            <CardDescription>Acesse seu perfil para continuar.</CardDescription>
+        <Card className="w-full p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50">
+          <CardHeader className="p-0 pb-6 mb-6 text-center border-b border-border/30">
+            <CardTitle className="text-3xl font-bold text-primary">Bem-vindo!</CardTitle>
+            <CardDescription className="mt-1 text-muted-foreground">Acesse seu perfil para continuar.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <form onSubmit={handleSearch} className="space-y-6">
               <div className="relative">
-                <UserRound className="absolute w-5 h-5 left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <UserRound className="absolute w-5 h-5 left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="text"
                   value={playerIdInput}
                   onChange={(e) => { setPlayerIdInput(e.target.value); setLoginError(null); }}
                   placeholder="Nome de usuário"
-                  className="pl-10 text-base h-11"
+                  className="pl-12 text-base rounded-md h-12 focus-visible:ring-primary focus-visible:ring-2"
                   aria-label="Nome de usuário Input"
                 />
               </div>
               <div className="relative">
-                <KeyRound className="absolute w-5 h-5 left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <KeyRound className="absolute w-5 h-5 left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="password"
                   value={passwordInput}
                   onChange={(e) => { setPasswordInput(e.target.value); setLoginError(null);}}
                   placeholder="Senha"
-                  className="pl-10 text-base h-11"
+                  className="pl-12 text-base rounded-md h-12 focus-visible:ring-primary focus-visible:ring-2"
                   aria-label="Password Input"
                 />
               </div>
               <Button
                 type="submit"
                 disabled={loading || !playerIdInput.trim() || !passwordInput}
-                className="w-full h-12 text-base font-semibold transition-transform bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95"
+                className="w-full h-12 text-base font-semibold transition-all duration-150 ease-in-out bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95 rounded-md"
                 aria-label="Buscar Jogador"
               >
                 {loading ? (
-                  <div className="w-5 h-5 border-t-2 border-b-2 rounded-full animate-spin border-primary-foreground"></div>
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <Search size={20} />
                 )}
@@ -374,12 +370,12 @@ function HomePageInternal() {
             </form>
           </CardContent>
         </Card>
-      </>
+      </div>
     );
   } else if (playerData && !loginError && !loading) { // Dados do Jogador
     contentToRender = (
-      <div className="w-full max-w-4xl">
-         {error && ( // Erro geral pós-login
+      <div className="w-full max-w-5xl px-2 animate-in fade-in-0 duration-500">
+         {error && ( 
           <Alert variant="destructive" className="w-full max-w-md mx-auto mb-6 shadow-lg">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
@@ -394,21 +390,24 @@ function HomePageInternal() {
           actionCooldownEndTimes={actionCooldownEndTimes}
           timeLeftForAction={timeLeftForAction}
           isActionInProgress={isActionInProgress}
+          currentActionLoading={currentActionLoading}
           disabled={!playerData || !currentPlayerId || isActionInProgress}
+          className="mt-8"
         />
          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50 mx-auto">
-          <CardHeader>
-              <CardTitle className="flex items-center text-xl">
-                  <ShoppingBag size={24} className="mr-2 text-primary" />
+          <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-xl text-primary">
+                  <ShoppingBag size={24} className="mr-2" />
                   Loja do Jogador
               </CardTitle>
-              <CardDescription>Compre itens para sua aventura.</CardDescription>
+              <CardDescription className="text-sm">Compre itens para sua aventura.</CardDescription>
           </CardHeader>
           <CardContent>
               <Button 
                   onClick={() => router.push(`/loja?playerId=${currentPlayerId}`)} 
-                  className="w-full"
+                  className="w-full h-11 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md"
                   disabled={!currentPlayerId}
+                  variant="secondary"
               >
                   Acessar Loja
               </Button>
@@ -420,32 +419,34 @@ function HomePageInternal() {
 
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-12 bg-background text-foreground sm:p-8 sm:pt-20">
+    <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-10 sm:pt-16 bg-background text-foreground">
       
-      <header className="mb-10 text-center sm:mb-12">
-        <h1 className="flex items-center justify-center text-5xl font-extrabold tracking-tight sm:text-6xl">
-          <Dices size={44} className="mr-3 text-primary shrink-0" />
+      <header className="mb-8 text-center sm:mb-10">
+        <h1 className="flex items-center justify-center text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+          <Dices size={40} className="mr-3 text-primary shrink-0 sm:size-48 lg:size-52" />
           <span className="text-muted-foreground">RPG</span>
           <span className="ml-2 text-primary">himiko</span>
         </h1>
       </header>
 
-      {contentToRender}
+      <div className="flex flex-col items-center justify-center w-full flex-grow">
+        {contentToRender}
+      </div>
       
       {activeActionAnimation && actionConfig[activeActionAnimation] && (
-        <Dialog open={!!activeActionAnimation} onOpenChange={() => {/* controlada pelo estado */}}>
-          <DialogContent className="sm:max-w-[280px] p-8">
+        <Dialog open={!!activeActionAnimation} onOpenChange={(open) => { if(!open) setActiveActionAnimation(null); }}>
+          <DialogContent className="sm:max-w-[320px] p-8 bg-card border-border/50 rounded-lg shadow-2xl">
             <DialogHeader className="items-center text-center">
-              <DialogTitle className="mb-4 text-2xl">{actionConfig[activeActionAnimation].modalTitle}</DialogTitle>
+              <DialogTitle className="mb-4 text-2xl font-semibold text-primary">{actionConfig[activeActionAnimation].modalTitle}</DialogTitle>
             </DialogHeader>
             <div className="flex justify-center animate-pulse text-primary">
-              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 72, strokeWidth: 1.5 })}
+              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 80, strokeWidth: 1.5 })}
             </div>
           </DialogContent>
         </Dialog>
       )}
 
-      <footer className="w-full max-w-lg mt-12 mb-8 text-center">
+      <footer className="w-full py-8 mt-12 text-center border-t border-border/20">
         <p className="text-xs text-muted-foreground">
           &copy; {currentYear} Yuri Draco. Todos os direitos reservados.
         </p>
@@ -456,8 +457,15 @@ function HomePageInternal() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-t-4 border-b-4 rounded-full animate-spin border-primary"></div><p className="ml-4 text-lg">Carregando...</p></div>}>
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
+        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+        <p className="mt-4 text-lg text-muted-foreground">Carregando aplicação...</p>
+      </div>
+    }>
       <HomePageInternal />
     </Suspense>
   );
 }
+
+    

@@ -36,7 +36,7 @@ function LojaContent() {
       }
       const data: Player | null = await response.json();
       if (data) {
-        setPlayerData({ ...data, nome: data.nome || id }); // Garante que o nome é exibido
+        setPlayerData({ ...data, nome: data.nome || id }); 
       } else {
         setError(`Jogador com ID "${id}" não encontrado.`);
         setPlayerData(null);
@@ -77,11 +77,9 @@ function LojaContent() {
     if (result.success) {
       toast({ title: "Compra Realizada!", description: result.message });
       if (result.updatedPlayer) {
-        setPlayerData(result.updatedPlayer); // Atualiza os dados do jogador localmente
-         // Salva no sessionStorage para refletir na página principal ao voltar
+        setPlayerData(result.updatedPlayer); 
         sessionStorage.setItem('playerData', JSON.stringify(result.updatedPlayer));
       } else {
-        // Se updatedPlayer não vier, refaz o fetch para garantir consistência.
         fetchPlayerData(playerId);
       }
     } else {
@@ -91,23 +89,23 @@ function LojaContent() {
   
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">Carregando dados da loja e do jogador...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background text-foreground">
+        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+        <p className="mt-6 text-xl text-muted-foreground">Carregando loja...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="w-4 h-4" />
-          <AlertTitle>Erro ao Carregar Loja</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background text-foreground">
+        <Alert variant="destructive" className="max-w-lg shadow-lg">
+          <AlertCircle className="w-5 h-5" />
+          <AlertTitle className="text-lg">Erro ao Carregar Loja</AlertTitle>
+          <AlertDescription className="text-base">{error}</AlertDescription>
         </Alert>
-        <Button variant="outline" onClick={() => router.push('/')} className="mt-6">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Voltar para Início
+        <Button variant="outline" onClick={() => router.push('/')} className="mt-8 text-base h-11 rounded-md">
+          <ArrowLeft className="w-5 h-5 mr-2" /> Voltar para Início
         </Button>
       </div>
     );
@@ -115,59 +113,59 @@ function LojaContent() {
 
   if (!playerData) {
      return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-        <Alert className="max-w-md">
-          <AlertCircle className="w-4 h-4" />
-          <AlertTitle>Jogador Não Encontrado</AlertTitle>
-          <AlertDescription>Não foi possível carregar os dados do jogador para a loja.</AlertDescription>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background text-foreground">
+        <Alert className="max-w-lg shadow-lg">
+          <AlertCircle className="w-5 h-5" />
+          <AlertTitle className="text-lg">Jogador Não Encontrado</AlertTitle>
+          <AlertDescription className="text-base">Não foi possível carregar os dados do jogador para a loja.</AlertDescription>
         </Alert>
-         <Button variant="outline" onClick={() => router.push(playerId ? `/?playerId=${playerId}` : '/')} className="mt-6">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Voltar para Perfil
+         <Button variant="outline" onClick={() => router.push(playerId ? `/?playerId=${playerId}` : '/')} className="mt-8 text-base h-11 rounded-md">
+          <ArrowLeft className="w-5 h-5 mr-2" /> Voltar para Perfil
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="container py-8 mx-auto max-w-5xl">
-      <header className="mb-8 text-center">
-        <h1 className="flex items-center justify-center mb-2 text-4xl font-extrabold tracking-tight text-primary sm:text-5xl">
-          <ShoppingBasket size={40} className="mr-3" /> Loja do Aventureiro
+    <div className="container py-10 mx-auto max-w-6xl px-4">
+      <header className="mb-10 text-center border-b pb-6 border-border/30">
+        <h1 className="flex items-center justify-center mb-3 text-5xl font-extrabold tracking-tight text-primary sm:text-6xl">
+          <ShoppingBasket size={50} className="mr-4" /> Loja do Aventureiro
         </h1>
-        <p className="text-muted-foreground">Bem-vindo(a) à loja, {playerData.nome || playerId}!</p>
-        <div className="flex items-center justify-center mt-4 text-lg font-semibold text-yellow-400">
-          <CircleDollarSign className="w-6 h-6 mr-2" />
+        <p className="text-lg text-muted-foreground">Bem-vindo(a) à loja, <span className="font-semibold text-primary">{playerData.nome || playerId}</span>!</p>
+        <div className="flex items-center justify-center mt-6 text-2xl font-bold text-yellow-400 bg-card/50 py-3 px-6 rounded-lg shadow-md max-w-xs mx-auto border border-border/30">
+          <CircleDollarSign className="w-8 h-8 mr-3" />
           Seu Ouro: {playerData.ouro !== undefined ? playerData.ouro.toLocaleString() : 'N/A'}
         </div>
       </header>
 
-      <Accordion type="multiple" collapsible className="w-full">
+      <Accordion type="multiple" collapsible className="w-full space-y-6">
         {shopCategoriesData.map((category) => (
-          <AccordionItem value={category.name} key={category.name}>
-            <AccordionTrigger className="text-xl font-semibold text-primary hover:text-primary/90">
+          <AccordionItem value={category.name} key={category.name} className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden">
+            <AccordionTrigger className="px-6 py-4 text-2xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30">
               {category.name}
             </AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-2">
+            <AccordionContent className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
                 {category.items.map((item) => (
-                  <Card key={item.name} className="flex flex-col overflow-hidden transition-all duration-200 shadow-md hover:shadow-xl bg-card/80 border-border/50">
-                    <CardHeader className="items-center p-4 text-center">
-                      <item.icon size={40} className={cn("mb-2", item.color || "text-accent")} />
-                      <CardTitle className="text-lg truncate" title={item.name}>{item.name}</CardTitle>
+                  <Card key={item.name} className="flex flex-col overflow-hidden transition-all duration-200 shadow-md hover:shadow-xl bg-card/80 border-border/50 hover:border-primary/50">
+                    <CardHeader className="items-center p-4 sm:p-5 text-center">
+                      <item.icon size={48} className={cn("mb-3", item.color || "text-accent")} />
+                      <CardTitle className="text-xl font-semibold truncate" title={item.name}>{item.name}</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-col items-center justify-between flex-grow p-4 pt-0">
-                      <CardDescription className="mb-3 text-center">
+                    <CardContent className="flex flex-col items-center justify-between flex-grow p-4 pt-0 sm:p-5">
+                      <CardDescription className="mb-4 text-center text-base">
                         Preço: <span className="font-semibold text-yellow-400">{item.price.toLocaleString()}</span> ouro
                       </CardDescription>
                       <Button
                         onClick={() => handlePurchase(item)}
                         disabled={purchasingItemId === item.name || (playerData.ouro !== undefined && playerData.ouro < item.price)}
-                        className="w-full mt-auto bg-primary hover:bg-primary/90"
+                        className="w-full mt-auto text-base h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md"
                       >
                         {purchasingItemId === item.name ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         ) : (
-                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          <ShoppingCart className="w-5 h-5 mr-2" />
                         )}
                         Comprar
                       </Button>
@@ -182,8 +180,8 @@ function LojaContent() {
 
       <div className="mt-12 text-center">
         <Link href={playerId ? `/?playerId=${playerId}` : '/'} passHref>
-          <Button variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+          <Button variant="outline" className="text-base h-11 rounded-md">
+            <ArrowLeft className="w-5 h-5 mr-2" />
             Voltar para Perfil
           </Button>
         </Link>
@@ -194,9 +192,15 @@ function LojaContent() {
 
 export default function LojaPage() {
   return (
-    // Suspense é necessário porque LojaContent usa useSearchParams
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>}>
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
+        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+        <p className="mt-6 text-xl text-muted-foreground">Carregando...</p>
+      </div>
+    }>
       <LojaContent />
     </Suspense>
   );
 }
+
+    
