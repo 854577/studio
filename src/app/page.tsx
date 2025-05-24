@@ -5,12 +5,12 @@ import { useState, type FormEvent, useEffect } from 'react';
 import type { Player } from '@/types/player';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Search, AlertCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard, { PlayerStatsSkeleton } from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
+import RechargeCard from '@/components/app/RechargeCard'; // Novo componente
 
 export type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 export const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
@@ -37,7 +37,6 @@ export default function HomePage() {
     treinar: null,
   });
 
-  // Load cooldowns from localStorage when currentPlayerId changes
   useEffect(() => {
     if (typeof window !== 'undefined' && currentPlayerId) {
       const loadedCooldowns: Record<ActionType, number> = { trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 };
@@ -49,13 +48,11 @@ export default function HomePage() {
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      // Reset cooldowns if no currentPlayerId (e.g., on initial load or after clearing search)
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
   }, [currentPlayerId]);
 
-  // Manage cooldown timers
   useEffect(() => {
     const intervalIds: NodeJS.Timeout[] = [];
 
@@ -111,7 +108,7 @@ export default function HomePage() {
     setLoading(true);
     setError(null);
     setPlayerData(null);
-    setCurrentPlayerId(null); // Reset current player ID on new search
+    setCurrentPlayerId(null); 
 
     try {
       const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
@@ -122,7 +119,7 @@ export default function HomePage() {
 
       if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[trimmedId]) {
         setPlayerData(allPlayersData[trimmedId]);
-        setCurrentPlayerId(trimmedId); // Set current player ID on successful search
+        setCurrentPlayerId(trimmedId); 
       } else if (allPlayersData === null || typeof allPlayersData !== 'object') {
         setError('Invalid data format received from API or no players found.');
       } else {
@@ -177,7 +174,7 @@ export default function HomePage() {
         actionTitle = "Você descansou bem.";
         break;
       case 'treinar':
-        xpEarned = Math.floor(Math.random() * 21) + 5; // 5-25 XP
+        xpEarned = Math.floor(Math.random() * 21) + 5; 
         actionTitle = "Treino concluído!";
         break;
     }
@@ -198,7 +195,6 @@ export default function HomePage() {
       description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP.`,
     });
 
-    // Save to Firebase
     try {
       const updatePath = `https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`;
       const response = await fetch(updatePath, {
@@ -210,8 +206,9 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})); // Try to parse error, default to empty object
-        console.error('Firebase save error response:', errorData);
+        const errorBody = await response.text();
+        console.error('Firebase save error response body:', errorBody);
+        const errorData = JSON.parse(errorBody || '{}');
         throw new Error(`Failed to save to Firebase: ${response.statusText} (status ${response.status}). Path: ${updatePath}. Details: ${JSON.stringify(errorData)}`);
       }
       toast({
@@ -225,8 +222,6 @@ export default function HomePage() {
         description: `Não foi possível salvar os dados no Firebase. ${saveError instanceof Error ? saveError.message : 'Erro desconhecido.'}`,
         variant: "destructive",
       });
-      // Optionally revert local changes if Firebase save fails
-      // setPlayerData(playerData); // This would revert the optimistic update
     }
   };
 
@@ -279,6 +274,11 @@ export default function HomePage() {
             onAction={handlePlayerAction}
             timeLeftForAction={timeLeftForAction}
             isDisabled={!playerData || !currentPlayerId}
+          />
+          <RechargeCard 
+            playerId={currentPlayerId} 
+            playerName={playerData?.nome}
+            isDisabled={!playerData || !currentPlayerId} 
           />
         </>
       )}
