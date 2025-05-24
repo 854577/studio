@@ -25,9 +25,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}>
-        <div className="min-h-screen">
+    <html lang="en" className=""> {/* Removed "dark" class to default to light theme */}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
+        {/* Removed star background divs */}
+        <div className="relative z-10 min-h-screen"> {/* Ensure content is above any potential fixed/absolute background elements */}
           {children}
         </div>
         <Toaster />

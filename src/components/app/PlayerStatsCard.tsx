@@ -21,13 +21,12 @@ const formatNumber = (num: number | undefined): string => {
   if (num === undefined || num === null) return 'N/A';
   if (Math.abs(num) < 1000) return num.toLocaleString();
   
-  const suffixes = ["", "K", "M", "B", "T"]; // Adicionado "T" para trilhões se necessário
+  const suffixes = ["", "K", "M", "B", "T"];
   const i = Math.floor(Math.log10(Math.abs(num)) / 3);
   
-  if (i >= suffixes.length) return num.toLocaleString(); // Fallback para números muito grandes
+  if (i >= suffixes.length) return num.toLocaleString(); 
 
   const scaledNum = num / Math.pow(1000, i);
-  // Arredonda para 1 casa decimal, mas remove .0
   const formattedNum = parseFloat(scaledNum.toFixed(1)); 
   return formattedNum.toString() + suffixes[i];
 };
@@ -36,7 +35,8 @@ const formatNumber = (num: number | undefined): string => {
 const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, value, iconColor, isLoading }) => {
   if (isLoading) {
     return (
-      <div className="animated-rgb-border-thin flex flex-col items-center justify-center p-2 space-y-1.5 rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden">
+      // Removed animated-rgb-border-thin
+      <div className="flex flex-col items-center justify-center p-2 space-y-1.5 rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden border border-border/30">
         <Skeleton className="w-6 h-6 rounded-full" />
         <Skeleton className="w-12 h-3" />
         <Skeleton className="w-8 h-3.5" />
@@ -44,7 +44,8 @@ const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, valu
     );
   }
   return (
-    <div className="animated-rgb-border-thin flex flex-col items-center justify-center p-2 space-y-1.5 text-center rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200">
+    // Removed animated-rgb-border-thin, added more pronounced shadow on hover
+    <div className="flex flex-col items-center justify-center p-2 space-y-1.5 text-center rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200 border border-border/30">
       <Icon size={22} className={cn(iconColor || 'text-primary', "shrink-0")} />
       <p className="text-[11px] font-medium text-muted-foreground truncate w-full" title={label}>{label}</p>
       <p className="text-xs font-semibold text-foreground break-words w-full" title={String(value)}>
@@ -63,7 +64,7 @@ interface PlayerStatsCardProps {
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading, className }) => {
   if (isLoading) {
     return (
-      <Card className={cn("w-full max-w-4xl overflow-hidden shadow-2xl bg-card", className)}>
+      <Card className={cn("w-full max-w-4xl overflow-hidden shadow-xl bg-card", className)}> {/* Increased shadow */}
         <CardHeader className="flex flex-col items-center gap-4 p-4 text-center border-b sm:flex-row sm:p-6 sm:text-left border-border/30">
           <Skeleton className="w-20 h-20 rounded-full sm:w-24 sm:h-24" />
           <div className="space-y-2">
@@ -72,17 +73,16 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
           </div>
         </CardHeader>
         <CardContent className="p-2 sm:p-3">
-          {/* Skeleton for stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
             {[...Array(7)].map((_, index) => ( 
               <PlayerStatItem key={`skel-stat-${index}`} icon={User} label="Carregando" value="0" isLoading={true} />
             ))}
           </div>
-          {/* Skeleton for inventory title and items */}
           <Skeleton className="w-1/3 h-5 mt-4 mb-2 ml-1 sm:ml-0" /> 
           <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
              {[...Array(5)].map((_, index) => (
-              <div key={`skel-inv-${index}`} className="animated-rgb-border-thin flex flex-col items-center justify-center p-2 space-y-1 rounded-lg bg-card/70 shadow-md min-h-[70px]">
+              // Removed animated-rgb-border-thin
+              <div key={`skel-inv-${index}`} className="flex flex-col items-center justify-center p-2 space-y-1 rounded-lg bg-card/70 shadow-md min-h-[70px] border border-border/30">
                 <Skeleton className="w-6 h-6 rounded-md" />
                 <Skeleton className="w-12 h-3" />
                 <Skeleton className="w-8 h-3" />
@@ -104,7 +104,8 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 
 
   const mainStats = [
-    { icon: Heart, label: 'Vida', value: playerData.vida, color: 'text-destructive' },
+    { icon: Wallet, label: 'Saldo (BRL)', value: playerData.saldoBRL !== undefined ? playerData.saldoBRL.toFixed(2) : undefined, color: 'text-[hsl(var(--chart-3))]' },
+    { icon: Heart, label: 'Vida', value: playerData.vida, color: 'text-destructive' }, // Using theme's destructive color
     { icon: CircleDollarSign, label: 'Ouro', value: playerData.ouro, color: 'text-[hsl(var(--chart-5))]' },
     { icon: Star, label: 'Level', value: playerData.nivel, color: 'text-[hsl(var(--chart-4))]' },
     { icon: TrendingUp, label: 'XP', value: playerData.xp, color: 'text-muted-foreground' },
@@ -124,18 +125,18 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
         icon: User, 
         label: key.charAt(0).toUpperCase() + key.slice(1),
         value: displayValue,
-        color: 'text-foreground'
+        color: 'text-foreground' 
       };
     });
 
   const inventoryItems = playerData.inventario ? Object.entries(playerData.inventario) : [];
 
   return (
-    <Card className={cn("w-full max-w-4xl overflow-hidden shadow-2xl bg-card", className)}>
+    <Card className={cn("w-full max-w-4xl overflow-hidden shadow-xl bg-card", className)}> {/* Increased shadow */}
       <CardHeader className="flex flex-col items-center gap-4 p-4 text-center border-b sm:flex-row sm:p-6 sm:text-left border-border/30">
         <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-primary shadow-lg">
-          <AvatarImage src={`https://placehold.co/120x120.png`} alt={playerData.nome || 'Avatar'} data-ai-hint="character avatar"/>
-          <AvatarFallback className="text-3xl">{fallbackName}</AvatarFallback>
+          <AvatarImage src={`https://placehold.co/120x120.png`} alt={playerData.nome || 'Avatar'} data-ai-hint="character face"/>
+          <AvatarFallback className="text-3xl bg-secondary text-secondary-foreground">{fallbackName}</AvatarFallback>
         </Avatar>
         <div className="mt-2 sm:mt-0">
           <CardTitle className="text-3xl sm:text-4xl font-bold text-primary break-words max-w-xs sm:max-w-md md:max-w-lg">{playerData.nome || 'Nome Desconhecido'}</CardTitle>
@@ -160,9 +161,10 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
                 const itemDetail = itemDetails[itemName.toLowerCase()];
                 const IconComponent = itemDetail ? itemDetail.icon : Package;
                 return (
+                  // Removed animated-rgb-border-thin
                   <div 
                     key={itemName} 
-                    className="animated-rgb-border-thin flex flex-col items-center justify-center p-2 space-y-1 text-center rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200"
+                    className="flex flex-col items-center justify-center p-2 space-y-1 text-center rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200 border border-border/30"
                   >
                     <IconComponent size={22} className={cn(itemDetail?.color || 'text-accent', "shrink-0")} />
                     <p className="text-[11px] font-medium text-muted-foreground capitalize truncate w-full" title={itemName}>{itemName}</p>
