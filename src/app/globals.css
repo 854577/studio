@@ -128,16 +128,4 @@
     0% { background-position: 0% center; }
     100% { background-position: 300% center; }
   }
-
-  .input-focus-rgb-ring:focus-visible {
-    /* Tailwind já aplica ring-2 ring-ring ring-offset-background. Vamos animar a --tw-ring-color */
-    animation: ring-color-cycle 3s linear infinite alternate;
-  }
-
-  @keyframes ring-color-cycle {
-    0% { --tw-ring-color: hsl(var(--primary) / 0.8); }
-    33% { --tw-ring-color: hsl(var(--chart-1) / 0.8); } /* Azul Vercel */
-    66% { --tw-ring-color: hsl(var(--chart-4) / 0.8); } /* Amarelo/Dourado */
-    100% { --tw-ring-color: hsl(var(--primary) / 0.8); }
-  }
 }

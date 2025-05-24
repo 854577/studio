@@ -218,6 +218,7 @@ export default function HomePage() {
             path: `rpgUsuarios/${currentPlayerId}`,
             status: firebaseResponse.status,
             statusText: firebaseResponse.statusText,
+            responseBody: await firebaseResponse.text().catch(() => 'Could not read response body'),
         });
         throw new Error(errorMessage);
       }
@@ -261,16 +262,13 @@ export default function HomePage() {
           value={playerIdInput}
           onChange={(e) => setPlayerIdInput(e.target.value)}
           placeholder="nome do usuário"
-          className={cn(
-            "flex-grow text-base h-12",
-            "input-focus-rgb-ring" 
-          )}
+          className="flex-grow text-base h-12"
           aria-label="Nome do usuário Input"
         />
         <Button 
           type="submit" 
           disabled={loading || !playerIdInput.trim()} 
-          className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6 transition-transform duration-200 ease-in-out hover:scale-[1.03]"
+          className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
           aria-label="Search Player"
         >
           {loading ? (
@@ -311,7 +309,7 @@ export default function HomePage() {
         <>
           <Card className={cn(
             "w-full max-w-lg shadow-2xl bg-card border-border/50 relative overflow-hidden",
-            playerData && "animated-rgb-border"
+            "animated-rgb-border"
             )}>
             <CardHeader className="pb-4">
               <CardTitle className="text-2xl sm:text-3xl text-primary flex items-center">
@@ -391,7 +389,7 @@ export default function HomePage() {
 
           <Card className={cn(
             "w-full max-w-lg mt-8 shadow-xl bg-card border-border/50 relative overflow-hidden",
-             playerData && "animated-rgb-border"
+             "animated-rgb-border"
             )}>
             <CardHeader>
               <CardTitle className="text-xl flex items-center">
@@ -410,7 +408,7 @@ export default function HomePage() {
                     key={action}
                     onClick={() => handlePlayerAction(action)}
                     disabled={isDisabled}
-                    className="w-full py-6 text-sm flex flex-col items-center justify-center h-auto min-h-[7rem] transition-transform duration-200 ease-in-out hover:scale-[1.03] disabled:transform-none"
+                    className="w-full py-6 text-sm flex flex-col items-center justify-center h-auto min-h-[7rem] disabled:transform-none"
                     variant={isDisabled ? "secondary" : "default"}
                   >
                     <Icon className={`mb-2 h-8 w-8 ${isDisabled ? 'text-muted-foreground' : ''}`} />
