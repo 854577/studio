@@ -38,7 +38,6 @@ export default function HomePage() {
       if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[trimmedId]) {
         setPlayerData(allPlayersData[trimmedId]);
       } else if (allPlayersData === null || typeof allPlayersData !== 'object') {
-        // This case handles if the entire rpgUsuarios.json is null or not an object
         setError('Invalid data format received from API or no players found.');
       } else {
         setError(`Player ID "${trimmedId}" not found.`);
@@ -117,7 +116,7 @@ export default function HomePage() {
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             {playerData.vida !== undefined && (
               <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md">
-                <Heart size={24} className="mr-3 text-red-500 shrink-0" />
+                <Heart size={24} className="mr-3 text-destructive shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Health</p>
                   <p className="text-lg font-bold text-foreground">{playerData.vida}</p>
@@ -126,7 +125,7 @@ export default function HomePage() {
             )}
             {playerData.dinheiro !== undefined && (
               <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md">
-                <CircleDollarSign size={24} className="mr-3 text-green-500 shrink-0" />
+                <CircleDollarSign size={24} className="mr-3 text-accent shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Money</p>
                   <p className="text-lg font-bold text-foreground">{playerData.dinheiro.toLocaleString()}</p>
@@ -135,7 +134,7 @@ export default function HomePage() {
             )}
             {playerData.nivel !== undefined && (
               <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md">
-                <Star size={24} className="mr-3 text-yellow-400 shrink-0" />
+                <Star size={24} className="mr-3 text-primary shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Level</p>
                   <p className="text-lg font-bold text-foreground">{playerData.nivel}</p>
@@ -144,7 +143,7 @@ export default function HomePage() {
             )}
             {playerData.xp !== undefined && (
               <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md">
-                <BarChart3 size={24} className="mr-3 text-blue-400 shrink-0" />
+                <BarChart3 size={24} className="mr-3 text-muted-foreground shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Experience (XP)</p>
                   <p className="text-lg font-bold text-foreground">{playerData.xp.toLocaleString()}</p>
