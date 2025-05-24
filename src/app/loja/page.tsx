@@ -78,6 +78,7 @@ function LojaContent() {
       toast({ title: "Compra Realizada!", description: result.message });
       if (result.updatedPlayer) {
         setPlayerData(result.updatedPlayer);
+        // Optionally update sessionStorage if you use it for player data across pages
         sessionStorage.setItem('playerData', JSON.stringify(result.updatedPlayer));
       } else {
         // Re-fetch player data if updatedPlayer is not returned to ensure UI consistency
@@ -91,7 +92,7 @@ function LojaContent() {
   if (loading && !playerData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background text-foreground">
-        <Loader2 className="w-16 h-16 text-primary" />
+        <Loader2 className="w-16 h-16 text-primary " />
         <p className="mt-6 text-xl text-muted-foreground">Carregando loja...</p>
       </div>
     );
@@ -105,8 +106,8 @@ function LojaContent() {
           <AlertTitle className="text-lg">Erro ao Carregar Loja</AlertTitle>
           <AlertDescription className="text-base">{error}</AlertDescription>
         </Alert>
-        <Button variant="outline" onClick={() => router.push('/')} className="mt-8 text-base h-11 rounded-md">
-          <ArrowLeft className="w-5 h-5 mr-2" /> Voltar para Início
+        <Button variant="outline" onClick={() => router.push(playerId ? `/?playerId=${playerId}` : '/')} className="mt-8 text-base h-11 rounded-md">
+          <ArrowLeft className="w-5 h-5 mr-2" /> Voltar para Perfil
         </Button>
       </div>
     );
@@ -128,7 +129,7 @@ function LojaContent() {
   }
 
   return (
-    <div className="container py-10 mx-auto max-w-6xl px-4">
+    <div className="container py-10 mx-auto max-w-6xl px-4 ">
       <header className="mb-10 text-center border-b pb-6 border-border/30">
         <h1 className="flex items-center justify-center mb-3 text-5xl font-extrabold tracking-tight text-primary sm:text-6xl">
           <ShoppingBasket size={50} className="mr-4" /> Loja do Aventureiro
@@ -143,7 +144,7 @@ function LojaContent() {
       <Accordion type="multiple" className="w-full space-y-6">
         {shopCategoriesData.map((category) => (
           <AccordionItem value={category.name} key={category.name} className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden">
-            <AccordionTrigger className="px-6 py-4 text-2xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:rotate-0">
+            <AccordionTrigger className="px-6 py-4 text-2xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:[transform:rotate(0deg)]">
               {category.name}
             </AccordionTrigger>
             <AccordionContent className="p-4 sm:p-6">
@@ -164,7 +165,7 @@ function LojaContent() {
                         className="w-full mt-auto text-base h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md"
                       >
                         {purchasingItemId === item.name ? (
-                          <Loader2 className="w-5 h-5 mr-2" />
+                          <Loader2 className="w-5 h-5 mr-2 " />
                         ) : (
                           <ShoppingCart className="w-5 h-5 mr-2" />
                         )}
@@ -195,7 +196,7 @@ export default function LojaPage() {
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Loader2 className="w-16 h-16" />
+        <Loader2 className="w-16 h-16 " />
         <p className="mt-6 text-xl text-muted-foreground">Carregando...</p>
       </div>
     }>
