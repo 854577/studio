@@ -63,6 +63,7 @@ export default function HomePage() {
 
         if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[id]) {
           setPlayerData(allPlayersData[id]);
+          setError(null); 
         } else {
           if (!error) setError(`Player ID "${id}" not found or data format invalid.`);
         }
@@ -77,7 +78,7 @@ export default function HomePage() {
     if (currentPlayerId) {
       fetchPlayerData(currentPlayerId);
     }
-  }, [currentPlayerId]); 
+  }, [currentPlayerId, error]); // Adicionado error como dependência para evitar loops se setError for chamado dentro
 
   useEffect(() => {
     if (typeof window !== 'undefined' && currentPlayerId) {
@@ -206,6 +207,15 @@ export default function HomePage() {
     setActiveActionAnimation(actionType);
 
     setTimeout(async () => {
+      // Adicionada verificação de playerData e currentPlayerId dentro do setTimeout
+      if (!playerData || !currentPlayerId) {
+        console.error("Player data or ID became null during action processing.");
+        setActiveActionAnimation(null);
+        setIsActionInProgress(false);
+        toast({ title: "Erro", description: "Dados do jogador não disponíveis para completar a ação. Tente novamente.", variant: "destructive" });
+        return;
+      }
+
       let goldEarned = 0;
       let xpEarned = 0;
       let actionToastTitle = "";
@@ -225,11 +235,11 @@ export default function HomePage() {
           actionToastTitle = "Boa pescaria!";
           break;
         case 'dormir':
-          xpEarned = randomReward();   
+          xpEarned = randomReward();   // Dormir não dá ouro, apenas XP
           actionToastTitle = "Você descansou bem.";
           break;
         case 'treinar':
-          xpEarned = randomReward(); 
+          xpEarned = randomReward(); // Treinar não dá ouro, apenas XP
           actionToastTitle = "Treino concluído!";
           break;
       }
@@ -392,5 +402,7 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
 
     
