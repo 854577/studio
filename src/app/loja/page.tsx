@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from "@/hooks/use-toast";
-import { CircleDollarSign, ShoppingCart, ChevronLeft, Coins, Warehouse, Package, Gem } from 'lucide-react'; // Adicionado Package e Gem
+import { CircleDollarSign, ShoppingCart, ChevronLeft, Coins, Warehouse, Package, Gem, ShoppingBasket } from 'lucide-react'; // Adicionado ShoppingBasket
 import { Skeleton } from '@/components/ui/skeleton';
 
 function LojaContent() {
@@ -30,11 +30,14 @@ function LojaContent() {
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${id}.json`);
       if (!response.ok) {
+        if (response.status === 404 || (await response.clone().json()) === null) {
+          throw new Error(`Jogador com ID "${id}" não encontrado.`);
+        }
         throw new Error(`Erro ao buscar dados do jogador. Status: ${response.status}`);
       }
       const data: Player | null = await response.json();
       if (!data) { 
-         throw new Error(`Jogador com ID "${id}" não encontrado.`);
+         throw new Error(`Jogador com ID "${id}" não encontrado ou dados inválidos.`);
       }
       setPlayerData({ ...data, nome: data.nome || id }); 
     } catch (error) {
@@ -171,7 +174,7 @@ function LojaContent() {
               {category.name}
             </AccordionTrigger>
             <AccordionContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2">
+              <div className="grid grid-cols-2 gap-4 p-2">
                 {category.items.map((item) => {
                   const IconComponent = item.icon || Package; // Fallback para ícone Package
                   return (
