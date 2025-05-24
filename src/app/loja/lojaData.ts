@@ -2,8 +2,8 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Sword, Axe, PocketKnife, Crosshair, Wand2, Shield, Shirt, VenetianMask,
-  Helmet, Footprints, Hand, Layers, CircleDollarSign, Diamond, Target,
-  Ring, BookOpen, Flame, Gem, Sigma, EyeOff, BookMarked, Medal, HelpCircle,
+  HardHat, Footprints, Hand, Layers, CircleDollarSign, Diamond, Target,
+  BookOpen, Flame, Gem, Sigma, EyeOff, BookMarked, Medal, HelpCircle,
   HeartPulse, BatteryCharging, Beef, Torch, IterationCw, BriefcaseMedical, GlassWater, ArrowRight, PaintBucket, Vegan,
   Bird, Option, CloudDrizzle, KeyRound, Scroll, Hammer, Feather, Box, Zap, Sparkles, Package, ShoppingBasket, Tent
 } from 'lucide-react';
@@ -37,7 +37,7 @@ const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
   "escudo": { price: 60, icon: Shield },
   "capa": { price: 50, icon: Shirt }, // Usando Shirt como placeholder para Capa
   "couraça": { price: 95, icon: Shield }, // Usando Shield para Couraça
-  "elmo": { price: 70, icon: Helmet },
+  "elmo": { price: 70, icon: HardHat },
   "botas": { price: 40, icon: Footprints },
   "luvas": { price: 30, icon: Hand },
   "armadura leve": { price: 100, icon: Shirt },
@@ -46,7 +46,7 @@ const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
   "manto": { price: 60, icon: Shirt }, // Usando Shirt para Manto
 
   // Itens Mágicos
-  "anel mágico": { price: 200, icon: Ring },
+  "anel mágico": { price: 200, icon: Gem }, // Alterado de Ring para Gem
   "colar de mana": { price: 190, icon: CircleDollarSign }, // Usando CircleDollarSign para Colar (genérico)
   "livro antigo": { price: 180, icon: BookOpen },
   "orbe de fogo": { price: 210, icon: Flame },
