@@ -69,11 +69,11 @@ export default function HomePage() {
         <Button 
           type="submit" 
           disabled={loading || !playerIdInput.trim()} 
-          className="h-12 bg-accent hover:bg-accent/90 text-accent-foreground px-4 sm:px-6"
+          className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
           aria-label="Search Player"
         >
           {loading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-accent-foreground"></div>
+            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
           ) : (
             <Search size={20} />
           )}
@@ -82,7 +82,7 @@ export default function HomePage() {
       </form>
 
       {error && (
-        <Alert variant="destructive" className="w-full max-w-md mb-8 shadow-md">
+        <Alert variant="destructive" className="w-full max-w-md mb-8 shadow-lg">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
@@ -90,7 +90,7 @@ export default function HomePage() {
       )}
 
       {loading && !error && (
-         <Card className="w-full max-w-lg shadow-xl animate-pulse bg-card border border-border/50">
+         <Card className="w-full max-w-lg shadow-2xl animate-pulse bg-card border border-border/50">
           <CardHeader className="pb-4">
             <div className="h-8 bg-muted rounded w-3/4"></div>
             <div className="h-4 bg-muted rounded w-1/2 mt-2"></div>
@@ -105,18 +105,18 @@ export default function HomePage() {
       )}
 
       {playerData && !loading && !error && (
-        <Card className="w-full max-w-lg shadow-xl bg-card border border-border/50">
+        <Card className="w-full max-w-lg shadow-2xl bg-card border border-border/50">
           <CardHeader className="pb-4">
             <CardTitle className="text-2xl sm:text-3xl text-primary flex items-center">
-              <User size={30} className="mr-3 shrink-0" />
+              <User size={30} className="mr-3 shrink-0 text-primary" />
               {playerData.nome}
             </CardTitle>
             {playerData.nome && <CardDescription className="mt-1">Displaying stats for {playerData.nome}</CardDescription>}
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             {playerData.vida !== undefined && (
-              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md">
-                <Heart size={24} className="mr-3 text-destructive shrink-0" />
+              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
+                <Heart size={24} className="mr-3 text-primary shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Health</p>
                   <p className="text-lg font-bold text-foreground">{playerData.vida}</p>
@@ -124,7 +124,7 @@ export default function HomePage() {
               </div>
             )}
             {playerData.dinheiro !== undefined && (
-              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md">
+              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
                 <CircleDollarSign size={24} className="mr-3 text-accent shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Money</p>
@@ -133,8 +133,8 @@ export default function HomePage() {
               </div>
             )}
             {playerData.nivel !== undefined && (
-              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md">
-                <Star size={24} className="mr-3 text-primary shrink-0" />
+              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
+                <Star size={24} className="mr-3 text-accent shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Level</p>
                   <p className="text-lg font-bold text-foreground">{playerData.nivel}</p>
@@ -142,7 +142,7 @@ export default function HomePage() {
               </div>
             )}
             {playerData.xp !== undefined && (
-              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md">
+              <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
                 <BarChart3 size={24} className="mr-3 text-muted-foreground shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-muted-foreground">Experience (XP)</p>
@@ -153,7 +153,7 @@ export default function HomePage() {
             {Object.entries(playerData)
               .filter(([key]) => !['nome', 'vida', 'dinheiro', 'nivel', 'xp', 'id'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
               .map(([key, value]) => (
-                <div key={key} className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md sm:col-span-2">
+                <div key={key} className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg sm:col-span-2">
                   <Info size={24} className="mr-3 text-muted-foreground shrink-0" />
                   <div>
                     <p className="font-semibold text-sm text-muted-foreground capitalize">{key.replace(/_/g, ' ').toLowerCase()}</p>

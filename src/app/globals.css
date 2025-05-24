@@ -44,35 +44,35 @@ body {
   }
 
   .dark {
-    --background: 287 20% 9%; /* #1A121D */
-    --foreground: 287 10% 88%; /* #E0DDE3 */
+    --background: 275 15% 12%; /* Roxo bem escuro, quase preto */
+    --foreground: 45 30% 92%; /* Bege bem claro, "off-white" */
 
-    --card: 287 18% 12%; /* #221A25 */
-    --card-foreground: 287 10% 88%;
+    --card: 275 13% 18%; /* Roxo um pouco mais claro para os cards */
+    --card-foreground: 45 30% 92%; /* Mesmo do foreground geral */
 
-    --popover: 287 20% 9%;
-    --popover-foreground: 287 10% 88%;
+    --popover: 275 15% 12%; /* Igual ao background */
+    --popover-foreground: 45 30% 92%; /* Mesmo do foreground geral */
 
-    --primary: 281 45% 53%; /* #A050BE */
-    --primary-foreground: 287 10% 95%; /* #F1EFF2 */
+    --primary: 350 75% 60%; /* Vermelho Toga, um pouco rosado/sangue */
+    --primary-foreground: 0 0% 100%; /* Branco para contraste no vermelho */
 
-    --secondary: 287 15% 20%; /* #3A2F3F */
-    --secondary-foreground: 287 10% 88%;
+    --secondary: 275 10% 25%; /* Roxo acinzentado escuro para elementos secundários */
+    --secondary-foreground: 45 25% 85%; /* Bege mais suave */
 
-    --muted: 287 15% 25%; /* #4A3F4F */
-    --muted-foreground: 287 10% 65%; /* #A8A2AC */
+    --muted: 275 8% 30%; /* Roxo acinzentado ainda mais escuro/sutil */
+    --muted-foreground: 45 20% 70%; /* Bege acinzentado */
 
-    --accent: 159 45% 53%; /* #50BE98 */
-    --accent-foreground: 287 20% 10%; /* #1C141F, dark text for accent background */
+    --accent: 45 85% 65%; /* Amarelo/Dourado vibrante - cabelo da Toga */
+    --accent-foreground: 275 20% 10%; /* Texto escuro para o accent amarelo */
 
-    --destructive: 0 72% 51%; /* Default ShadCN destructive red */
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 70% 50%; /* Vermelho forte para erros */
+    --destructive-foreground: 0 0% 98%; /* Branco para contraste no vermelho destrutivo */
 
-    --border: 287 15% 18%; /* #302635 */
-    --input: 287 15% 15%; /* #2B222F */
-    --ring: 159 45% 60%; /* Slightly lighter accent for rings for visibility */
+    --border: 275 10% 22%; /* Borda sutil, um pouco mais clara que card */
+    --input: 275 10% 20%; /* Fundo do input */
+    --ring: 45 85% 70%; /* Anel de foco com a cor do accent (amarelo mais claro) */
     
-    /* Keeping chart and sidebar colors from default dark theme for now */
+    /* Mantendo cores de chart e sidebar do tema escuro padrão por enquanto, podem ser ajustadas depois se necessário */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
