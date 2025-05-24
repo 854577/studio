@@ -152,7 +152,7 @@ export default function HomePage() {
               </div>
             )}
             {Object.entries(playerData)
-              .filter(([key]) => !['nome', 'vida', 'dinheiro', 'nivel', 'xp'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
+              .filter(([key]) => !['nome', 'vida', 'dinheiro', 'nivel', 'xp', 'id'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
               .map(([key, value]) => (
                 <div key={key} className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-md sm:col-span-2">
                   <Info size={24} className="mr-3 text-muted-foreground shrink-0" />
