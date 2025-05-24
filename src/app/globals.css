@@ -72,7 +72,7 @@
     --chart-1: 200 90% 55%; /* Azul Vercel */
     --chart-2: 220 85% 65%; /* Azul mais claro */
     --chart-3: 240 5% 50%;  /* Cinza azulado */
-    --chart-4: 0 0% 80%;    /* Cinza claro */
+    --chart-4: 43 74% 66%;    /* Amarelo/Dourado */
     --chart-5: 270 70% 60%; /* Roxo sutil */
 
     --sidebar-background: 240 10% 4.5%; /* Um pouco mais claro que o fundo principal */
@@ -92,6 +92,5 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* font-family: Arial, Helvetica, sans-serif; REMOVIDO para usar Geist */
   }
 }

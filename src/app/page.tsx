@@ -318,7 +318,7 @@ export default function HomePage() {
               )}
               {playerData.ouro !== undefined && (
                 <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <CircleDollarSign size={24} className="mr-3 text-foreground shrink-0" /> 
+                  <CircleDollarSign size={24} className="mr-3 text-[hsl(var(--chart-5))] shrink-0" /> 
                   <div>
                     <p className="font-semibold text-sm text-muted-foreground">Ouro</p>
                     <p className="text-lg font-bold text-foreground">{playerData.ouro.toLocaleString()}</p>
@@ -327,7 +327,7 @@ export default function HomePage() {
               )}
               {playerData.nivel !== undefined && (
                 <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <Star size={24} className="mr-3 text-foreground shrink-0" />
+                  <Star size={24} className="mr-3 text-[hsl(var(--chart-4))] shrink-0" />
                   <div>
                     <p className="font-semibold text-sm text-muted-foreground">Level</p>
                     <p className="text-lg font-bold text-foreground">{playerData.nivel}</p>
@@ -345,7 +345,7 @@ export default function HomePage() {
               )}
               {playerData.energia !== undefined && (
                 <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <Zap size={24} className="mr-3 text-accent shrink-0" />
+                  <Zap size={24} className="mr-3 text-[hsl(var(--chart-4))] shrink-0" />
                   <div>
                     <p className="font-semibold text-sm text-muted-foreground">Energia</p>
                     <p className="text-lg font-bold text-foreground">{playerData.energia}</p>
@@ -354,7 +354,7 @@ export default function HomePage() {
               )}
               {playerData.mana !== undefined && (
                 <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <Sparkles size={24} className="mr-3 text-accent shrink-0" />
+                  <Sparkles size={24} className="mr-3 text-[hsl(var(--chart-1))] shrink-0" />
                   <div>
                     <p className="font-semibold text-sm text-muted-foreground">Mana</p>
                     <p className="text-lg font-bold text-foreground">{playerData.mana}</p>
