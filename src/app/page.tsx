@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function HomePage() {
   const [playerIdInput, setPlayerIdInput] = useState<string>('');
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,10 +34,10 @@ export default function HomePage() {
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && playerIdInput) {
+    if (typeof window !== 'undefined' && currentPlayerId) {
       const loadedCooldowns: Record<ActionType, number> = { trabalhar: 0, pescar: 0, dormir: 0 };
       (['trabalhar', 'pescar', 'dormir'] as ActionType[]).forEach(action => {
-        const endTime = localStorage.getItem(`cooldown_${action}_${playerIdInput}`);
+        const endTime = localStorage.getItem(`cooldown_${action}_${currentPlayerId}`);
         if (endTime) {
           loadedCooldowns[action] = parseInt(endTime, 10);
         }
@@ -46,7 +47,7 @@ export default function HomePage() {
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null });
     }
-  }, [playerIdInput]);
+  }, [currentPlayerId]);
 
   useEffect(() => {
     const intervalIds: NodeJS.Timeout[] = [];
@@ -67,8 +68,8 @@ export default function HomePage() {
           }));
         } else {
           setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-          if (playerIdInput && localStorage.getItem(`cooldown_${action}_${playerIdInput}`)) {
-             localStorage.removeItem(`cooldown_${action}_${playerIdInput}`);
+          if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
+             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
         }
       };
@@ -79,8 +80,8 @@ export default function HomePage() {
         intervalIds.push(id);
       } else {
          setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-         if (playerIdInput && localStorage.getItem(`cooldown_${action}_${playerIdInput}`)) {
-             localStorage.removeItem(`cooldown_${action}_${playerIdInput}`);
+         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
+             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
       }
     });
@@ -88,7 +89,7 @@ export default function HomePage() {
     return () => {
       intervalIds.forEach(clearInterval);
     };
-  }, [actionCooldownEndTimes, playerIdInput]);
+  }, [actionCooldownEndTimes, currentPlayerId]);
 
   const handleSearch = async (event: FormEvent) => {
     event.preventDefault();
@@ -96,12 +97,14 @@ export default function HomePage() {
     if (!trimmedId) {
       setError('Player ID cannot be empty.');
       setPlayerData(null);
+      setCurrentPlayerId(null);
       return;
     }
 
     setLoading(true);
     setError(null);
     setPlayerData(null);
+    setCurrentPlayerId(null);
 
     try {
       const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
@@ -112,6 +115,7 @@ export default function HomePage() {
 
       if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[trimmedId]) {
         setPlayerData(allPlayersData[trimmedId]);
+        setCurrentPlayerId(trimmedId); // Definir o ID do jogador atual
       } else if (allPlayersData === null || typeof allPlayersData !== 'object') {
         setError('Invalid data format received from API or no players found.');
       } else {
@@ -126,7 +130,7 @@ export default function HomePage() {
   };
   
   const handlePlayerAction = async (actionType: ActionType) => {
-    if (!playerData || !playerData.nome || !playerIdInput) {
+    if (!playerData || !currentPlayerId) {
       setError("Busque um jogador primeiro para realizar ações.");
       toast({
         title: "Erro",
@@ -170,7 +174,6 @@ export default function HomePage() {
     const newDinheiro = (playerData.dinheiro || 0) + goldEarned;
     const newXp = (playerData.xp || 0) + xpEarned;
 
-    // Atualização visual imediata
     setPlayerData(prevData => {
       if (!prevData) return null;
       return {
@@ -180,9 +183,8 @@ export default function HomePage() {
       };
     });
 
-    // Salvar no Firebase
     try {
-      const firebaseResponse = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${playerIdInput}.json`, {
+      const firebaseResponse = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`, {
         method: 'PATCH', 
         headers: {
           'Content-Type': 'application/json',
@@ -194,16 +196,16 @@ export default function HomePage() {
       });
 
       if (!firebaseResponse.ok) {
-        let errorDetail = firebaseResponse.statusText;
+        let errorDetail = `Status: ${firebaseResponse.status} - ${firebaseResponse.statusText}`;
         try {
             const errorData = await firebaseResponse.json();
             if (errorData && errorData.error) {
-                errorDetail = errorData.error;
+                errorDetail = typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error);
             }
         } catch (e) {
             // Ignora se não conseguir parsear o JSON do erro
         }
-        throw new Error(`Falha ao salvar no Firebase: ${errorDetail} (status ${firebaseResponse.status})`);
+        throw new Error(`Falha ao salvar no Firebase: ${errorDetail}. Por favor, verifique as regras de segurança do seu Firebase Realtime Database para garantir que a escrita está permitida para o caminho 'rpgUsuarios/${currentPlayerId}'.`);
       }
 
       toast({
@@ -220,11 +222,10 @@ export default function HomePage() {
       });
     }
 
-    // Lógica de cooldown
     const newCooldownEndTime = now + ACTION_COOLDOWN_DURATION;
     setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
-    if (typeof window !== 'undefined' && playerIdInput) {
-      localStorage.setItem(`cooldown_${actionType}_${playerIdInput}`, newCooldownEndTime.toString());
+    if (typeof window !== 'undefined' && currentPlayerId) {
+      localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
     }
   };
 
@@ -379,5 +380,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
