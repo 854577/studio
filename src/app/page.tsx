@@ -197,25 +197,28 @@ export default function HomePage() {
     let actionTitle = "";
     let updatedPlayerData = { ...playerData }; // Copia os dados atuais do jogador
 
+    // Min 100, Max 500: Math.floor(Math.random() * (500 - 100 + 1)) + 100  => Math.floor(Math.random() * 401) + 100
+    const randomReward = () => Math.floor(Math.random() * 401) + 100;
+
     switch (actionType) {
       case 'trabalhar':
-        goldEarned = Math.floor(Math.random() * 41) + 10; 
-        xpEarned = Math.floor(Math.random() * 16) + 5;   
+        goldEarned = randomReward(); 
+        xpEarned = randomReward();   
         actionTitle = "Você trabalhou duro!";
         break;
       case 'pescar':
-        goldEarned = Math.floor(Math.random() * 26) + 5;  
-        xpEarned = Math.floor(Math.random() * 13) + 3;   
+        goldEarned = randomReward();  
+        xpEarned = randomReward();   
         actionTitle = "Boa pescaria!";
         break;
       case 'dormir':
         // Dormir não dá ouro, apenas XP
-        xpEarned = Math.floor(Math.random() * 10) + 1;   
+        xpEarned = randomReward();   
         actionTitle = "Você descansou bem.";
         break;
       case 'treinar':
         // Treinar não dá ouro, apenas XP
-        xpEarned = Math.floor(Math.random() * 21) + 5; 
+        xpEarned = randomReward(); 
         actionTitle = "Treino concluído!";
         break;
     }
