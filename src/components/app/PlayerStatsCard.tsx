@@ -12,13 +12,27 @@ interface PlayerStatItemProps {
   iconClassName?: string;
 }
 
+const formatNumberWithAbbreviation = (num: number): string => {
+  if (num < 1000) {
+    return num.toLocaleString();
+  }
+  const suffixes = ["", "K", "M", "B", "T"]; // K for thousands, M for millions, B for billions, etc.
+  const i = Math.floor(Math.log10(Math.abs(num)) / 3);
+  const shortValue = (num / Math.pow(1000, i));
+  
+  // Show one decimal place if it's not a whole number, otherwise show no decimals
+  const formattedValue = shortValue % 1 !== 0 ? shortValue.toFixed(1) : shortValue.toFixed(0);
+  
+  return formattedValue + suffixes[i];
+};
+
 const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, value, iconClassName }) => (
   <div className="flex items-center p-3 sm:p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50">
-    <Icon size={20} className={`mr-2 sm:mr-2.5 shrink-0 ${iconClassName || ''}`} />
+    <Icon size={18} className={`mr-2 sm:mr-2.5 shrink-0 ${iconClassName || ''}`} />
     <div className="overflow-hidden">
-      <p className="font-semibold text-xs sm:text-sm text-muted-foreground truncate">{label}</p>
-      <p className="text-sm sm:text-base font-bold text-foreground break-words">
-        {typeof value === 'number' ? value.toLocaleString() : value}
+      <p className="font-semibold text-xs sm:text-sm text-muted-foreground truncate" title={label}>{label}</p>
+      <p className="text-sm sm:text-base font-bold text-foreground break-words" title={String(value)}>
+        {typeof value === 'number' ? formatNumberWithAbbreviation(value) : value}
       </p>
     </div>
   </div>
@@ -29,51 +43,52 @@ interface PlayerStatsCardProps {
 }
 
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
-  const orderedKeys: (keyof Player)[] = ['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
+  const orderedKeys: (keyof Player)[] = ['saldoBRL', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
   
   const mainStats = orderedKeys.map(key => {
-    if (playerData[key] === undefined || playerData[key] === null) return null;
+    const rawValue = playerData[key];
+    if (rawValue === undefined || rawValue === null) return null;
 
     let icon = Info;
     let label = key.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
     let iconClassName = 'text-muted-foreground';
-    let value: string | number = playerData[key] as string | number;
+    let value: string | number = rawValue as string | number;
 
     switch (key) {
+      case 'saldoBRL':
+        icon = Wallet;
+        label = 'Saldo (BRL)';
+        value = typeof rawValue === 'number' ? parseFloat(rawValue.toFixed(2)) : 0;
+        iconClassName = 'text-green-500'; // Example color for BRL
+        break;
       case 'vida':
         icon = Heart;
         label = 'Vida';
-        value = playerData.vida ?? 0;
         iconClassName = 'text-destructive';
         break;
       case 'ouro':
         icon = CircleDollarSign;
         label = 'Ouro';
-        value = playerData.ouro ?? 0;
         iconClassName = 'text-[hsl(var(--chart-5))]';
         break;
       case 'nivel':
         icon = Star;
         label = 'Level';
-        value = playerData.nivel ?? 0;
         iconClassName = 'text-[hsl(var(--chart-4))]';
         break;
       case 'xp':
         icon = BarChart3;
         label = 'Experience (XP)';
-        value = playerData.xp ?? 0;
         iconClassName = 'text-muted-foreground';
         break;
       case 'energia':
         icon = Zap;
         label = 'Energia';
-        value = playerData.energia ?? 0;
         iconClassName = 'text-[hsl(var(--chart-4))]';
         break;
       case 'mana':
         icon = Sparkles;
         label = 'Mana';
-        value = playerData.mana ?? 0;
         iconClassName = 'text-[hsl(var(--chart-1))]';
         break;
     }
@@ -92,15 +107,18 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
     )
     .map(([key, rawValue]) => {
       let displayValue = String(rawValue);
-      if (typeof displayValue === 'string' && displayValue.includes('@s.whatsapp.net')) {
-        displayValue = displayValue.replace('@s.whatsapp.net', '');
+      if (typeof rawValue === 'string' && rawValue.includes('@s.whatsapp.net')) {
+        displayValue = rawValue.replace('@s.whatsapp.net', '');
       }
+      const numericValue = parseFloat(displayValue);
+      const valueToDisplay = !isNaN(numericValue) && String(numericValue) === displayValue ? numericValue : displayValue;
+
       return (
         <PlayerStatItem 
           key={key}
           icon={Info} 
           label={key.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())} 
-          value={displayValue} 
+          value={valueToDisplay} 
           iconClassName="text-muted-foreground" 
         />
       );
