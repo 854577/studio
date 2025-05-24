@@ -7,13 +7,13 @@ import type { Player } from '@/types/player';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
-import { Search, AlertCircle, ShoppingBag } from 'lucide-react'; 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Search, AlertCircle, ShoppingBag, KeyRound } from 'lucide-react'; 
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard, { PlayerStatsSkeleton } from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
 import RechargeCard from '@/components/app/RechargeCard';
-import { Dialog, DialogContent as ShadDialogContent, DialogHeader as ShadDialogHeader, DialogTitle as ShadDialogTitle } from '@/components/ui/dialog'; // Renamed to avoid conflict
+import { Dialog, DialogContent as ShadDialogContent, DialogHeader as ShadDialogHeader, DialogTitle as ShadDialogTitle } from '@/components/ui/dialog';
 import { Briefcase, Fish, Bed, Dumbbell } from 'lucide-react'; 
 import Link from 'next/link'; 
 
@@ -29,6 +29,7 @@ export const actionConfig: Record<ActionType, { label: string; icon: React.Eleme
 
 export default function HomePage() {
   const [playerIdInput, setPlayerIdInput] = useState<string>('');
+  const [passwordInput, setPasswordInput] = useState<string>(''); // Novo estado para senha
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -52,60 +53,32 @@ export default function HomePage() {
   const [activeActionAnimation, setActiveActionAnimation] = useState<ActionType | null>(null);
   const [isActionInProgress, setIsActionInProgress] = useState<boolean>(false);
 
-  // Efeito para carregar playerId da URL na montagem
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const pid = params.get('playerId');
     if (pid) {
       setPlayerIdInput(pid);
-      // Disparar busca automaticamente se pid existir
-      // Criar um evento sintético ou chamar handleSearch diretamente
-      // Para simplificar, vamos apenas preencher o input e o usuário pode clicar em buscar
-      // ou você pode adaptar handleSearch para ser chamado aqui.
-      // Se quiser busca automática:
-      handleSearch(undefined, pid.trim());
+      // Não vamos disparar a busca automaticamente aqui, pois agora precisamos da senha.
+      // O usuário precisará digitar a senha e clicar em buscar.
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
   useEffect(() => {
-    const fetchPlayerData = async (id: string) => {
-      setLoading(true); 
-      try {
-        const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${id}.json`);
-        if (!response.ok) {
-           if (response.status === 404 || (await response.clone().json()) === null) { 
-            setError(`Player ID "${id}" not found.`);
-          } else {
-            throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
-          }
-          setPlayerData(null);
-          return;
-        }
-        const fetchedPlayerData: Player | null = await response.json();
-
-        if (fetchedPlayerData) {
-          setPlayerData(fetchedPlayerData);
-          setError(null); 
-        } else {
-          if (!error) setError(`Player ID "${id}" not found or data format invalid.`);
-          setPlayerData(null);
-        }
-      } catch (err) {
-        console.error('Fetch error:', err);
-        if (!error) setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching data.');
-        setPlayerData(null);
-      } finally {
-        setLoading(false);
-      }
+    // Este useEffect é apenas para recarregar dados se currentPlayerId mudar.
+    // A busca inicial com senha é feita em handleSearch.
+    const fetchPlayerDataOnIdChange = async (id: string) => {
+      // Se já temos dados e o ID não mudou, não faz nada aqui.
+      // Esta função seria mais útil se quiséssemos atualizar os dados periodicamente
+      // ou se outra ação na página alterasse o currentPlayerId e precisássemos de novos dados.
+      // Por agora, a busca principal é controlada pelo handleSearch.
     };
 
-    if (currentPlayerId) {
-      fetchPlayerData(currentPlayerId);
+    if (currentPlayerId && playerData) { // Somente se já temos um jogador e queremos "refrescar"
+      // fetchPlayerDataOnIdChange(currentPlayerId); 
+      // Comentado por enquanto para evitar buscas repetidas sem necessidade com a senha.
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPlayerId]); 
+  }, [currentPlayerId, playerData]); // Dependências intencionais
 
   useEffect(() => {
     if (typeof window !== 'undefined' && currentPlayerId) {
@@ -170,14 +143,25 @@ export default function HomePage() {
     };
   }, [actionCooldownEndTimes, currentPlayerId]);
 
-  const handleSearch = async (event?: FormEvent, idFromUrl?: string) => { 
+  const handleSearch = async (event?: FormEvent) => { 
     if (event) event.preventDefault(); 
     
-    const trimmedId = idFromUrl || playerIdInput.trim();
+    const trimmedId = playerIdInput.trim();
+    const trimmedPassword = passwordInput.trim(); // Senha digitada
+
     if (!trimmedId) {
-      setError('Player ID cannot be empty.');
+      setError('O nome do usuário não pode estar vazio.');
       setPlayerData(null);
       setCurrentPlayerId(null);
+      setPasswordInput('');
+      return;
+    }
+    if (!trimmedPassword) {
+      setError('A senha não pode estar vazia.');
+      setPlayerData(null);
+      setCurrentPlayerId(null);
+      // Não limpar playerIdInput aqui, apenas a senha
+      setPasswordInput('');
       return;
     }
 
@@ -185,13 +169,56 @@ export default function HomePage() {
     setError(null);
     setPlayerData(null); 
 
-    if (typeof window !== 'undefined' && !idFromUrl) {
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('playerId', trimmedId);
-      window.history.pushState({}, '', currentUrl.toString());
+    try {
+      const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
+      // Não limpar input de senha aqui ainda, esperar o resultado da busca
+      
+      if (!response.ok) {
+         if (response.status === 404 || (await response.clone().json()) === null) { 
+          setError(`Nome de usuário ou senha inválidos.`); // Mensagem genérica
+        } else {
+          throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
+        }
+        setPlayerData(null);
+        setCurrentPlayerId(null);
+        setPasswordInput(''); // Limpar senha em caso de erro de rede também
+        setLoading(false);
+        return;
+      }
+      const fetchedPlayerData: Player | null = await response.json();
+
+      if (fetchedPlayerData && fetchedPlayerData.senha !== undefined) {
+        // **AVISO DE SEGURANÇA: Comparação de senha em texto plano no frontend.**
+        // **Isto NÃO é seguro para um aplicativo de produção.**
+        if (fetchedPlayerData.senha === trimmedPassword) {
+          setPlayerData(fetchedPlayerData);
+          setError(null); 
+          setCurrentPlayerId(trimmedId); // Definir ID do jogador atual apenas com sucesso
+          // Atualizar URL com playerId se a busca for bem-sucedida
+          if (typeof window !== 'undefined') {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('playerId', trimmedId);
+            window.history.pushState({}, '', currentUrl.toString());
+          }
+        } else {
+          setError(`Nome de usuário ou senha inválidos.`);
+          setPlayerData(null);
+          setCurrentPlayerId(null);
+        }
+      } else {
+        setError(`Nome de usuário ou senha inválidos.`); // Jogador não encontrado ou não tem campo senha
+        setPlayerData(null);
+        setCurrentPlayerId(null);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido ao buscar dados.');
+      setPlayerData(null);
+      setCurrentPlayerId(null);
+    } finally {
+      setLoading(false);
+      setPasswordInput(''); // Limpar campo de senha após a tentativa
     }
-    
-    setCurrentPlayerId(trimmedId); 
   };
   
   const handlePlayerAction = async (actionType: ActionType) => {
@@ -208,7 +235,7 @@ export default function HomePage() {
     if (actionCooldownEndTimes[actionType] > now) {
       toast({
         title: "Ação em Cooldown",
-        description: `Você precisa esperar ${timeLeftForAction[actionType]} para ${actionType} novamente.`,
+        description: `Você precisa esperar ${timeLeftForAction[actionType]} para ${actionConfig[actionType].label.toLowerCase()} novamente.`,
         variant: "destructive",
       });
       return;
@@ -218,7 +245,7 @@ export default function HomePage() {
     setActiveActionAnimation(actionType);
 
     setTimeout(async () => {
-      if (!playerData || !currentPlayerId) { // Double check here
+      if (!playerData || !currentPlayerId) { 
         console.error("Player data or ID became null during action processing.");
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
@@ -245,10 +272,12 @@ export default function HomePage() {
           actionToastTitle = "Boa pescaria!";
           break;
         case 'dormir':
+          // goldEarned = 0; // Dormir não dá ouro
           xpEarned = randomReward();   
           actionToastTitle = "Você descansou bem.";
           break;
         case 'treinar':
+          // goldEarned = 0; // Treinar não dá ouro
           xpEarned = randomReward(); 
           actionToastTitle = "Treino concluído!";
           break;
@@ -290,7 +319,7 @@ export default function HomePage() {
             console.warn('Could not parse Firebase error response as JSON:', parseError);
             errorData = { message: errorBody || 'Unknown Firebase error structure.' };
           }
-          throw new Error(`Failed to save to Firebase: ${response.statusText} (status ${response.status}). Path: ${updatePath}. Details: ${JSON.stringify(errorData)}`);
+          throw new Error(`Falha ao salvar no Firebase: ${response.statusText} (status ${response.status}). Caminho: ${updatePath}. Detalhes: ${JSON.stringify(errorData)}`);
         }
         toast({
           title: "Progresso Salvo!",
@@ -319,34 +348,47 @@ export default function HomePage() {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2 tracking-tight">RPG himiko</h1>
       </header>
 
-      <form onSubmit={(e) => handleSearch(e)} className="w-full max-w-md mb-8 flex items-stretch gap-2 sm:gap-3">
-        <Input
-          type="text"
-          value={playerIdInput}
-          onChange={(e) => setPlayerIdInput(e.target.value)}
-          placeholder="nome do usuário"
-          className="flex-grow text-base h-12"
-          aria-label="Nome do usuário Input"
-        />
-        <Button 
-          type="submit" 
-          disabled={loading || !playerIdInput.trim()} 
-          className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
-          aria-label="Search Player"
-        >
-          {loading && !playerData ? ( 
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
-          ) : (
-            <Search size={20} />
-          )}
-          <span className="ml-2 hidden sm:inline">Search</span>
-        </Button>
+      <form onSubmit={handleSearch} className="w-full max-w-md mb-8 flex flex-col gap-3">
+        <div className="flex items-stretch gap-2 sm:gap-3">
+            <Input
+              type="text"
+              value={playerIdInput}
+              onChange={(e) => setPlayerIdInput(e.target.value)}
+              placeholder="nome do usuário"
+              className="flex-grow text-base h-12"
+              aria-label="Nome do usuário Input"
+            />
+            <Button 
+              type="submit" 
+              disabled={loading || !playerIdInput.trim() || !passwordInput.trim()} 
+              className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
+              aria-label="Search Player"
+            >
+              {loading && !playerData ? ( 
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
+              ) : (
+                <Search size={20} />
+              )}
+              <span className="ml-2 hidden sm:inline">Buscar</span>
+            </Button>
+        </div>
+        <div className="relative flex items-center">
+            <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              placeholder="senha"
+              className="flex-grow text-base h-12 pl-10" // Aumentado o padding left para o ícone
+              aria-label="Password Input"
+            />
+        </div>
       </form>
 
       {error && (
         <Alert variant="destructive" className="w-full max-w-md mb-8 shadow-lg">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>Erro</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -439,6 +481,9 @@ export default function HomePage() {
       <footer className="w-full max-w-lg mt-12 pt-8 border-t border-border/30 text-center">
         <p className="text-sm text-muted-foreground">
           &copy; {currentYear} Yuri Draco. Todos os direitos reservados.
+        </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          AVISO: A verificação de senha neste protótipo é apenas para demonstração e não é segura para uso em produção.
         </p>
       </footer>
     </div>
