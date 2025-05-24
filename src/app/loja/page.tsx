@@ -26,20 +26,23 @@ function LojaContent() {
 
   const fetchPlayerData = async (id: string) => {
     setIsLoadingPlayer(true);
+    setPlayerData(null); // Limpa dados antigos antes de buscar novos
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${id}.json`);
       if (!response.ok) {
-        throw new Error(`Jogador não encontrado ou erro na API (${response.status})`);
+        // Mesmo que !response.ok, pode ser que o Firebase tenha retornado algo útil, mas vamos tratar como erro de rede/servidor aqui.
+        // Se o jogador não existe, o Firebase retorna 200 OK com null no corpo.
+        throw new Error(`Erro ao buscar dados do jogador. Status: ${response.status}`);
       }
-      const data: Player = await response.json();
-      if (!data) { // Firebase returns null for non-existent paths
+      const data: Player | null = await response.json();
+      if (!data) { // Firebase retorna null para nós não existentes
          throw new Error(`Jogador com ID "${id}" não encontrado.`);
       }
       setPlayerData({ ...data, nome: data.nome || id }); // Garante que playerData tenha um nome
     } catch (error) {
       console.error("Erro ao buscar dados do jogador:", error);
       toast({
-        title: "Erro",
+        title: "Erro ao Carregar Jogador",
         description: error instanceof Error ? error.message : "Não foi possível carregar dados do jogador.",
         variant: "destructive",
       });
@@ -54,14 +57,19 @@ function LojaContent() {
       fetchPlayerData(playerId);
     } else {
       setIsLoadingPlayer(false);
-      setPlayerData(null);
+      setPlayerData(null); // Se não há playerId, não há jogador para carregar
+      toast({
+        title: "Loja Indisponível",
+        description: "Nenhum ID de jogador fornecido para acessar a loja.",
+        variant: "destructive"
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerId]);
+  }, [playerId]); // A função toast é estável e não precisa ser incluída aqui
 
   const handlePurchase = async (item: ShopItem) => {
     if (!playerId || !playerData) {
-      toast({ title: "Erro", description: "ID do jogador não disponível.", variant: "destructive" });
+      toast({ title: "Erro", description: "ID do jogador não disponível ou dados do jogador não carregados.", variant: "destructive" });
       return;
     }
     if ((playerData.ouro || 0) < item.price) {
@@ -79,23 +87,30 @@ function LojaContent() {
         description: result.message,
       });
       // Atualizar dados do jogador localmente
-      setPlayerData(prevData => ({
-        ...prevData!,
-        ouro: result.newOuro,
-        inventario: result.updatedInventory,
-      }));
+      setPlayerData(prevData => {
+        if (!prevData) return null; // Segurança caso prevData seja null
+        return {
+          ...prevData,
+          ouro: result.newOuro,
+          inventario: result.updatedInventory,
+        };
+      });
     } else {
       toast({
         title: "Falha na Compra",
         description: result.message,
         variant: "destructive",
       });
+       // Se a falha for por jogador não encontrado no backend, atualiza o frontend
+       if (result.message.includes("não encontrado")) {
+        setPlayerData(null);
+      }
     }
   };
   
   const currentYear = new Date().getFullYear();
 
-  if (isLoadingPlayer && !playerData) {
+  if (isLoadingPlayer && !playerData) { // Mostra Skeleton apenas se estiver carregando E não houver dados ainda
     return (
       <div className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-8 pt-12">
         <Skeleton className="h-10 w-48 mb-2" />
@@ -109,7 +124,7 @@ function LojaContent() {
     );
   }
 
-  if (!playerId || !playerData) {
+  if (!playerId || !playerData) { // Se, após o carregamento, não houver playerId ou playerData
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 text-center">
         <Warehouse size={64} className="mb-4 text-muted-foreground" />
@@ -205,8 +220,9 @@ function LojaContent() {
 // Adicionando Suspense Boundary para useSearchParams
 export default function LojaPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Carregando loja...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background text-foreground p-6 text-xl">Carregando loja...</div>}>
       <LojaContent />
     </Suspense>
   );
 }
+
