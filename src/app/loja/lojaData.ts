@@ -20,7 +20,7 @@ export interface ShopCategory {
 }
 
 // Mapeamento de nomes de itens para seus ícones e preços
-const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
+export const itemDetails: Record<string, { price: number; icon: LucideIcon }> = {
   // Armas
   "espada": { price: 80, icon: Sword },
   "machado": { price: 85, icon: Axe },

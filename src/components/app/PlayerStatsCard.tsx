@@ -2,8 +2,9 @@
 import type { Player } from '@/types/player';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles, Wallet } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Info, Zap, Sparkles, Wallet, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { itemDetails } from '@/app/loja/lojaData'; // Importar itemDetails
 
 interface PlayerStatItemProps {
   icon: React.ElementType;
@@ -16,11 +17,10 @@ const formatNumberWithAbbreviation = (num: number): string => {
   if (num < 1000) {
     return num.toLocaleString();
   }
-  const suffixes = ["", "K", "M", "B", "T"]; // K for thousands, M for millions, B for billions, etc.
+  const suffixes = ["", "K", "M", "B", "T"];
   const i = Math.floor(Math.log10(Math.abs(num)) / 3);
   const shortValue = (num / Math.pow(1000, i));
   
-  // Show one decimal place if it's not a whole number, otherwise show no decimals
   const formattedValue = shortValue % 1 !== 0 ? shortValue.toFixed(1) : shortValue.toFixed(0);
   
   return formattedValue + suffixes[i];
@@ -43,7 +43,7 @@ interface PlayerStatsCardProps {
 }
 
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
-  const orderedKeys: (keyof Player)[] = ['saldoBRL', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
+  const orderedKeys: (keyof Player)[] = ['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
   
   const mainStats = orderedKeys.map(key => {
     const rawValue = playerData[key];
@@ -55,12 +55,6 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
     let value: string | number = rawValue as string | number;
 
     switch (key) {
-      case 'saldoBRL':
-        icon = Wallet;
-        label = 'Saldo (BRL)';
-        value = typeof rawValue === 'number' ? parseFloat(rawValue.toFixed(2)) : 0;
-        iconClassName = 'text-green-500'; // Example color for BRL
-        break;
       case 'vida':
         icon = Heart;
         label = 'Vida';
@@ -101,6 +95,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
       key !== 'nome' && 
       key !== 'senha' &&
       key !== 'id' &&
+      key !== 'inventario' && // Não exibir inventário aqui, pois terá seção própria
       value !== undefined && 
       value !== null && 
       String(value).trim() !== ""
@@ -124,6 +119,8 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
       );
     });
 
+  const inventoryArray = playerData.inventario ? Object.entries(playerData.inventario) : [];
+
   return (
     <Card className="w-full shadow-2xl bg-card border border-border/50 overflow-hidden">
       <CardHeader className="pb-4 flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
@@ -145,6 +142,27 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
       <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-2 pb-4 px-4 sm:px-6">
         {mainStats}
         {otherStats}
+        
+        {inventoryArray.length > 0 && (
+          <CardTitle className="col-span-full mt-4 pt-4 border-t text-lg font-semibold text-primary">
+            Inventário
+          </CardTitle>
+        )}
+        {inventoryArray.map(([itemName, quantity]) => {
+          const itemDetail = itemDetails[itemName.toLowerCase()];
+          const IconComponent = itemDetail ? itemDetail.icon : Package;
+          return (
+            <div 
+              key={itemName} 
+              className="flex flex-col items-center text-center p-3 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg hover:border-primary/50"
+              title={`${itemName} (x${quantity})`}
+            >
+              <IconComponent size={28} className="mb-1.5 text-primary" />
+              <p className="text-xs font-medium text-muted-foreground capitalize truncate w-full">{itemName}</p>
+              <p className="text-sm font-bold text-foreground">x{String(quantity)}</p>
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );
@@ -174,3 +192,4 @@ export const PlayerStatsSkeleton: React.FC = () => (
 );
 
 export default PlayerStatsCard;
+
