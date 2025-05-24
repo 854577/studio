@@ -44,7 +44,6 @@ export default function HomePage() {
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      // Reset cooldowns if no currentPlayerId (e.g., on initial load or after an error)
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null });
     }
@@ -69,7 +68,6 @@ export default function HomePage() {
           }));
         } else {
           setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-          // Remove from localStorage only if it exists and currentPlayerId is set
           if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
              localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -82,7 +80,6 @@ export default function HomePage() {
         intervalIds.push(id);
       } else {
          setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-         // Ensure removal from localStorage if expired and currentPlayerId is set
          if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
              localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -345,7 +342,7 @@ export default function HomePage() {
                 </div>
               )}
               {Object.entries(playerData)
-                .filter(([key]) => !['nome', 'vida', 'ouro', 'nivel', 'xp', 'id'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
+                .filter(([key]) => !['nome', 'vida', 'ouro', 'nivel', 'xp', 'id', 'dinheiro'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
                 .map(([key, value]) => (
                   <div key={key} className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg sm:col-span-2">
                     <Info size={24} className="mr-3 text-muted-foreground shrink-0" />
@@ -376,10 +373,10 @@ export default function HomePage() {
                     key={action}
                     onClick={() => handlePlayerAction(action)}
                     disabled={isDisabled}
-                    className="w-full py-4 text-sm flex flex-col items-center justify-center h-auto min-h-[5rem]"
+                    className="w-full py-4 text-sm flex flex-col items-center justify-center h-auto min-h-[6rem]"
                     variant={isDisabled ? "secondary" : "default"}
                   >
-                    <Icon className={`mb-1 h-6 w-6 ${isDisabled ? 'text-muted-foreground' : ''}`} />
+                    <Icon className={`mb-2 h-7 w-7 ${isDisabled ? 'text-muted-foreground' : ''}`} />
                     <span className="font-semibold">{action.charAt(0).toUpperCase() + action.slice(1)}</span>
                     {isDisabled && <span className="text-xs text-muted-foreground mt-0.5">({currentCooldown})</span>}
                   </Button>
