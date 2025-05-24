@@ -86,6 +86,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
     .filter(([key]) => 
       !orderedKeys.includes(key as keyof Player) &&
       key !== 'nome' && 
+      key !== 'senha' && // Explicitly filter out 'senha'
       playerData[key] !== undefined && 
       playerData[key] !== null && 
       String(playerData[key]).trim() !== ""
