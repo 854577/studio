@@ -85,20 +85,26 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
   const otherStats = Object.entries(playerData)
     .filter(([key]) => 
       !orderedKeys.includes(key as keyof Player) &&
-      key !== 'nome' && // nome já está no título
+      key !== 'nome' && 
       playerData[key] !== undefined && 
       playerData[key] !== null && 
       String(playerData[key]).trim() !== ""
     )
-    .map(([key, value]) => (
-      <PlayerStatItem 
-        key={key}
-        icon={Info} 
-        label={key.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())} // Capitalize each word
-        value={String(value)} 
-        iconClassName="text-muted-foreground" 
+    .map(([key, rawValue]) => {
+      let displayValue = String(rawValue);
+      if (typeof displayValue === 'string' && displayValue.includes('@s.whatsapp.net')) {
+        displayValue = displayValue.replace('@s.whatsapp.net', '');
+      }
+      return (
+        <PlayerStatItem 
+          key={key}
+          icon={Info} 
+          label={key.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())} 
+          value={displayValue} 
+          iconClassName="text-muted-foreground" 
         />
-    ));
+      );
+    });
 
   return (
     <Card className="w-full max-w-lg shadow-2xl bg-card border border-border/50">
@@ -124,7 +130,7 @@ export const PlayerStatsSkeleton: React.FC = () => (
       <div className="h-4 bg-muted rounded w-1/2 mt-2"></div>
     </CardHeader>
     <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-      {[...Array(7)].map((_, i) => ( // Aumentado para 7 para incluir possível Saldo
+      {[...Array(7)].map((_, i) => ( 
         <div key={i} className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30">
           <div className="h-6 w-6 bg-muted rounded-full mr-3 shrink-0"></div>
           <div className="flex-grow">
