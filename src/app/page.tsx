@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Activity, Store, Briefcase, Fish, Bed, Dumbbell } from 'lucide-react';
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Activity, Briefcase, Fish, Bed, Dumbbell } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
@@ -184,6 +184,7 @@ function HomePageInternal() {
           }
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(fetchedPlayerData));
+          // Do not clear passwordInput here for successful login
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
           setPlayerData(null); 
@@ -311,13 +312,13 @@ function HomePageInternal() {
   if (loading && !playerData && !loginError) {
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow">
-        <Loader2 className="w-16 h-16 text-primary" />
+        <Loader2 className="w-16 h-16 text-primary " />
         <p className="mt-4 text-lg text-muted-foreground">Buscando informações...</p>
       </div>
     );
   } else if (!playerData && !loading) {
     contentToRender = (
-      <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4">
+      <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4 ">
         {loginError && (
           <Alert variant="destructive" className="w-full mb-6 shadow-lg">
             <AlertCircle className="w-4 h-4" />
@@ -325,12 +326,12 @@ function HomePageInternal() {
             <AlertDescription>{loginError}</AlertDescription>
           </Alert>
         )}
-        <Card className="w-full p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50">
+        <Card className="w-full p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50 ">
           <CardHeader className="p-0 pb-6 mb-6 text-center border-b border-border/30">
             <CardTitle className="text-3xl font-bold text-primary">Bem-vindo!</CardTitle>
             <CardDescription className="mt-1 text-muted-foreground">Acesse seu perfil para continuar.</CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 ">
             <form onSubmit={handleSearch} className="space-y-6">
               <div className="relative">
                 <UserRound className="absolute w-5 h-5 left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -339,7 +340,7 @@ function HomePageInternal() {
                   value={playerIdInput}
                   onChange={(e) => { setPlayerIdInput(e.target.value); setLoginError(null); }}
                   placeholder="Nome de usuário"
-                  className="pl-12 text-base rounded-md h-12 focus-visible:ring-primary focus-visible:ring-2"
+                  className="pl-12 text-base rounded-md h-12 focus-visible:ring-primary focus-visible:ring-2 "
                   aria-label="Nome de usuário Input"
                 />
               </div>
@@ -350,18 +351,18 @@ function HomePageInternal() {
                   value={passwordInput}
                   onChange={(e) => { setPasswordInput(e.target.value); setLoginError(null);}}
                   placeholder="Senha"
-                  className="pl-12 text-base rounded-md h-12 focus-visible:ring-primary focus-visible:ring-2"
+                  className="pl-12 text-base rounded-md h-12 focus-visible:ring-primary focus-visible:ring-2 "
                   aria-label="Password Input"
                 />
               </div>
               <Button
                 type="submit"
                 disabled={loading || !playerIdInput.trim() || !passwordInput}
-                className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-md"
+                className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-md "
                 aria-label="Buscar Jogador"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5" />
+                  <Loader2 className="w-5 h-5 " />
                 ) : (
                   <Search size={20} />
                 )}
@@ -374,7 +375,7 @@ function HomePageInternal() {
     );
   } else if (playerData && !loginError && !loading) { 
     contentToRender = (
-      <div className="w-full max-w-5xl px-2 space-y-8">
+      <div className="w-full max-w-5xl px-2 space-y-8 ">
          {error && ( 
           <Alert variant="destructive" className="w-full max-w-md mx-auto shadow-lg">
             <AlertCircle className="w-4 h-4" />
@@ -405,7 +406,7 @@ function HomePageInternal() {
 
           <AccordionItem value="shop-link" className="bg-card border border-border/50 rounded-lg shadow-md overflow-hidden">
             <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30">
-              <Store size={24} className="mr-3" /> Loja do Aventureiro
+               Loja do Aventureiro
             </AccordionTrigger>
             <AccordionContent className="p-4 sm:p-6">
                <Button 
@@ -466,7 +467,7 @@ export default function HomePage() {
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Loader2 className="w-16 h-16" />
+        <Loader2 className="w-16 h-16 " />
         <p className="mt-4 text-lg text-muted-foreground">Carregando aplicação...</p>
       </div>
     }>
