@@ -25,53 +25,93 @@ interface PlayerStatsCardProps {
 }
 
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData }) => {
+  const orderedKeys: (keyof Player)[] = ['saldoBRL', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
+  
+  const mainStats = orderedKeys.map(key => {
+    if (playerData[key] === undefined || playerData[key] === null) return null;
+
+    let icon = Info;
+    let label = key.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    let iconClassName = 'text-muted-foreground';
+    let value: string | number = String(playerData[key]);
+
+    switch (key) {
+      case 'saldoBRL':
+        icon = Wallet;
+        label = 'Saldo (BRL)';
+        value = (playerData.saldoBRL ?? 0).toFixed(2);
+        iconClassName = 'text-[hsl(var(--chart-2))]';
+        break;
+      case 'vida':
+        icon = Heart;
+        label = 'Vida';
+        value = playerData.vida ?? 0;
+        iconClassName = 'text-destructive';
+        break;
+      case 'ouro':
+        icon = CircleDollarSign;
+        label = 'Ouro';
+        value = playerData.ouro ?? 0;
+        iconClassName = 'text-[hsl(var(--chart-5))]';
+        break;
+      case 'nivel':
+        icon = Star;
+        label = 'Level';
+        value = playerData.nivel ?? 0;
+        iconClassName = 'text-[hsl(var(--chart-4))]';
+        break;
+      case 'xp':
+        icon = BarChart3;
+        label = 'Experience (XP)';
+        value = playerData.xp ?? 0;
+        iconClassName = 'text-muted-foreground';
+        break;
+      case 'energia':
+        icon = Zap;
+        label = 'Energia';
+        value = playerData.energia ?? 0;
+        iconClassName = 'text-[hsl(var(--chart-4))]';
+        break;
+      case 'mana':
+        icon = Sparkles;
+        label = 'Mana';
+        value = playerData.mana ?? 0;
+        iconClassName = 'text-[hsl(var(--chart-1))]';
+        break;
+    }
+    return <PlayerStatItem key={key} icon={icon} label={label} value={value} iconClassName={iconClassName} />;
+  }).filter(Boolean);
+
+  const otherStats = Object.entries(playerData)
+    .filter(([key]) => 
+      !orderedKeys.includes(key as keyof Player) &&
+      key !== 'nome' && // nome já está no título
+      playerData[key] !== undefined && 
+      playerData[key] !== null && 
+      String(playerData[key]).trim() !== ""
+    )
+    .map(([key, value]) => (
+      <PlayerStatItem 
+        key={key}
+        icon={Info} 
+        label={key.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())} // Capitalize each word
+        value={String(value)} 
+        iconClassName="text-muted-foreground" 
+        />
+    ));
+
   return (
     <Card className="w-full max-w-lg shadow-2xl bg-card border border-border/50">
       <CardHeader className="pb-4">
         <CardTitle className="text-2xl sm:text-3xl text-primary flex items-center">
           <User size={30} className="mr-3 shrink-0 text-primary" />
-          {playerData.nome}
+          {playerData.nome || 'Jogador não encontrado'}
         </CardTitle>
-        {playerData.nome && <CardDescription className="mt-1">Displaying stats for {playerData.nome}</CardDescription>}
+        {playerData.nome && <CardDescription className="mt-1">Exibindo estatísticas para {playerData.nome}</CardDescription>}
       </CardHeader>
       <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-        {playerData.saldoBRL !== undefined && (
-          <PlayerStatItem icon={Wallet} label="Saldo (BRL)" value={playerData.saldoBRL.toFixed(2)} iconClassName="text-[hsl(var(--chart-2))]" />
-        )}
-        {playerData.ouro !== undefined && (
-          <PlayerStatItem icon={CircleDollarSign} label="Ouro" value={playerData.ouro} iconClassName="text-[hsl(var(--chart-5))]" />
-        )}
-        {playerData.vida !== undefined && (
-          <PlayerStatItem icon={Heart} label="Health" value={playerData.vida} iconClassName="text-destructive" />
-        )}
-        {playerData.nivel !== undefined && (
-          <PlayerStatItem icon={Star} label="Level" value={playerData.nivel} iconClassName="text-[hsl(var(--chart-4))]" />
-        )}
-        {playerData.xp !== undefined && (
-          <PlayerStatItem icon={BarChart3} label="Experience (XP)" value={playerData.xp} iconClassName="text-muted-foreground" />
-        )}
-        {playerData.energia !== undefined && (
-          <PlayerStatItem icon={Zap} label="Energia" value={playerData.energia} iconClassName="text-[hsl(var(--chart-4))]" />
-        )}
-        {playerData.mana !== undefined && (
-          <PlayerStatItem icon={Sparkles} label="Mana" value={playerData.mana} iconClassName="text-[hsl(var(--chart-1))]" />
-        )}
-        {Object.entries(playerData)
-          .filter(([key]) => 
-            !['nome', 'vida', 'ouro', 'dinheiro', 'nivel', 'xp', 'id', 'energia', 'mana', 'saldoBRL'].includes(key) && 
-            playerData[key] !== undefined && 
-            playerData[key] !== null && 
-            String(playerData[key]).trim() !== ""
-          )
-          .map(([key, value]) => (
-            <PlayerStatItem 
-              key={key}
-              icon={Info} 
-              label={key.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())} // Capitalize each word
-              value={String(value)} 
-              iconClassName="text-muted-foreground" 
-              />
-          ))}
+        {mainStats}
+        {otherStats}
       </CardContent>
     </Card>
   );
