@@ -1,24 +1,24 @@
 
 'use client';
 
-import React from 'react'; // Adicionado React aqui
+import React from 'react'; 
 import { useState, type FormEvent, useEffect } from 'react';
 import type { Player } from '@/types/player';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Search, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle, ShoppingBag } from 'lucide-react'; // Adicionado ShoppingBag
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard, { PlayerStatsSkeleton } from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
 import RechargeCard from '@/components/app/RechargeCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Briefcase, Fish, Bed, Dumbbell } from 'lucide-react'; // Importar ícones explicitamente se usados no Dialog
+import { Briefcase, Fish, Bed, Dumbbell } from 'lucide-react'; 
+import Link from 'next/link'; // Adicionado Link
 
 export type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 export const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 
-// Adicionando modalTitle e mantendo icon para o PlayerActionsCard e o Dialog de animação
 export const actionConfig: Record<ActionType, { label: string; icon: React.ElementType; modalTitle: string }> = {
   trabalhar: { label: 'Trabalhar', icon: Briefcase, modalTitle: 'Trabalhando...' },
   pescar: { label: 'Pescar', icon: Fish, modalTitle: 'Pescando...' },
@@ -51,28 +51,49 @@ export default function HomePage() {
   const [activeActionAnimation, setActiveActionAnimation] = useState<ActionType | null>(null);
   const [isActionInProgress, setIsActionInProgress] = useState<boolean>(false);
 
+  // Efeito para carregar playerId da URL na montagem
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pid = params.get('playerId');
+    if (pid) {
+      setPlayerIdInput(pid);
+      // Disparar busca automaticamente se pid existir
+      // Criar um evento sintético ou chamar handleSearch diretamente
+      // Para simplificar, vamos apenas preencher o input e o usuário pode clicar em buscar
+      // ou você pode adaptar handleSearch para ser chamado aqui.
+      // Se quiser busca automática:
+      // setCurrentPlayerId(pid.trim()); // Ou chamar handleSearch com o pid.
+    }
+  }, []);
+
 
   useEffect(() => {
     const fetchPlayerData = async (id: string) => {
       setLoading(true); 
       try {
-        const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
+        const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${id}.json`);
         if (!response.ok) {
-          throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
+           if (response.status === 404 || (await response.clone().json()) === null) { // Firebase retorna 200 OK com null se o nó não existe
+            setError(`Player ID "${id}" not found.`);
+          } else {
+            throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
+          }
+          setPlayerData(null);
+          return;
         }
-        const allPlayersData: Record<string, Player> | null = await response.json();
+        const fetchedPlayerData: Player | null = await response.json();
 
-        if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[id]) {
-          setPlayerData(allPlayersData[id]);
+        if (fetchedPlayerData) {
+          setPlayerData(fetchedPlayerData);
           setError(null); 
         } else {
-          // Mantém o erro existente se já houver um, para não sobrescrever um erro de busca com "not found"
           if (!error) setError(`Player ID "${id}" not found or data format invalid.`);
+          setPlayerData(null);
         }
       } catch (err) {
         console.error('Fetch error:', err);
-        // Mantém o erro existente se já houver um
         if (!error) setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching data.');
+        setPlayerData(null);
       } finally {
         setLoading(false);
       }
@@ -82,7 +103,7 @@ export default function HomePage() {
       fetchPlayerData(currentPlayerId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPlayerId]); // Removido 'error' da dependência para evitar loop se fetchPlayerData chamar setError
+  }, [currentPlayerId]); 
 
   useEffect(() => {
     if (typeof window !== 'undefined' && currentPlayerId) {
@@ -94,14 +115,12 @@ export default function HomePage() {
           if (endTime > Date.now()) { 
             loadedCooldowns[action] = endTime;
           } else { 
-            // Cooldown expirado, remover do localStorage
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      // Resetar cooldowns se não houver currentPlayerId
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
@@ -126,7 +145,6 @@ export default function HomePage() {
           }));
         } else {
           setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-          // Garante a remoção do localStorage se o timer expirar enquanto a página está aberta
           if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
              localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -134,11 +152,10 @@ export default function HomePage() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay(); // Chamar uma vez para exibir imediatamente
+        updateDisplay(); 
         const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
-         // Garante que, se o cooldown já expirou ao carregar, o tempo é nulo e limpa o localStorage
          setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
          if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
              localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
@@ -151,8 +168,9 @@ export default function HomePage() {
     };
   }, [actionCooldownEndTimes, currentPlayerId]);
 
-  const handleSearch = async (event: FormEvent) => {
-    event.preventDefault();
+  const handleSearch = async (event?: FormEvent) => { // Tornar event opcional
+    if (event) event.preventDefault(); // Prevenir comportamento padrão apenas se chamado por evento de formulário
+    
     const trimmedId = playerIdInput.trim();
     if (!trimmedId) {
       setError('Player ID cannot be empty.');
@@ -163,32 +181,16 @@ export default function HomePage() {
 
     setLoading(true);
     setError(null);
-    setPlayerData(null); // Limpa dados do jogador anterior ao iniciar nova busca
+    setPlayerData(null); 
 
-    try {
-      const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
-      }
-      const allPlayersData: Record<string, Player> | null = await response.json();
-
-      if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[trimmedId]) {
-        setPlayerData(allPlayersData[trimmedId]);
-        setCurrentPlayerId(trimmedId); // Define o ID do jogador atual após busca bem-sucedida
-      } else if (allPlayersData === null || typeof allPlayersData !== 'object') {
-        setError('Invalid data format received from API or no players found.');
-        setCurrentPlayerId(null);
-      } else {
-        setError(`Player ID "${trimmedId}" not found.`);
-        setCurrentPlayerId(null);
-      }
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching data.');
-      setCurrentPlayerId(null);
-    } finally {
-      setLoading(false);
+    // Atualizar URL com o playerId pesquisado
+    if (typeof window !== 'undefined') {
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('playerId', trimmedId);
+      window.history.pushState({}, '', currentUrl.toString());
     }
+    
+    setCurrentPlayerId(trimmedId); 
   };
   
   const handlePlayerAction = async (actionType: ActionType) => {
@@ -215,7 +217,6 @@ export default function HomePage() {
     setActiveActionAnimation(actionType);
 
     setTimeout(async () => {
-      // Verificação de playerData e currentPlayerId DENTRO do setTimeout
       if (!playerData || !currentPlayerId) {
         console.error("Player data or ID became null during action processing.");
         setActiveActionAnimation(null);
@@ -227,7 +228,7 @@ export default function HomePage() {
       let goldEarned = 0;
       let xpEarned = 0;
       let actionToastTitle = "";
-      let updatedPlayerData = { ...playerData }; // Criar cópia para modificação
+      let updatedPlayerData = { ...playerData }; 
 
       const randomReward = () => Math.floor(Math.random() * (500 - 100 + 1)) + 100;
 
@@ -243,62 +244,51 @@ export default function HomePage() {
           actionToastTitle = "Boa pescaria!";
           break;
         case 'dormir':
-          // Dormir não dá ouro, apenas XP
           xpEarned = randomReward();   
           actionToastTitle = "Você descansou bem.";
           break;
         case 'treinar':
-          // Treinar não dá ouro, apenas XP
           xpEarned = randomReward(); 
           actionToastTitle = "Treino concluído!";
           break;
       }
       
-      // Atualizar os valores na cópia
       updatedPlayerData.ouro = (playerData.ouro || 0) + goldEarned;
       updatedPlayerData.xp = (playerData.xp || 0) + xpEarned;
       
-      // Atualizar o estado local com a cópia modificada
       setPlayerData(updatedPlayerData);
 
-      // Configurar novo cooldown
       const newCooldownEndTime = Date.now() + ACTION_COOLDOWN_DURATION;
       setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
       if (typeof window !== 'undefined') {
         localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
       }
 
-      // Exibir toast com as recompensas
       toast({
         title: actionToastTitle,
         description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP.`,
       });
 
-      // Tentar salvar no Firebase
       try {
         const updatePath = `https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`;
         const response = await fetch(updatePath, {
-          method: 'PATCH', // Usar PATCH para atualizar apenas os campos especificados
+          method: 'PATCH', 
           headers: {
             'Content-Type': 'application/json',
           },
-          // Enviar apenas os campos atualizados
           body: JSON.stringify({ ouro: updatedPlayerData.ouro, xp: updatedPlayerData.xp }),
         });
 
         if (!response.ok) {
-          // Tentar ler o corpo do erro
-          const errorBody = await response.text(); // Ler como texto primeiro
+          const errorBody = await response.text(); 
           console.error('Firebase save error response body:', errorBody);
           let errorData = {};
           try {
-            errorData = JSON.parse(errorBody); // Tentar parsear como JSON
+            errorData = JSON.parse(errorBody); 
           } catch (parseError) {
             console.warn('Could not parse Firebase error response as JSON:', parseError);
-            // Usar o texto puro se não for JSON
             errorData = { message: errorBody || 'Unknown Firebase error structure.' };
           }
-          // Lançar um erro mais detalhado
           throw new Error(`Failed to save to Firebase: ${response.statusText} (status ${response.status}). Path: ${updatePath}. Details: ${JSON.stringify(errorData)}`);
         }
         toast({
@@ -311,17 +301,13 @@ export default function HomePage() {
           title: "Erro ao Salvar",
           description: `Não foi possível salvar os dados no Firebase. ${saveError instanceof Error ? saveError.message : 'Erro desconhecido.'}. Verifique as regras de segurança do Firebase e o console para mais detalhes.`,
           variant: "destructive",
-          duration: 7000, // Aumentar duração para erros importantes
+          duration: 7000, 
         });
-        // Opcional: Reverter o estado local se o salvamento falhar? 
-        // setPlayerData(playerData); // Reverte para os dados antes da ação
-        // setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: 0 })); // Remove cooldown
-        // localStorage.removeItem(`cooldown_${actionType}_${currentPlayerId}`);
       } finally {
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
       }
-    }, 1500); // Duração da animação em ms
+    }, 1500); 
   };
 
   const currentYear = new Date().getFullYear();
@@ -347,7 +333,7 @@ export default function HomePage() {
           className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
           aria-label="Search Player"
         >
-          {loading && !playerData ? ( // Mostrar spinner apenas se estiver carregando e não houver dados antigos
+          {loading && !playerData ? ( 
             <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
           ) : (
             <Search size={20} />
@@ -364,28 +350,41 @@ export default function HomePage() {
         </Alert>
       )}
 
-      {/* Skeleton loader quando 'loading' é true E não há 'playerData' ou 'error' */}
       {loading && !playerData && !error && <PlayerStatsSkeleton />}
       
-      {/* Exibe os dados do jogador se não estiver carregando E houver dados E não houver erro */}
-      {!loading && playerData && !error && (
+      {!loading && playerData && !error && currentPlayerId && (
         <>
           <PlayerStatsCard playerData={playerData} />
           <PlayerActionsCard
             onAction={handlePlayerAction}
             timeLeftForAction={timeLeftForAction}
-            actionConfig={actionConfig} // Passar actionConfig
-            isDisabled={!playerData || !currentPlayerId || isActionInProgress} // Desabilita se não houver dados do jogador ou ação em progresso
+            actionConfig={actionConfig} 
+            isDisabled={!playerData || !currentPlayerId || isActionInProgress} 
           />
           <RechargeCard 
             playerId={currentPlayerId} 
             playerName={playerData?.nome}
-            isDisabled={!playerData || !currentPlayerId} // Desabilita se não houver dados do jogador
+            isDisabled={!playerData || !currentPlayerId} 
           />
+          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
+            <CardHeader>
+                <CardTitle className="text-xl flex items-center">
+                    <ShoppingBag size={24} className="mr-2 text-primary" />
+                    Loja do Jogador
+                </CardTitle>
+                <CardDescription>Compre itens e equipamentos para sua aventura.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild className="w-full py-3 text-base" variant="outline">
+                    <Link href={`/loja?playerId=${currentPlayerId}`}>
+                        Acessar Loja
+                    </Link>
+                </Button>
+            </CardContent>
+          </Card>
         </>
       )}
-       {/* Exibe os dados antigos do jogador (se houver) com um indicador de atualização, se 'loading' é true E já existe 'playerData' E não há erro */}
-       {loading && playerData && !error && ( 
+       {loading && playerData && !error && currentPlayerId && ( 
         <>
           <div className="w-full max-w-lg text-center my-2">
             <span className="text-sm text-muted-foreground italic">Atualizando dados...</span>
@@ -394,7 +393,7 @@ export default function HomePage() {
            <PlayerActionsCard
             onAction={handlePlayerAction}
             timeLeftForAction={timeLeftForAction}
-            actionConfig={actionConfig} // Passar actionConfig
+            actionConfig={actionConfig} 
             isDisabled={!playerData || !currentPlayerId || isActionInProgress}
           />
           <RechargeCard 
@@ -402,20 +401,35 @@ export default function HomePage() {
             playerName={playerData?.nome}
             isDisabled={!playerData || !currentPlayerId} 
           />
+          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50">
+            <CardHeader>
+                <CardTitle className="text-xl flex items-center">
+                     <ShoppingBag size={24} className="mr-2 text-primary" />
+                    Loja do Jogador
+                </CardTitle>
+                <CardDescription>Compre itens e equipamentos para sua aventura.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild className="w-full py-3 text-base" variant="outline" disabled>
+                    <Link href={`/loja?playerId=${currentPlayerId}`}>
+                        Acessar Loja (Carregando...)
+                    </Link>
+                </Button>
+            </CardContent>
+          </Card>
         </>
       )}
 
-      {/* Modal de Animação da Ação */}
       {activeActionAnimation && (
-        <Dialog open={!!activeActionAnimation} onOpenChange={() => {/* O diálogo é controlado por activeActionAnimation e fecha quando ele é null */}}>
+        <Dialog open={!!activeActionAnimation} onOpenChange={() => {}}>
           <DialogContent className="sm:max-w-[280px] p-6 flex flex-col items-center justify-center bg-card/95 backdrop-blur-sm shadow-2xl rounded-lg border-border/50">
             <DialogHeader className="mb-3">
               <DialogTitle className="text-center text-xl font-semibold text-primary">
-                {actionConfig[activeActionAnimation].modalTitle}
+                {actionConfig[activeActionAnimation!].modalTitle}
               </DialogTitle>
             </DialogHeader>
             <div className="animate-pulse text-primary">
-              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 72, strokeWidth: 1.5 })}
+              {React.createElement(actionConfig[activeActionAnimation!].icon, { size: 72, strokeWidth: 1.5 })}
             </div>
           </DialogContent>
         </Dialog>
@@ -429,7 +443,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
-
-    

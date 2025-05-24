@@ -7,7 +7,8 @@ export interface Player {
   xp?: number;
   energia?: number;
   mana?: number;
-  saldoBRL?: number; // Novo campo para saldo em BRL
+  saldoBRL?: number; 
+  inventario?: Record<string, number>; // Novo campo para o inventário
   // Allows for other potential fields from the API
   [key: string]: any; 
 }
