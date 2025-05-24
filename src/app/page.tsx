@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Search, AlertCircle, Info, Briefcase, Fish, Bed } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Search, AlertCircle, Info, Briefcase, Fish, Bed, Zap, Sparkles } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 export default function HomePage() {
@@ -290,6 +290,8 @@ export default function HomePage() {
             <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
             <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
             <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
+             <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
+            <div className="h-16 bg-muted/50 rounded-lg p-4"></div>
           </CardContent>
         </Card>
       )}
@@ -341,8 +343,26 @@ export default function HomePage() {
                   </div>
                 </div>
               )}
+              {playerData.energia !== undefined && (
+                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
+                  <Zap size={24} className="mr-3 text-accent shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm text-muted-foreground">Energia</p>
+                    <p className="text-lg font-bold text-foreground">{playerData.energia}</p>
+                  </div>
+                </div>
+              )}
+              {playerData.mana !== undefined && (
+                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
+                  <Sparkles size={24} className="mr-3 text-accent shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm text-muted-foreground">Mana</p>
+                    <p className="text-lg font-bold text-foreground">{playerData.mana}</p>
+                  </div>
+                </div>
+              )}
               {Object.entries(playerData)
-                .filter(([key]) => !['nome', 'vida', 'ouro', 'nivel', 'xp', 'id', 'dinheiro'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
+                .filter(([key]) => !['nome', 'vida', 'ouro', 'nivel', 'xp', 'id', 'dinheiro', 'energia', 'mana'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
                 .map(([key, value]) => (
                   <div key={key} className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg sm:col-span-2">
                     <Info size={24} className="mr-3 text-muted-foreground shrink-0" />
@@ -373,10 +393,10 @@ export default function HomePage() {
                     key={action}
                     onClick={() => handlePlayerAction(action)}
                     disabled={isDisabled}
-                    className="w-full py-4 text-sm flex flex-col items-center justify-center h-auto min-h-[6rem]"
+                    className="w-full py-6 text-sm flex flex-col items-center justify-center h-auto min-h-[7rem]"
                     variant={isDisabled ? "secondary" : "default"}
                   >
-                    <Icon className={`mb-2 h-7 w-7 ${isDisabled ? 'text-muted-foreground' : ''}`} />
+                    <Icon className={`mb-2 h-8 w-8 ${isDisabled ? 'text-muted-foreground' : ''}`} />
                     <span className="font-semibold">{action.charAt(0).toUpperCase() + action.slice(1)}</span>
                     {isDisabled && <span className="text-xs text-muted-foreground mt-0.5">({currentCooldown})</span>}
                   </Button>
