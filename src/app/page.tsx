@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Search, AlertCircle, Info, Briefcase, Fish, Bed, Zap, Sparkles } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Search, AlertCircle, Info, Briefcase, Fish, Bed, Zap, Sparkles, Dumbbell } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 export default function HomePage() {
@@ -18,25 +18,27 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  type ActionType = 'trabalhar' | 'pescar' | 'dormir';
+  type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
   const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 
   const [actionCooldownEndTimes, setActionCooldownEndTimes] = useState<Record<ActionType, number>>({
     trabalhar: 0,
     pescar: 0,
     dormir: 0,
+    treinar: 0,
   });
 
   const [timeLeftForAction, setTimeLeftForAction] = useState<Record<ActionType, string | null>>({
     trabalhar: null,
     pescar: null,
     dormir: null,
+    treinar: null,
   });
 
   useEffect(() => {
     if (typeof window !== 'undefined' && currentPlayerId) {
-      const loadedCooldowns: Record<ActionType, number> = { trabalhar: 0, pescar: 0, dormir: 0 };
-      (['trabalhar', 'pescar', 'dormir'] as ActionType[]).forEach(action => {
+      const loadedCooldowns: Record<ActionType, number> = { trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 };
+      (['trabalhar', 'pescar', 'dormir', 'treinar'] as ActionType[]).forEach(action => {
         const endTime = localStorage.getItem(`cooldown_${action}_${currentPlayerId}`);
         if (endTime) {
           loadedCooldowns[action] = parseInt(endTime, 10);
@@ -44,15 +46,15 @@ export default function HomePage() {
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0 });
-      setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null });
+      setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
+      setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
   }, [currentPlayerId]);
 
   useEffect(() => {
     const intervalIds: NodeJS.Timeout[] = [];
 
-    (['trabalhar', 'pescar', 'dormir'] as ActionType[]).forEach(action => {
+    (['trabalhar', 'pescar', 'dormir', 'treinar'] as ActionType[]).forEach(action => {
       const endTime = actionCooldownEndTimes[action];
       
       const updateDisplay = () => {
@@ -168,6 +170,10 @@ export default function HomePage() {
       case 'dormir':
         xpEarned = Math.floor(Math.random() * 10) + 1;   
         actionTitle = "Você descansou bem.";
+        break;
+      case 'treinar':
+        xpEarned = Math.floor(Math.random() * 21) + 5; // 5 a 25 XP
+        actionTitle = "Treino intenso!";
         break;
     }
     
@@ -383,9 +389,9 @@ export default function HomePage() {
               </CardTitle>
               <CardDescription>Realize ações para ganhar recompensas.</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {(['trabalhar', 'pescar', 'dormir'] as ActionType[]).map((action) => {
-                const Icon = action === 'trabalhar' ? Briefcase : action === 'pescar' ? Fish : Bed;
+            <CardContent className="grid grid-cols-2 gap-4">
+              {(['trabalhar', 'pescar', 'dormir', 'treinar'] as ActionType[]).map((action) => {
+                const Icon = action === 'trabalhar' ? Briefcase : action === 'pescar' ? Fish : action === 'dormir' ? Bed : Dumbbell;
                 const currentCooldown = timeLeftForAction[action];
                 const isDisabled = !!currentCooldown;
                 return (
