@@ -1,48 +1,118 @@
 
 'use client';
 
-import { useState, type FormEvent, useEffect } from 'react';
+import React, { useState, type FormEvent, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { Player } from '@/types/player';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Heart, CircleDollarSign, Star, User, BarChart3, Search, AlertCircle, Info, Briefcase, Fish, Bed, Zap, Sparkles, Dumbbell } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Heart, CircleDollarSign, Star, User, BarChart3, Search, AlertCircle, Info, Briefcase, Fish, Bed, Zap, Sparkles, Dumbbell, UserRound, KeyRound, ShoppingBag, Dices } from 'lucide-react'; // Added Dices
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
+import PlayerStatsCard from '@/components/app/PlayerStatsCard';
+import PlayerActionsCard from '@/components/app/PlayerActionsCard';
 
-export default function HomePage() {
+const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
+type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
+
+const actionConfig: Record<ActionType, { icon: React.ElementType, goldRange: [number, number], xpRange: [number, number], title: string, modalTitle: string }> = {
+  trabalhar: { icon: Briefcase, goldRange: [100, 500], xpRange: [100, 500], title: "Você trabalhou duro!", modalTitle: "Trabalhando..." },
+  pescar: { icon: Fish, goldRange: [100, 500], xpRange: [100, 500], title: "Boa pescaria!", modalTitle: "Pescando..." },
+  dormir: { icon: Bed, goldRange: [0, 0], xpRange: [100, 500], title: "Você descansou bem.", modalTitle: "Descansando..." },
+  treinar: { icon: Dumbbell, goldRange: [0, 0], xpRange: [100, 500], title: "Treino intenso!", modalTitle: "Treinando..." },
+};
+
+function HomePageInternal() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+
   const [playerIdInput, setPlayerIdInput] = useState<string>('');
+  const [passwordInput, setPasswordInput] = useState<string>('');
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [loginError, setLoginError] = useState<string | null>(null);
 
-  type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
-  const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 
   const [actionCooldownEndTimes, setActionCooldownEndTimes] = useState<Record<ActionType, number>>({
-    trabalhar: 0,
-    pescar: 0,
-    dormir: 0,
-    treinar: 0,
+    trabalhar: 0, pescar: 0, dormir: 0, treinar: 0,
+  });
+  const [timeLeftForAction, setTimeLeftForAction] = useState<Record<ActionType, string | null>>({
+    trabalhar: null, pescar: null, dormir: null, treinar: null,
   });
 
-  const [timeLeftForAction, setTimeLeftForAction] = useState<Record<ActionType, string | null>>({
-    trabalhar: null,
-    pescar: null,
-    dormir: null,
-    treinar: null,
-  });
+  const [activeActionAnimation, setActiveActionAnimation] = useState<ActionType | null>(null);
+  const [isActionInProgress, setIsActionInProgress] = useState<boolean>(false);
+
+  useEffect(() => {
+    const pidFromUrl = searchParams.get('playerId');
+
+    if (pidFromUrl) {
+      const sessionPlayerId = sessionStorage.getItem('currentPlayerId');
+      const sessionPlayerData = sessionStorage.getItem('playerData');
+
+      if (sessionPlayerId === pidFromUrl && sessionPlayerData) {
+        try {
+          const parsedData = JSON.parse(sessionPlayerData);
+          setPlayerData(parsedData);
+          setCurrentPlayerId(sessionPlayerId);
+          setPlayerIdInput(pidFromUrl);
+          // Não limpar a senha aqui se estamos restaurando a sessão
+        } catch (e) {
+          console.error("Failed to parse session player data", e);
+          sessionStorage.removeItem('currentPlayerId');
+          sessionStorage.removeItem('playerData');
+          // Limpar senha se a restauração da sessão falhar e o ID da URL é diferente do jogador carregado (se houver)
+          if (currentPlayerId && pidFromUrl !== currentPlayerId) {
+            setPasswordInput('');
+          }
+        }
+      } else {
+        // Se o ID da URL é diferente do jogador atual (e havia um jogador atual), é um novo contexto de login
+        if (currentPlayerId && pidFromUrl !== currentPlayerId) {
+          setPlayerData(null);
+          setCurrentPlayerId(null);
+          setPasswordInput(''); // Limpar senha para novo login
+          setLoginError(null);
+          setError(null);
+        } else if (!currentPlayerId) { // Se não havia jogador atual, apenas preenche o input de ID
+           // Não limpar a senha aqui, pode ser uma tentativa de login direto via URL
+        }
+        setPlayerIdInput(pidFromUrl);
+      }
+    } else {
+      // Se não há playerId na URL, limpar tudo, incluindo a senha, se havia um jogador logado
+      if (currentPlayerId) {
+        setPlayerData(null);
+        setCurrentPlayerId(null);
+        setPlayerIdInput('');
+        setPasswordInput('');
+        sessionStorage.removeItem('currentPlayerId');
+        sessionStorage.removeItem('playerData');
+        setLoginError(null);
+        setError(null);
+      }
+    }
+  }, [searchParams]);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined' && currentPlayerId) {
       const loadedCooldowns: Record<ActionType, number> = { trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 };
-      (['trabalhar', 'pescar', 'dormir', 'treinar'] as ActionType[]).forEach(action => {
-        const endTime = localStorage.getItem(`cooldown_${action}_${currentPlayerId}`);
-        if (endTime) {
-          loadedCooldowns[action] = parseInt(endTime, 10);
+      (Object.keys(actionConfig) as ActionType[]).forEach(action => {
+        const endTimeStr = localStorage.getItem(`cooldown_${action}_${currentPlayerId}`);
+        if (endTimeStr) {
+          const endTime = parseInt(endTimeStr, 10);
+          if (endTime > Date.now()) { // Só carregar se o cooldown ainda estiver ativo
+            loadedCooldowns[action] = endTime;
+          } else {
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); // Limpar cooldown expirado
+          }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
@@ -54,406 +124,317 @@ export default function HomePage() {
 
   useEffect(() => {
     const intervalIds: NodeJS.Timeout[] = [];
-
-    (['trabalhar', 'pescar', 'dormir', 'treinar'] as ActionType[]).forEach(action => {
+    (Object.keys(actionConfig) as ActionType[]).forEach(action => {
       const endTime = actionCooldownEndTimes[action];
-      
       const updateDisplay = () => {
         const now = Date.now();
         const remainingTime = endTime - now;
-
         if (remainingTime > 0) {
           const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
           const seconds = Math.floor((remainingTime / 1000) % 60);
-          setTimeLeftForAction(prev => ({
-            ...prev,
-            [action]: `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-          }));
+          setTimeLeftForAction(prev => ({ ...prev, [action]: `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}` }));
         } else {
           setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
           if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
-             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
         }
       };
-
       if (endTime > Date.now()) {
-        updateDisplay(); 
+        updateDisplay();
         const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
-         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
-             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
-          }
+        setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+        if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
+          localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+        }
       }
     });
-
-    return () => {
-      intervalIds.forEach(clearInterval);
-    };
+    return () => intervalIds.forEach(clearInterval);
   }, [actionCooldownEndTimes, currentPlayerId]);
 
-  const handleSearch = async (event: FormEvent) => {
-    event.preventDefault();
+  const handleSearch = async (event?: FormEvent) => {
+    if (event) event.preventDefault();
     const trimmedId = playerIdInput.trim();
-    if (!trimmedId) {
-      setError('Player ID cannot be empty.');
+
+    if (!trimmedId || !passwordInput) {
+      setLoginError('Nome de usuário e senha são obrigatórios.');
       setPlayerData(null);
-      setCurrentPlayerId(null); 
+      setCurrentPlayerId(null);
+      sessionStorage.removeItem('currentPlayerId');
+      sessionStorage.removeItem('playerData');
       return;
     }
 
     setLoading(true);
-    setError(null);
-    setPlayerData(null);
-    setCurrentPlayerId(null); 
+    setLoginError(null);
+    setError(null); // Limpa erros gerais também
+    // Não limpar playerData e currentPlayerId aqui para evitar piscar a UI se já estiver logado e for erro de senha
+    // setPlayerData(null); 
+    // setCurrentPlayerId(null);
 
     try {
       const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
-      }
+      if (!response.ok) throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
+      
       const allPlayersData: Record<string, Player> | null = await response.json();
+      const fetchedPlayerData = allPlayersData ? allPlayersData[trimmedId] : null;
 
-      if (allPlayersData && typeof allPlayersData === 'object' && allPlayersData[trimmedId]) {
-        setPlayerData(allPlayersData[trimmedId]);
-        setCurrentPlayerId(trimmedId); 
-      } else if (allPlayersData === null || typeof allPlayersData !== 'object') {
-        setError('Invalid data format received from API or no players found.');
+      if (fetchedPlayerData && fetchedPlayerData.senha !== undefined) {
+        if (fetchedPlayerData.senha === passwordInput) {
+          setPlayerData(fetchedPlayerData);
+          setCurrentPlayerId(trimmedId);
+          // Não limpar passwordInput aqui, o formulário vai sumir
+          if (searchParams.get('playerId') !== trimmedId) {
+            window.history.pushState(null, '', `?playerId=${trimmedId}`);
+          }
+          sessionStorage.setItem('currentPlayerId', trimmedId);
+          sessionStorage.setItem('playerData', JSON.stringify(fetchedPlayerData));
+        } else {
+          setLoginError('Nome de usuário ou senha inválidos.');
+          setPlayerData(null); // Garante que dados antigos não sejam exibidos
+          setCurrentPlayerId(null);
+          setPasswordInput(''); // Limpar senha em caso de falha
+          sessionStorage.removeItem('currentPlayerId');
+          sessionStorage.removeItem('playerData');
+        }
       } else {
-        setError(`Player ID "${trimmedId}" not found.`);
+        setLoginError('Nome de usuário ou senha inválidos.');
+        setPlayerData(null);
+        setCurrentPlayerId(null);
+        setPasswordInput(''); // Limpar senha em caso de falha
+        sessionStorage.removeItem('currentPlayerId');
+        sessionStorage.removeItem('playerData');
       }
     } catch (err) {
       console.error('Fetch error:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching data.');
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setLoginError(`Erro ao buscar dados: ${errorMessage}`);
+      setPlayerData(null);
+      setCurrentPlayerId(null);
+      setPasswordInput(''); // Limpar senha em caso de falha
+      sessionStorage.removeItem('currentPlayerId');
+      sessionStorage.removeItem('playerData');
     } finally {
       setLoading(false);
     }
   };
-  
+
   const handlePlayerAction = async (actionType: ActionType) => {
     if (!playerData || !currentPlayerId) {
       setError("Busque um jogador primeiro para realizar ações.");
-      toast({
-        title: "Erro",
-        description: "Busque um jogador primeiro para realizar ações.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Busque um jogador primeiro para realizar ações.", variant: "destructive" });
       return;
     }
-    
+
     const now = Date.now();
     if (actionCooldownEndTimes[actionType] > now) {
-      toast({
-        title: "Ação em Cooldown",
-        description: `Você precisa esperar ${timeLeftForAction[actionType]} para ${actionType} novamente.`,
-        variant: "destructive",
-      });
+      toast({ title: "Ação em Cooldown", description: `Você precisa esperar ${timeLeftForAction[actionType]} para ${actionType} novamente.`, variant: "destructive" });
       return;
     }
 
-    let goldEarned = 0;
-    let xpEarned = 0;
-    let actionTitle = "";
+    setIsActionInProgress(true);
+    setActiveActionAnimation(actionType);
 
-    switch (actionType) {
-      case 'trabalhar':
-        goldEarned = Math.floor(Math.random() * 41) + 10; 
-        xpEarned = Math.floor(Math.random() * 16) + 5;   
-        actionTitle = "Você trabalhou duro!";
-        break;
-      case 'pescar':
-        goldEarned = Math.floor(Math.random() * 26) + 5;  
-        xpEarned = Math.floor(Math.random() * 13) + 3;   
-        actionTitle = "Boa pescaria!";
-        break;
-      case 'dormir':
-        xpEarned = Math.floor(Math.random() * 10) + 1;   
-        actionTitle = "Você descansou bem.";
-        break;
-      case 'treinar':
-        xpEarned = Math.floor(Math.random() * 21) + 5; // 5 a 25 XP
-        actionTitle = "Treino intenso!";
-        break;
-    }
-    
-    const newOuro = (playerData.ouro || 0) + goldEarned;
-    const newXp = (playerData.xp || 0) + xpEarned;
-
-    setPlayerData(prevData => {
-      if (!prevData) return null;
-      return {
-        ...prevData,
-        ouro: newOuro,
-        xp: newXp,
-      };
-    });
-
-    try {
-      const firebaseResponse = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`, {
-        method: 'PATCH', 
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ouro: newOuro,
-          xp: newXp,
-        }),
-      });
-
-      if (!firebaseResponse.ok) {
-        let errorDetail = `Status: ${firebaseResponse.status} - ${firebaseResponse.statusText}`;
-        try {
-            const errorData = await firebaseResponse.json();
-            if (errorData && errorData.error) {
-                errorDetail = typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error);
-            }
-        } catch (e) {
-          console.warn("Could not parse Firebase error response JSON", e)
-        }
-        const errorMessage = `Falha ao salvar no Firebase: ${errorDetail}. Verifique as regras de segurança do seu Firebase Realtime Database para 'rpgUsuarios/${currentPlayerId}'.`;
-        console.error('Firebase save error details:', {
-            message: errorMessage,
-            path: `rpgUsuarios/${currentPlayerId}`,
-            status: firebaseResponse.status,
-            statusText: firebaseResponse.statusText,
-            responseBody: await firebaseResponse.text().catch(() => 'Could not read response body'),
-        });
-        throw new Error(errorMessage);
+    setTimeout(async () => {
+      // Refetch playerData to ensure we have the latest before calculating rewards
+      // This also acts as a check if playerData became null during animation
+      if (!currentPlayerId) {
+        setActiveActionAnimation(null);
+        setIsActionInProgress(false);
+        setError("ID do jogador não encontrado. Por favor, faça login novamente.");
+        toast({ title: "Erro", description: "ID do jogador não encontrado.", variant: "destructive" });
+        return;
       }
 
-      toast({
-        title: actionTitle,
-        description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP. Dados salvos no servidor!`,
-      });
+      let currentPlayerDataForAction: Player | null = null;
+      try {
+        const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
+        if (!response.ok) throw new Error('Falha ao buscar dados atualizados do jogador.');
+        const allPlayers = await response.json();
+        currentPlayerDataForAction = allPlayers ? allPlayers[currentPlayerId] : null;
 
-    } catch (err) {
-      console.error('Detalhes do erro ao salvar no Firebase:', {
-        message: err instanceof Error ? err.message : String(err),
-        playerId: currentPlayerId,
-        dataAttemptedToSave: { ouro: newOuro, xp: newXp },
-        originalError: err
-      });
-      toast({
-        title: "Erro ao Salvar no Servidor",
-        description: err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.",
-        variant: "destructive",
-      });
-    }
+        if (!currentPlayerDataForAction) {
+          throw new Error('Não foi possível encontrar os dados atualizados do jogador.');
+        }
 
-    const newCooldownEndTime = now + ACTION_COOLDOWN_DURATION;
-    setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
-    if (typeof window !== 'undefined' && currentPlayerId) {
-      localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
-    }
+      } catch (fetchErr) {
+        setActiveActionAnimation(null);
+        setIsActionInProgress(false);
+        const message = fetchErr instanceof Error ? fetchErr.message : "Erro desconhecido ao buscar dados do jogador.";
+        setError(message);
+        toast({ title: "Erro de Sincronização", description: message, variant: "destructive" });
+        return;
+      }
+
+
+      const config = actionConfig[actionType];
+      const goldEarned = config.goldRange[0] === 0 && config.goldRange[1] === 0 ? 0 : Math.floor(Math.random() * (config.goldRange[1] - config.goldRange[0] + 1)) + config.goldRange[0];
+      const xpEarned = config.xpRange[0] === 0 && config.xpRange[1] === 0 ? 0 : Math.floor(Math.random() * (config.xpRange[1] - config.xpRange[0] + 1)) + config.xpRange[0];
+      
+      const newOuro = (currentPlayerDataForAction.ouro || 0) + goldEarned;
+      const newXp = (currentPlayerDataForAction.xp || 0) + xpEarned;
+
+      const updatedLocalPlayerData = { ...currentPlayerDataForAction, ouro: newOuro, xp: newXp };
+      setPlayerData(updatedLocalPlayerData);
+      sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData));
+
+
+      try {
+        const firebaseResponse = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ouro: newOuro, xp: newXp }),
+        });
+        if (!firebaseResponse.ok) {
+          let errorDetail = `Status: ${firebaseResponse.status} - ${firebaseResponse.statusText}`;
+          try { const errorData = await firebaseResponse.json(); if (errorData && errorData.error) errorDetail = typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error); } catch (e) { /* ignore */ }
+          throw new Error(`Falha ao salvar no Firebase: ${errorDetail}.`);
+        }
+        toast({ title: config.title, description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP. Dados salvos no servidor!` });
+      } catch (err) {
+        console.error('Detalhes do erro ao salvar no Firebase:', { message: err instanceof Error ? err.message : String(err), playerId: currentPlayerId, dataAttemptedToSave: { ouro: newOuro, xp: newXp }, originalError: err });
+        setError(err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor.");
+        toast({ title: "Erro ao Salvar no Servidor", description: err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.", variant: "destructive" });
+      }
+
+      const newCooldownEndTime = Date.now() + ACTION_COOLDOWN_DURATION;
+      setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
+      if (typeof window !== 'undefined') localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
+      
+      setActiveActionAnimation(null);
+      setIsActionInProgress(false);
+
+    }, 1500);
   };
-  
+
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-8 pt-12 sm:pt-20">
-      <header className="mb-10 sm:mb-12 text-center">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2 tracking-tight">RPG himiko</h1>
+    <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-12 bg-background text-foreground sm:p-8 sm:pt-20">
+      
+      <header className="mb-10 text-center sm:mb-12">
+        <h1 className="flex items-center justify-center text-5xl font-extrabold tracking-tight sm:text-6xl">
+          <Dices size={44} className="mr-3 text-primary shrink-0" />
+          <span className="text-muted-foreground">RPG</span>
+          <span className="ml-2 text-primary">himiko</span>
+        </h1>
       </header>
 
-      <form onSubmit={handleSearch} className="w-full max-w-md mb-8 flex items-stretch gap-2 sm:gap-3">
-        <Input
-          type="text"
-          value={playerIdInput}
-          onChange={(e) => setPlayerIdInput(e.target.value)}
-          placeholder="nome do usuário"
-          className="flex-grow text-base h-12"
-          aria-label="Nome do usuário Input"
-        />
-        <Button 
-          type="submit" 
-          disabled={loading || !playerIdInput.trim()} 
-          className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6"
-          aria-label="Search Player"
-        >
-          {loading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
-          ) : (
-            <Search size={20} />
-          )}
-          <span className="ml-2 hidden sm:inline">Search</span>
-        </Button>
-      </form>
-
-      {error && (
-        <Alert variant="destructive" className="w-full max-w-md mb-8 shadow-lg">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+      {loginError && !playerData && !loading && (
+        <Alert variant="destructive" className="w-full max-w-md mb-6 shadow-lg">
+          <AlertCircle className="w-4 h-4" />
+          <AlertTitle>Erro de Login</AlertTitle>
+          <AlertDescription>{loginError}</AlertDescription>
         </Alert>
       )}
 
-      {loading && !error && (
-         <Card className="w-full max-w-lg shadow-2xl animate-pulse bg-card border-border/50">
-          <CardHeader className="pb-4 p-6">
-            <div className="h-7 bg-muted rounded w-3/5 mb-3"></div> {/* Placeholder para o título (nome do jogador) */}
-            <div className="h-4 bg-muted rounded w-4/5"></div> {/* Placeholder para a descrição */}
+      {(!playerData && !loading) && (
+         <Card className="w-full max-w-md p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50 animate-in fade-in-0 slide-in-from-top-8 duration-500">
+          <CardHeader className="p-0 pb-4 mb-4 text-center border-b">
+            <CardTitle className="text-2xl text-primary">Bem-vindo!</CardTitle>
+            <CardDescription>Acesse seu perfil para continuar.</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6 pt-2">
-            {/* Placeholders para 6 itens de estatísticas */}
-            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
-              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
-              <div>
-                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
-                <div className="h-5 bg-muted rounded w-12"></div>
+          <CardContent className="p-0">
+            <form onSubmit={handleSearch} className="space-y-6">
+              <div className="relative">
+                <UserRound className="absolute w-5 h-5 left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={playerIdInput}
+                  onChange={(e) => { setPlayerIdInput(e.target.value); setLoginError(null); }}
+                  placeholder="Nome de usuário"
+                  className="pl-10 text-base h-11"
+                  aria-label="Nome de usuário Input"
+                />
               </div>
-            </div>
-            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
-              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
-              <div>
-                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
-                <div className="h-5 bg-muted rounded w-12"></div>
+              <div className="relative">
+                <KeyRound className="absolute w-5 h-5 left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => { setPasswordInput(e.target.value); setLoginError(null);}}
+                  placeholder="Senha"
+                  className="pl-10 text-base h-11"
+                  aria-label="Password Input"
+                />
               </div>
-            </div>
-            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
-              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
-              <div>
-                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
-                <div className="h-5 bg-muted rounded w-12"></div>
-              </div>
-            </div>
-            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
-              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
-              <div>
-                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
-                <div className="h-5 bg-muted rounded w-12"></div>
-              </div>
-            </div>
-            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
-              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
-              <div>
-                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
-                <div className="h-5 bg-muted rounded w-12"></div>
-              </div>
-            </div>
-            <div className="flex items-center p-4 bg-muted/50 rounded-lg border border-border/30 h-[72px]">
-              <div className="h-6 w-6 bg-muted rounded-full mr-3"></div>
-              <div>
-                <div className="h-4 bg-muted rounded w-16 mb-1.5"></div>
-                <div className="h-5 bg-muted rounded w-12"></div>
-              </div>
-            </div>
+              <Button
+                type="submit"
+                disabled={loading || !playerIdInput.trim() || !passwordInput}
+                className="w-full h-12 text-base font-semibold transition-transform bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95"
+                aria-label="Buscar Jogador"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-t-2 border-b-2 rounded-full animate-spin border-primary-foreground"></div>
+                ) : (
+                  <Search size={20} />
+                )}
+                <span className="ml-2">Buscar</span>
+              </Button>
+            </form>
           </CardContent>
         </Card>
       )}
 
-      {playerData && !loading && !error && (
-        <>
-          <Card className="w-full max-w-lg shadow-2xl bg-card border-border/50 relative overflow-hidden">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-2xl sm:text-3xl text-primary flex items-center">
-                <User size={30} className="mr-3 shrink-0 text-primary" />
-                {playerData.nome}
-              </CardTitle>
-              {playerData.nome && <CardDescription className="mt-1">Displaying stats for {playerData.nome}</CardDescription>}
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              {playerData.vida !== undefined && (
-                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <Heart size={24} className="mr-3 text-destructive shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm text-muted-foreground">Health</p>
-                    <p className="text-lg font-bold text-foreground">{playerData.vida}</p>
-                  </div>
-                </div>
-              )}
-              {playerData.ouro !== undefined && (
-                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <CircleDollarSign size={24} className="mr-3 text-[hsl(var(--chart-5))] shrink-0" /> 
-                  <div>
-                    <p className="font-semibold text-sm text-muted-foreground">Ouro</p>
-                    <p className="text-lg font-bold text-foreground">{playerData.ouro.toLocaleString()}</p>
-                  </div>
-                </div>
-              )}
-              {playerData.nivel !== undefined && (
-                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <Star size={24} className="mr-3 text-[hsl(var(--chart-4))] shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm text-muted-foreground">Level</p>
-                    <p className="text-lg font-bold text-foreground">{playerData.nivel}</p>
-                  </div>
-                </div>
-              )}
-              {playerData.xp !== undefined && (
-                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <BarChart3 size={24} className="mr-3 text-muted-foreground shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm text-muted-foreground">Experience (XP)</p>
-                    <p className="text-lg font-bold text-foreground">{playerData.xp.toLocaleString()}</p>
-                  </div>
-                </div>
-              )}
-              {playerData.energia !== undefined && (
-                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <Zap size={24} className="mr-3 text-[hsl(var(--chart-4))] shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm text-muted-foreground">Energia</p>
-                    <p className="text-lg font-bold text-foreground">{playerData.energia}</p>
-                  </div>
-                </div>
-              )}
-              {playerData.mana !== undefined && (
-                <div className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg">
-                  <Sparkles size={24} className="mr-3 text-[hsl(var(--chart-1))] shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm text-muted-foreground">Mana</p>
-                    <p className="text-lg font-bold text-foreground">{playerData.mana}</p>
-                  </div>
-                </div>
-              )}
-              {Object.entries(playerData)
-                .filter(([key]) => !['nome', 'vida', 'ouro', 'nivel', 'xp', 'id', 'dinheiro', 'energia', 'mana'].includes(key) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== "")
-                .map(([key, value]) => (
-                  <div key={key} className="flex items-center p-4 bg-card-foreground/5 rounded-lg border border-border/30 transition-shadow hover:shadow-lg sm:col-span-2">
-                    <Info size={24} className="mr-3 text-muted-foreground shrink-0" />
-                    <div>
-                      <p className="font-semibold text-sm text-muted-foreground capitalize">{key.replace(/_/g, ' ').toLowerCase()}</p>
-                      <p className="text-lg font-bold text-foreground">{String(value)}</p>
-                    </div>
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-
-          <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50 relative overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 lucide lucide-gamepad-2"><line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect width="20" height="12" x="2" y="6" rx="2"/><path d="M6 18h4"/><path d="M14 18h4"/></svg>
-                Ações do Jogador
-              </CardTitle>
-              <CardDescription>Realize ações para ganhar recompensas.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              {(['trabalhar', 'pescar', 'dormir', 'treinar'] as ActionType[]).map((action) => {
-                const Icon = action === 'trabalhar' ? Briefcase : action === 'pescar' ? Fish : action === 'dormir' ? Bed : Dumbbell;
-                const currentCooldown = timeLeftForAction[action];
-                const isDisabled = !!currentCooldown;
-                return (
-                  <Button
-                    key={action}
-                    onClick={() => handlePlayerAction(action)}
-                    disabled={isDisabled}
-                    className="w-full py-6 text-sm flex flex-col items-center justify-center h-auto min-h-[7rem] disabled:transform-none"
-                    variant={isDisabled ? "secondary" : "default"}
-                  >
-                    <Icon className={`mb-2 h-8 w-8 ${isDisabled ? 'text-muted-foreground' : ''}`} />
-                    <span className="font-semibold">{action.charAt(0).toUpperCase() + action.slice(1)}</span>
-                    {isDisabled && <span className="text-xs text-muted-foreground mt-0.5">({currentCooldown})</span>}
-                  </Button>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </>
+      {loading && !playerData && (
+        <PlayerStatsCard isLoading={true} />
       )}
-      <footer className="w-full max-w-lg text-center mt-12 mb-8">
+
+      {playerData && !loginError && !loading && (
+        <div className="w-full max-w-4xl">
+           {error && ( // Erro geral pós-login
+            <Alert variant="destructive" className="w-full max-w-md mx-auto mb-6 shadow-lg">
+              <AlertCircle className="w-4 h-4" />
+              <AlertTitle>Ocorreu um Erro</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <PlayerStatsCard playerData={playerData} />
+          <PlayerActionsCard
+            playerData={playerData}
+            currentPlayerId={currentPlayerId}
+            onAction={handlePlayerAction}
+            actionCooldownEndTimes={actionCooldownEndTimes}
+            timeLeftForAction={timeLeftForAction}
+            isActionInProgress={isActionInProgress}
+            disabled={!playerData || !currentPlayerId || isActionInProgress}
+          />
+           <Card className="w-full max-w-lg mt-8 shadow-xl bg-card border-border/50 mx-auto">
+            <CardHeader>
+                <CardTitle className="flex items-center text-xl">
+                    <ShoppingBag size={24} className="mr-2 text-primary" />
+                    Loja do Jogador
+                </CardTitle>
+                <CardDescription>Compre itens para sua aventura.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button 
+                    onClick={() => router.push(`/loja?playerId=${currentPlayerId}`)} 
+                    className="w-full"
+                    disabled={!currentPlayerId}
+                >
+                    Acessar Loja
+                </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
+      {activeActionAnimation && actionConfig[activeActionAnimation] && (
+        <Dialog open={!!activeActionAnimation} onOpenChange={() => {/* controlada pelo estado */}}>
+          <DialogContent className="sm:max-w-[280px] p-8">
+            <DialogHeader className="items-center text-center">
+              <DialogTitle className="mb-4 text-2xl">{actionConfig[activeActionAnimation].modalTitle}</DialogTitle>
+            </DialogHeader>
+            <div className="animate-pulse text-primary flex justify-center">
+              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 72, strokeWidth: 1.5 })}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <footer className="w-full max-w-lg mt-12 mb-8 text-center">
         <p className="text-xs text-muted-foreground">
           &copy; {currentYear} Yuri Draco. Todos os direitos reservados.
         </p>
@@ -462,4 +443,10 @@ export default function HomePage() {
   );
 }
 
-    
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <HomePageInternal />
+    </Suspense>
+  );
+}
