@@ -10,11 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2, Briefcase, Fish, Bed, Dumbbell } from 'lucide-react';
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2, Briefcase, Fish, Bed, Dumbbell, Settings, Pencil, Lock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
 import { cn } from '@/lib/utils';
+import { updatePlayerNameAction, updatePlayerPasswordAction } from './actions/playerActions';
 
 
 const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
@@ -46,9 +47,8 @@ function HomePageInternal() {
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null); 
-  const [loginError, setLoginError] = useState<string | null>(null); 
-
+  const [error, setError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const [actionCooldownEndTimes, setActionCooldownEndTimes] = useState<Record<ActionType, number>>({
     trabalhar: 0, pescar: 0, dormir: 0, treinar: 0,
@@ -60,6 +60,13 @@ function HomePageInternal() {
   const [activeActionAnimation, setActiveActionAnimation] = useState<ActionType | null>(null);
   const [isActionInProgress, setIsActionInProgress] = useState<boolean>(false);
   const [currentActionLoading, setCurrentActionLoading] = useState<ActionType | null>(null);
+
+  // States for changing name and password
+  const [newName, setNewName] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
 
   useEffect(() => {
     const pidFromUrl = searchParams.get('playerId');
@@ -73,13 +80,14 @@ function HomePageInternal() {
           const parsedData = JSON.parse(sessionPlayerData);
           setPlayerData(parsedData);
           setCurrentPlayerId(sessionPlayerId);
-          setPlayerIdInput(pidFromUrl);
+          setPlayerIdInput(pidFromUrl); 
+          // Do not clear passwordInput here if restoring session
         } catch (e) {
           console.error("Failed to parse session player data", e);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
-           if (currentPlayerId && pidFromUrl !== currentPlayerId) { 
-            setPasswordInput(''); 
+          if (currentPlayerId && pidFromUrl !== currentPlayerId) {
+            setPasswordInput('');
             setPlayerData(null);
             setCurrentPlayerId(null);
             setLoginError(null);
@@ -87,17 +95,19 @@ function HomePageInternal() {
           }
         }
       } else {
+        // If pidFromUrl is present but doesn't match session, or no session data
         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-          setPlayerData(null); 
-          setCurrentPlayerId(null); 
-          setPasswordInput(''); 
-          setLoginError(null); 
-          setError(null); 
+          setPlayerData(null);
+          setCurrentPlayerId(null);
+          setPasswordInput(''); // Clear password if changing player via URL
+          setLoginError(null);
+          setError(null);
         }
-        setPlayerIdInput(pidFromUrl); 
+        setPlayerIdInput(pidFromUrl);
       }
     } else {
-      if (currentPlayerId) { 
+      // No playerId in URL
+      if (currentPlayerId) { // If there was a player active, clear everything for a fresh login state
         setPlayerData(null);
         setCurrentPlayerId(null);
         setPlayerIdInput('');
@@ -108,7 +118,7 @@ function HomePageInternal() {
         setError(null);
       }
     }
-  }, [searchParams, currentPlayerId]); 
+  }, [searchParams, currentPlayerId]);
 
 
   useEffect(() => {
@@ -118,10 +128,10 @@ function HomePageInternal() {
         const endTimeStr = localStorage.getItem(`cooldown_${action}_${currentPlayerId}`);
         if (endTimeStr) {
           const endTime = parseInt(endTimeStr, 10);
-          if (endTime > Date.now()) { 
+          if (endTime > Date.now()) {
             loadedCooldowns[action] = endTime;
           } else {
-            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); 
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
         }
       });
@@ -152,12 +162,12 @@ function HomePageInternal() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay(); 
-        const id = setInterval(updateDisplay, 1000); 
+        updateDisplay();
+        const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) { 
+         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
         }
       }
@@ -171,7 +181,7 @@ function HomePageInternal() {
 
     if (!trimmedId || !passwordInput) {
       setLoginError('Nome de usuário e senha são obrigatórios.');
-      setPlayerData(null); 
+      setPlayerData(null);
       setCurrentPlayerId(null);
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
@@ -180,36 +190,36 @@ function HomePageInternal() {
 
     setLoading(true);
     setLoginError(null);
-    setError(null); 
-    setPlayerData(null); 
-    setCurrentPlayerId(null); 
-    
+    setError(null);
+    setPlayerData(null);
+    setCurrentPlayerId(null);
+
     try {
-      const response = await fetch('https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios.json');
+      const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
       if (!response.ok) throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
       
-      const allPlayersData: Record<string, Player> | null = await response.json();
-      const fetchedPlayerData = allPlayersData ? allPlayersData[trimmedId] : null;
+      const fetchedPlayerData: Player | null = await response.json();
 
       if (fetchedPlayerData && fetchedPlayerData.senha !== undefined) {
         if (fetchedPlayerData.senha === passwordInput) {
-          setPlayerData(fetchedPlayerData);
+          const playerDataToSet = { ...fetchedPlayerData, nome: fetchedPlayerData.nome || trimmedId };
+          setPlayerData(playerDataToSet);
           setCurrentPlayerId(trimmedId);
           if (searchParams.get('playerId') !== trimmedId) {
              window.history.pushState(null, '', `?playerId=${trimmedId}`);
           }
           sessionStorage.setItem('currentPlayerId', trimmedId);
-          sessionStorage.setItem('playerData', JSON.stringify(fetchedPlayerData));
-          // Não limpar passwordInput aqui para manter consistência se handleSearch for chamado por outros motivos
+          sessionStorage.setItem('playerData', JSON.stringify(playerDataToSet));
+          // Do not clear passwordInput here on successful login
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
-          setPasswordInput(''); 
+          setPasswordInput(''); // Clear password on failed login
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
         }
       } else {
-        setLoginError('Nome de usuário ou senha inválidos.');
-        setPasswordInput(''); 
+        setLoginError('Jogador não encontrado ou sem dados de senha.');
+        setPasswordInput(''); // Clear password if player not found or no password field
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
       }
@@ -217,7 +227,7 @@ function HomePageInternal() {
       console.error('Fetch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setLoginError(`Erro ao buscar dados: ${errorMessage}`);
-      setPasswordInput(''); 
+      setPasswordInput(''); // Clear password on API error
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
     } finally {
@@ -239,15 +249,15 @@ function HomePageInternal() {
     }
     
     setIsActionInProgress(true);
-    setCurrentActionLoading(actionType); 
+    setCurrentActionLoading(actionType);
 
-    await new Promise(resolve => setTimeout(resolve, 300)); 
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     setActiveActionAnimation(actionType);
-    setCurrentActionLoading(null); 
+    setCurrentActionLoading(null);
 
     setTimeout(async () => {
-      if (!currentPlayerId || !playerData) { 
+      if (!currentPlayerId || !playerData) {
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
         const msg = !currentPlayerId ? "ID do jogador não encontrado." : "Dados do jogador não encontrados.";
@@ -265,7 +275,6 @@ function HomePageInternal() {
         if (!currentPlayerDataForAction) {
           throw new Error('Não foi possível encontrar os dados atualizados do jogador.');
         }
-
       } catch (fetchErr) {
         setActiveActionAnimation(null);
         setIsActionInProgress(false);
@@ -275,18 +284,16 @@ function HomePageInternal() {
         return;
       }
 
-
       const config = actionConfig[actionType];
-      const goldEarned = config.goldRange[0] === 0 && config.goldRange[1] === 0 ? 0 : Math.floor(Math.random() * (config.goldRange[1] - config.goldRange[0] + 1)) + config.goldRange[0];
-      const xpEarned = config.xpRange[0] === 0 && config.xpRange[1] === 0 ? 0 : Math.floor(Math.random() * (config.xpRange[1] - config.xpRange[0] + 1)) + config.xpRange[0];
+      const goldEarned = Math.floor(Math.random() * (config.goldRange[1] - config.goldRange[0] + 1)) + config.goldRange[0];
+      const xpEarned = Math.floor(Math.random() * (config.xpRange[1] - config.xpRange[0] + 1)) + config.xpRange[0];
       
       const newOuro = (currentPlayerDataForAction.ouro || 0) + goldEarned;
       const newXp = (currentPlayerDataForAction.xp || 0) + xpEarned;
 
-      const updatedLocalPlayerData = { ...currentPlayerDataForAction, ouro: newOuro, xp: newXp };
-      setPlayerData(updatedLocalPlayerData); 
-      sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData)); 
-
+      const updatedLocalPlayerData = { ...currentPlayerDataForAction, nome: currentPlayerDataForAction.nome || currentPlayerId, ouro: newOuro, xp: newXp };
+      setPlayerData(updatedLocalPlayerData);
+      sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData));
 
       try {
         const firebaseResponse = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`, {
@@ -296,7 +303,7 @@ function HomePageInternal() {
         if (!firebaseResponse.ok) {
           let errorDetail = `Status: ${firebaseResponse.status} - ${firebaseResponse.statusText}`;
           try { const errorData = await firebaseResponse.json(); if (errorData && errorData.error) errorDetail = typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error); } catch (e) { /* ignore parsing error */ }
-          throw new Error(`Falha ao salvar no Firebase: ${errorDetail}. Tentando salvar em rpgUsuarios/${currentPlayerId}.json`);
+          throw new Error(`Falha ao salvar no Firebase: ${errorDetail}.`);
         }
         toast({ title: config.title, description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP. Dados salvos no servidor!` });
       } catch (err) {
@@ -312,8 +319,55 @@ function HomePageInternal() {
       setActiveActionAnimation(null);
       setIsActionInProgress(false);
 
-    }, 1200); 
+    }, 1200);
   };
+
+  const handleChangeName = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!currentPlayerId || !newName.trim()) {
+      toast({ title: "Erro", description: "Novo nome não pode estar vazio.", variant: "destructive" });
+      return;
+    }
+    setIsUpdatingName(true);
+    const result = await updatePlayerNameAction(currentPlayerId, newName);
+    setIsUpdatingName(false);
+
+    if (result.success && result.updatedPlayer?.nome && playerData) {
+      toast({ title: "Sucesso!", description: result.message });
+      const updatedData = { ...playerData, nome: result.updatedPlayer.nome };
+      setPlayerData(updatedData);
+      sessionStorage.setItem('playerData', JSON.stringify(updatedData));
+      setNewName(''); // Clear input
+    } else {
+      toast({ title: "Erro ao Alterar Nome", description: result.message, variant: "destructive" });
+    }
+  };
+
+  const handleChangePassword = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!currentPlayerId || !newPassword) {
+      toast({ title: "Erro", description: "Nova senha não pode estar vazia.", variant: "destructive" });
+      return;
+    }
+     if (newPassword.length < 4) {
+       toast({ title: "Erro", description: "A nova senha deve ter pelo menos 4 caracteres.", variant: "destructive" });
+       return;
+    }
+    setIsUpdatingPassword(true);
+    const result = await updatePlayerPasswordAction(currentPlayerId, newPassword);
+    setIsUpdatingPassword(false);
+
+    if (result.success && result.updatedPlayer?.senha && playerData) {
+      toast({ title: "Sucesso!", description: result.message });
+      const updatedData = { ...playerData, senha: result.updatedPlayer.senha };
+      setPlayerData(updatedData); // Keep local state consistent
+      sessionStorage.setItem('playerData', JSON.stringify(updatedData)); // Update session too
+      setNewPassword(''); // Clear input
+    } else {
+      toast({ title: "Erro ao Alterar Senha", description: result.message, variant: "destructive" });
+    }
+  };
+
 
   const currentYear = new Date().getFullYear();
 
@@ -326,11 +380,11 @@ function HomePageInternal() {
         <p className="mt-4 text-lg text-muted-foreground">Buscando informações do jogador...</p>
       </div>
     );
-  } else if (!playerData && !loading) { 
+  } else if (!playerData && !loading) {
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4">
         {loginError && (
-          <Alert variant="destructive" className="w-full mb-6 shadow-lg">
+          <Alert variant="destructive" className="w-full mb-6 shadow-lg card-glow">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Erro de Login</AlertTitle>
             <AlertDescription>{loginError}</AlertDescription>
@@ -383,11 +437,11 @@ function HomePageInternal() {
         </Card>
       </div>
     );
-  } else if (playerData && !loginError && !loading) { 
+  } else if (playerData && !loginError && !loading) {
     contentToRender = (
       <div className="w-full max-w-5xl px-2 space-y-8">
-         {error && ( 
-          <Alert variant="destructive" className="w-full max-w-md mx-auto my-4 shadow-lg">
+         {error && (
+          <Alert variant="destructive" className="w-full max-w-md mx-auto my-4 shadow-lg card-glow">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -398,7 +452,7 @@ function HomePageInternal() {
         <Accordion type="multiple" defaultValue={['player-actions']} className="w-full space-y-6">
           <AccordionItem value="player-actions" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden card-glow">
             <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:[transform:rotate(0deg)]">
-              <Gamepad2 size={24} className="mr-3 data-[state=open]:rotate-0" /> Ações do Jogador 
+              <Gamepad2 size={24} className="mr-3 data-[state=open]:rotate-0" /> Ações do Jogador
             </AccordionTrigger>
             <AccordionContent className="p-4 sm:p-6">
               <PlayerActionsCard
@@ -419,8 +473,8 @@ function HomePageInternal() {
                Loja do Aventureiro
             </AccordionTrigger>
             <AccordionContent className="p-4 sm:p-6">
-               <Button 
-                  onClick={() => router.push(`/loja?playerId=${currentPlayerId}`)} 
+               <Button
+                  onClick={() => router.push(`/loja?playerId=${currentPlayerId}`)}
                   className="w-full h-12 text-base bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md shadow-md hover:shadow-lg"
                   disabled={!currentPlayerId}
                   variant="secondary"
@@ -430,13 +484,60 @@ function HomePageInternal() {
               </Button>
             </AccordionContent>
           </AccordionItem>
+
+          <AccordionItem value="account-settings" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden card-glow">
+            <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:[transform:rotate(0deg)]">
+               <Settings size={24} className="mr-3" /> Configurações da Conta
+            </AccordionTrigger>
+            <AccordionContent className="p-4 sm:p-6 space-y-6">
+              <Card className="bg-card/80 border-border/50 shadow-lg card-glow">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center text-primary"><Pencil size={20} className="mr-2" />Alterar Nome</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleChangeName} className="space-y-4">
+                    <Input
+                      type="text"
+                      placeholder="Novo nome"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
+                    />
+                    <Button type="submit" disabled={isUpdatingName || !newName.trim()} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
+                      {isUpdatingName ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : 'Salvar Nome'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+              <Card className="bg-card/80 border-border/50 shadow-lg card-glow">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center text-primary"><Lock size={20} className="mr-2" />Alterar Senha</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleChangePassword} className="space-y-4">
+                    <Input
+                      type="password"
+                      placeholder="Nova senha"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
+                    />
+                    <Button type="submit" disabled={isUpdatingPassword || !newPassword.trim() || newPassword.length < 4} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
+                      {isUpdatingPassword ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : 'Salvar Senha'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+
         </Accordion>
       </div>
     );
-  } else if (loading && playerData) { 
-     contentToRender = ( 
+  } else if (loading && playerData) {
+     contentToRender = (
       <div className="w-full max-w-5xl px-2 space-y-8">
-        <PlayerStatsCard playerData={playerData} isLoading={true} /> 
+        <PlayerStatsCard playerData={playerData} isLoading={true} />
          <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
             <div className="h-8 bg-muted rounded w-1/3 animate-pulse"></div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -450,7 +551,6 @@ function HomePageInternal() {
       </div>
     );
   }
-
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-10 sm:pt-12 bg-background text-foreground">
@@ -492,7 +592,7 @@ function HomePageInternal() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={ 
+    <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
         <Loader2 className="w-16 h-16 text-primary animate-spin" />
         <p className="mt-4 text-lg text-muted-foreground">Carregando aplicação...</p>
@@ -502,4 +602,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-    
