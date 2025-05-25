@@ -10,11 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2, Briefcase, Fish, Bed, Dumbbell, Settings, Pencil, Lock, Edit, Users } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2, Briefcase, Fish, Bed, Dumbbell, Settings, Pencil, Lock, Users } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
-import CompactPlayerStats from '@/components/app/CompactPlayerStats'; // Novo componente
+import CompactPlayerStats from '@/components/app/CompactPlayerStats';
 import { cn } from '@/lib/utils';
 import { updatePlayerNameAction, updatePlayerPasswordAction } from './actions/playerActions';
 
@@ -36,7 +37,7 @@ export const actionConfig: Record<ActionType, ActionConfig> = {
   treinar: { icon: Dumbbell, goldRange: [100, 500], xpRange: [100, 500], title: "Treino intenso!", modalTitle: "Treinando..." },
 };
 
-const ADMIN_PLAYER_ID = '5521994361356';
+const ADMIN_PLAYER_IDS = ['5521994361356', 'HimikoToga'];
 
 function HomePageInternal() {
   const router = useRouter();
@@ -119,8 +120,8 @@ function HomePageInternal() {
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
           sessionStorage.removeItem('isAdmin');
-          if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-            setPasswordInput('');
+           if (currentPlayerId && pidFromUrl !== currentPlayerId) {
+            setPasswordInput(''); // Clear password if changing player context
             setPlayerData(null);
             setCurrentPlayerId(null);
             setIsAdmin(false);
@@ -129,20 +130,20 @@ function HomePageInternal() {
           }
         }
       } else {
-        if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-          setPlayerData(null);
-          setCurrentPlayerId(null);
-          setIsAdmin(false);
-          setPasswordInput('');
-          setLoginError(null);
-          setError(null);
-          sessionStorage.removeItem('currentPlayerId');
-          sessionStorage.removeItem('playerData');
-          sessionStorage.removeItem('isAdmin');
-        }
+         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
+            setPlayerData(null);
+            setCurrentPlayerId(null);
+            setIsAdmin(false);
+            setPasswordInput(''); // Clear password if context is fully changing
+            setLoginError(null);
+            setError(null);
+            sessionStorage.removeItem('currentPlayerId');
+            sessionStorage.removeItem('playerData');
+            sessionStorage.removeItem('isAdmin');
+         }
       }
     } else {
-      if (currentPlayerId) {
+       if (currentPlayerId) { // If URL has no playerId but we had a session
         setPlayerData(null);
         setCurrentPlayerId(null);
         setIsAdmin(false);
@@ -153,7 +154,7 @@ function HomePageInternal() {
         sessionStorage.removeItem('isAdmin');
         setLoginError(null);
         setError(null);
-      }
+       }
     }
   }, [searchParams, currentPlayerId]);
 
@@ -168,7 +169,7 @@ function HomePageInternal() {
           if (endTime > Date.now()) {
             loadedCooldowns[action] = endTime;
           } else {
-            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); // Cooldown expired
           }
         }
       });
@@ -204,8 +205,8 @@ function HomePageInternal() {
         intervalIds.push(id);
       } else {
         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
-        if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
-          localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
         }
       }
     });
@@ -230,9 +231,8 @@ function HomePageInternal() {
     setLoading(true);
     setLoginError(null);
     setError(null);
-    setPlayerData(null);
-    setCurrentPlayerId(null);
-    setIsAdmin(false);
+    // Do not clear playerData and currentPlayerId here if they might be valid from session/URL
+    // Only clear them if the login attempt is for a *different* ID or if it fails.
 
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
@@ -242,8 +242,9 @@ function HomePageInternal() {
 
       if (fetchedPlayerData && fetchedPlayerData.senha !== undefined) {
         if (fetchedPlayerData.senha === passwordInput) {
-          const currentIsAdmin = trimmedId === ADMIN_PLAYER_ID;
+          const currentIsAdmin = ADMIN_PLAYER_IDS.includes(trimmedId);
           const playerDataToSet = { ...fetchedPlayerData, nome: fetchedPlayerData.nome || trimmedId };
+          
           setPlayerData(playerDataToSet);
           setCurrentPlayerId(trimmedId);
           setIsAdmin(currentIsAdmin);
@@ -254,9 +255,11 @@ function HomePageInternal() {
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(playerDataToSet));
           sessionStorage.setItem('isAdmin', String(currentIsAdmin));
+          // Do NOT clear passwordInput here if login is successful
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
           setPasswordInput('');
+          setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
           sessionStorage.removeItem('isAdmin');
@@ -264,6 +267,7 @@ function HomePageInternal() {
       } else {
         setLoginError('Jogador não encontrado ou sem dados de senha.');
         setPasswordInput('');
+        setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
         sessionStorage.removeItem('isAdmin');
@@ -273,6 +277,7 @@ function HomePageInternal() {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setLoginError(`Erro ao buscar dados: ${errorMessage}`);
       setPasswordInput('');
+      setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
       sessionStorage.removeItem('isAdmin');
@@ -293,31 +298,35 @@ function HomePageInternal() {
       toast({ title: "Ação em Cooldown", description: `Você precisa esperar ${timeLeftForAction[actionType]} para ${actionType} novamente.`, variant: "destructive" });
       return;
     }
-
+    
     setIsActionInProgress(true);
-    setCurrentActionLoading(actionType);
+    setCurrentActionLoading(actionType); // Set loading specific to this action button
 
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Short delay to allow UI to update with spinner before modal
+    await new Promise(resolve => setTimeout(resolve, 300)); 
 
     setActiveActionAnimation(actionType);
-    setCurrentActionLoading(null);
+    setCurrentActionLoading(null); // Clear specific button loading once modal is up
 
 
     setTimeout(async () => {
+      // Re-check playerData and currentPlayerId inside setTimeout as they might change
       if (!currentPlayerId || !playerData) {
-        setActiveActionAnimation(null);
-        setIsActionInProgress(false);
+        setActiveActionAnimation(null); // Close animation dialog
+        setIsActionInProgress(false); // Re-enable action buttons
         const msg = !currentPlayerId ? "ID do jogador não encontrado." : "Dados do jogador não encontrados.";
         setError(`${msg} Por favor, faça login novamente.`);
         toast({ title: "Erro de Sessão", description: msg, variant: "destructive" });
         return;
       }
 
-
+      // Fetch fresh player data before applying action
       let currentPlayerDataForAction: Player | null = null;
       try {
         const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`);
-        if (!response.ok) throw new Error('Falha ao buscar dados atualizados do jogador para a ação.');
+        if (!response.ok) {
+          throw new Error('Falha ao buscar dados atualizados do jogador para a ação.');
+        }
         currentPlayerDataForAction = await response.json();
 
         if (!currentPlayerDataForAction) {
@@ -339,9 +348,10 @@ function HomePageInternal() {
 
       const newOuro = (currentPlayerDataForAction.ouro || 0) + goldEarned;
       const newXp = (currentPlayerDataForAction.xp || 0) + xpEarned;
-
+      
+      // Update local state immediately for responsiveness
       const updatedLocalPlayerData = { ...currentPlayerDataForAction, nome: currentPlayerDataForAction.nome || currentPlayerId, ouro: newOuro, xp: newXp };
-      setPlayerData(updatedLocalPlayerData); // Update local state immediately for responsiveness
+      setPlayerData(updatedLocalPlayerData); 
       sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData));
 
 
@@ -371,10 +381,10 @@ function HomePageInternal() {
       setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
       if (typeof window !== 'undefined') localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
 
-      setActiveActionAnimation(null);
-      setIsActionInProgress(false);
+      setActiveActionAnimation(null); // Close animation dialog
+      setIsActionInProgress(false); // Re-enable action buttons
 
-    }, 1200);
+    }, 1200); // Duration of the animation dialog
   };
 
   const handleChangeName = async (event: FormEvent) => {
@@ -416,7 +426,7 @@ function HomePageInternal() {
       toast({ title: "Sucesso!", description: result.message });
       const updatedData = { ...playerData, senha: result.updatedPlayer.senha };
       setPlayerData(updatedData);
-      sessionStorage.setItem('playerData', JSON.stringify(updatedData));
+      sessionStorage.setItem('playerData', JSON.stringify(updatedData)); // Update session with new password if needed
       setNewPassword('');
     } else {
       toast({ title: "Erro ao Alterar Senha", description: result.message, variant: "destructive" });
@@ -442,15 +452,23 @@ function HomePageInternal() {
 
     if (result.success) {
       toast({ title: "Sucesso!", description: `Nome de ${editingUser.id} atualizado para ${editUserNewName}.` });
-      // Optionally refresh allPlayers list or update in place
       if (allPlayers && result.updatedPlayer?.nome) {
-        setAllPlayers(prev => ({
-            ...prev,
-            [editingUser.id]: {
-                ...(prev ? prev[editingUser.id] : {}),
-                nome: result.updatedPlayer.nome
-            }
-        }));
+        setAllPlayers(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                [editingUser.id]: {
+                    ...prev[editingUser.id],
+                    nome: result.updatedPlayer.nome
+                }
+            };
+        });
+      }
+      // If the admin is editing their own name via this dialog, update current playerData too
+      if (currentPlayerId === editingUser.id && playerData && result.updatedPlayer?.nome) {
+        const updatedData = { ...playerData, nome: result.updatedPlayer.nome };
+        setPlayerData(updatedData);
+        sessionStorage.setItem('playerData', JSON.stringify(updatedData));
       }
       setIsEditUserDialogOpen(false);
     } else {
@@ -474,7 +492,12 @@ function HomePageInternal() {
 
     if (result.success) {
       toast({ title: "Sucesso!", description: `Senha de ${editingUser.id} atualizada.` });
-      // Optionally update local allPlayers state if it stores password (it shouldn't)
+      // If admin changes their own password via this dialog, update current playerData too
+       if (currentPlayerId === editingUser.id && playerData && result.updatedPlayer?.senha) {
+        const updatedData = { ...playerData, senha: result.updatedPlayer.senha };
+        setPlayerData(updatedData);
+        sessionStorage.setItem('playerData', JSON.stringify(updatedData));
+      }
       setIsEditUserDialogOpen(false);
     } else {
       toast({ title: "Erro ao Alterar Senha", description: result.message, variant: "destructive" });
@@ -489,7 +512,7 @@ function HomePageInternal() {
   if (loading && !playerData && !loginError) {
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow mt-10">
-        <Loader2 className="w-16 h-16 text-primary " />
+        <Loader2 className="w-16 h-16 text-primary" />
         <p className="mt-4 text-lg text-muted-foreground">Buscando informações do jogador...</p>
       </div>
     );
@@ -539,7 +562,7 @@ function HomePageInternal() {
                 aria-label="Buscar Jogador"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 " />
+                  <Loader2 className="w-5 h-5" />
                 ) : (
                   <Search size={20} />
                 )}
@@ -552,8 +575,10 @@ function HomePageInternal() {
     );
   } else if (playerData && !loginError && !loading) {
     contentToRender = (
-      <div className="w-full max-w-5xl px-2 space-y-8 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-[1%]">
-        {error && !loginError && (
+      <div className="w-full max-w-5xl px-2 space-y-8 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-[1%]"
+        style={{ '--animate-duration': '300ms' } as React.CSSProperties}
+      >
+        {error && !loginError && ( // Only show this general error if not a login error and playerData exists
           <Alert variant="destructive" className="w-full max-w-md mx-auto my-4 shadow-lg card-glow">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
@@ -583,7 +608,7 @@ function HomePageInternal() {
 
           <AccordionItem value="shop-link" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden card-glow">
             <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:[transform:rotate(0deg)]">
-              Loja do Aventureiro
+               Loja do Aventureiro
             </AccordionTrigger>
             <AccordionContent className="p-4 sm:p-6">
               <Button
@@ -603,25 +628,27 @@ function HomePageInternal() {
               <Settings size={24} className="mr-3" /> Configurações da Conta
             </AccordionTrigger>
             <AccordionContent className="p-4 sm:p-6 space-y-6">
-              <Card className="bg-card/80 border-border/50 shadow-lg card-glow">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center text-primary"><Pencil size={20} className="mr-2" />Alterar Nome</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleChangeName} className="space-y-4">
-                    <Input
-                      type="text"
-                      placeholder="Novo nome"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
-                    />
-                    <Button type="submit" disabled={isUpdatingName || !newName.trim()} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
-                      {isUpdatingName ? <Loader2 className="w-5 h-5 mr-2 " /> : 'Salvar Nome'}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+              {isAdmin && (
+                <Card className="bg-card/80 border-border/50 shadow-lg card-glow">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center text-primary"><Pencil size={20} className="mr-2" />Alterar Seu Nome</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleChangeName} className="space-y-4">
+                      <Input
+                        type="text"
+                        placeholder="Novo nome"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
+                      />
+                      <Button type="submit" disabled={isUpdatingName || !newName.trim()} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
+                        {isUpdatingName ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Nome'}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
               <Card className="bg-card/80 border-border/50 shadow-lg card-glow">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center text-primary"><Lock size={20} className="mr-2" />Alterar Senha</CardTitle>
@@ -636,7 +663,7 @@ function HomePageInternal() {
                       className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
                     />
                     <Button type="submit" disabled={isUpdatingPassword || !newPassword.trim() || newPassword.length < 4} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
-                      {isUpdatingPassword ? <Loader2 className="w-5 h-5 mr-2 " /> : 'Salvar Senha'}
+                      {isUpdatingPassword ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Senha'}
                     </Button>
                   </form>
                 </CardContent>
@@ -648,14 +675,14 @@ function HomePageInternal() {
             <AccordionItem value="admin-panel" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden card-glow">
               <AccordionTrigger
                 className="px-6 py-4 text-xl font-semibold text-accent hover:text-accent/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:[transform:rotate(0deg)]"
-                onClick={() => { if (!allPlayers) fetchAllPlayers(); }}
+                onClick={() => { if (!allPlayers && !loadingAllPlayers) fetchAllPlayers(); }}
               >
                 <Users size={24} className="mr-3" /> Painel do Administrador
               </AccordionTrigger>
               <AccordionContent className="p-4 sm:p-6">
                 {loadingAllPlayers && (
                   <div className="flex justify-center items-center py-8">
-                    <Loader2 className="w-10 h-10 text-primary " />
+                    <Loader2 className="w-10 h-10 text-primary" />
                     <p className="ml-3 text-muted-foreground">Carregando todos os jogadores...</p>
                   </div>
                 )}
@@ -666,8 +693,11 @@ function HomePageInternal() {
                     <AlertDescription>{adminPanelError}</AlertDescription>
                   </Alert>
                 )}
-                {allPlayers && !loadingAllPlayers && (
-                  <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                {!loadingAllPlayers && allPlayers && Object.keys(allPlayers).length === 0 && (
+                  <p className="text-center text-muted-foreground">Nenhum outro jogador encontrado.</p>
+                )}
+                {allPlayers && !loadingAllPlayers && Object.keys(allPlayers).length > 0 && (
+                  <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                     {Object.entries(allPlayers).map(([id, p]) => (
                       <Card key={id} className="bg-card/70 border-border/50 card-glow">
                         <CardHeader className='p-4'>
@@ -690,6 +720,15 @@ function HomePageInternal() {
                     ))}
                   </div>
                 )}
+                 <Button 
+                    variant="outline" 
+                    onClick={fetchAllPlayers} 
+                    disabled={loadingAllPlayers}
+                    className="mt-4 w-full"
+                  >
+                    {loadingAllPlayers ? <Loader2 className="mr-2 h-4 w-4" /> : null}
+                    Atualizar Lista de Jogadores
+                  </Button>
               </AccordionContent>
             </AccordionItem>
           )}
@@ -697,19 +736,20 @@ function HomePageInternal() {
         </Accordion>
       </div>
     );
-  } else if (loading && playerData) {
+  } else if (loading && playerData) { // Show skeleton for main content if loading new data for an already logged-in player
     contentToRender = (
       <div className="w-full max-w-5xl px-2 space-y-8">
         <PlayerStatsCard playerData={playerData} isLoading={true} />
+        {/* Skeleton for Accordions */}
         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
-          <div className="h-8 bg-muted rounded w-1/3 "></div>
+          <Skeleton className="h-8 bg-muted rounded w-1/3" />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-muted rounded "></div>)}
+            {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-muted rounded"></div>)}
           </div>
         </div>
-        <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
-          <div className="h-8 bg-muted rounded w-1/3 "></div>
-          <div className="h-12 bg-muted rounded w-full "></div>
+         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
+          <Skeleton className="h-8 bg-muted rounded w-1/3" />
+          <div className="h-12 bg-muted rounded w-full"></div>
         </div>
       </div>
     );
@@ -737,7 +777,7 @@ function HomePageInternal() {
               <DialogTitle className="mb-4 text-2xl font-semibold text-primary">{actionConfig[activeActionAnimation].modalTitle}</DialogTitle>
             </DialogHeader>
             <div className="flex justify-center text-primary">
-              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 80, strokeWidth: 1.5, className: "" })}
+              {React.createElement(actionConfig[activeActionAnimation].icon, { size: 80, strokeWidth: 1.5 })}
             </div>
           </DialogContent>
         </Dialog>
@@ -751,7 +791,7 @@ function HomePageInternal() {
             </DialogHeader>
             <div className="grid gap-6 py-4">
               <form onSubmit={handleUpdateOtherUserName} className="space-y-3">
-                <Label htmlFor="editUserNewName" className="text-muted-foreground">Novo Nome</Label>
+                <Label htmlFor="editUserNewName" className="text-left text-muted-foreground">Novo Nome</Label>
                 <Input
                   id="editUserNewName"
                   value={editUserNewName}
@@ -760,12 +800,12 @@ function HomePageInternal() {
                   placeholder="Novo nome do usuário"
                 />
                 <Button type="submit" disabled={isUpdatingOtherUserName || !editUserNewName.trim()} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                  {isUpdatingOtherUserName ? <Loader2 className="mr-2 h-4 w-4 " /> : <Pencil className="mr-2 h-4 w-4" />}
+                  {isUpdatingOtherUserName ? <Loader2 className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
                   Salvar Nome
                 </Button>
               </form>
               <form onSubmit={handleUpdateOtherUserPassword} className="space-y-3">
-                <Label htmlFor="editUserNewPassword" className="text-muted-foreground">Nova Senha</Label>
+                <Label htmlFor="editUserNewPassword" className="text-left text-muted-foreground">Nova Senha</Label>
                 <Input
                   id="editUserNewPassword"
                   type="password"
@@ -775,7 +815,7 @@ function HomePageInternal() {
                   placeholder="Nova senha (mín. 4 caracteres)"
                 />
                 <Button type="submit" disabled={isUpdatingOtherUserPassword || !editUserNewPassword.trim() || editUserNewPassword.length < 4} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                  {isUpdatingOtherUserPassword ? <Loader2 className="mr-2 h-4 w-4 " /> : <Lock className="mr-2 h-4 w-4" />}
+                  {isUpdatingOtherUserPassword ? <Loader2 className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
                   Salvar Senha
                 </Button>
               </form>
@@ -803,7 +843,7 @@ export default function HomePage() {
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Loader2 className="w-16 h-16 text-primary " />
+        <Loader2 className="w-16 h-16 text-primary" />
         <p className="mt-4 text-lg text-muted-foreground">Carregando aplicação...</p>
       </div>
     }>
