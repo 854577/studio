@@ -63,12 +63,12 @@ function HomePageInternal() {
   const [isActionInProgress, setIsActionInProgress] = useState<boolean>(false);
   const [currentActionLoading, setCurrentActionLoading] = useState<ActionType | null>(null);
 
-  const [newName, setNewName] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
-  const [isUpdatingName, setIsUpdatingName] = useState(false);
+  const [isUpdatingName, setIsUpdatingName] = useState(false); // Still needed for admin's own name change
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
+  const [newName, setNewName] = useState(''); // For admin to change their own name
 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [allPlayers, setAllPlayers] = useState<Record<string, Player> | null>(null);
@@ -112,7 +112,9 @@ function HomePageInternal() {
     const sessionIsAdmin = sessionStorage.getItem('isAdmin');
 
     if (pidFromUrl) {
-      setPlayerIdInput(pidFromUrl);
+      if (pidFromUrl !== playerIdInput) {
+        setPlayerIdInput(pidFromUrl);
+      }
 
       if (sessionPlayerId === pidFromUrl && sessionPlayerData) {
         try {
@@ -120,7 +122,7 @@ function HomePageInternal() {
           setPlayerData(parsedData);
           setCurrentPlayerId(sessionPlayerId);
           setIsAdmin(sessionIsAdmin === 'true');
-          setLoginError(null); 
+          if (loginError !== null) setLoginError(null);
         } catch (e) {
           console.error("Falha ao parsear dados do jogador da sessão", e);
           sessionStorage.removeItem('currentPlayerId');
@@ -129,38 +131,38 @@ function HomePageInternal() {
           setPlayerData(null);
           setCurrentPlayerId(null);
           setIsAdmin(false);
-          setPasswordInput('');
-          setLoginError(null);
-          setError(null);
+          if (passwordInput !== '') setPasswordInput('');
+          if (loginError !== null) setLoginError(null);
+          if (error !== null) setError(null);
         }
       } else {
-        if (currentPlayerId && pidFromUrl !== currentPlayerId) { 
+        if (currentPlayerId && pidFromUrl !== currentPlayerId) {
           setPlayerData(null);
           setCurrentPlayerId(null);
           setIsAdmin(false);
-          setPasswordInput(''); 
+          if (passwordInput !== '') setPasswordInput('');
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
           sessionStorage.removeItem('isAdmin');
         }
-        setLoginError(null); 
-        setError(null); 
+        if (loginError !== null) setLoginError(null);
+        if (error !== null) setError(null);
       }
     } else {
-      if (currentPlayerId) { 
+      if (currentPlayerId) {
         setPlayerData(null);
         setCurrentPlayerId(null);
         setIsAdmin(false);
-        setPlayerIdInput('');
-        setPasswordInput(''); 
+        if (playerIdInput !== '') setPlayerIdInput('');
+        if (passwordInput !== '') setPasswordInput('');
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
         sessionStorage.removeItem('isAdmin');
       }
-      setLoginError(null);
-      setError(null);
+      if (loginError !== null) setLoginError(null);
+      if (error !== null) setError(null);
     }
-  }, [searchParams, currentPlayerId]); 
+  }, [searchParams, currentPlayerId, playerIdInput, passwordInput, loginError, error, setPlayerData, setCurrentPlayerId, setIsAdmin, setPlayerIdInput, setPasswordInput, setLoginError, setError]);
 
 
   useEffect(() => {
@@ -173,7 +175,7 @@ function HomePageInternal() {
           if (endTime > Date.now()) {
             loadedCooldowns[action] = endTime;
           } else {
-            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); 
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
         }
       });
@@ -204,7 +206,7 @@ function HomePageInternal() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay(); 
+        updateDisplay();
         const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
@@ -250,7 +252,7 @@ function HomePageInternal() {
           setPlayerData(playerDataToSet);
           setCurrentPlayerId(trimmedId);
           setIsAdmin(currentIsAdmin);
-          setLoginError(null); 
+
 
            if (searchParams.get('playerId') !== trimmedId) {
              router.push(`/?playerId=${trimmedId}`, { scroll: false });
@@ -258,9 +260,10 @@ function HomePageInternal() {
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(playerDataToSet));
           sessionStorage.setItem('isAdmin', String(currentIsAdmin));
+          // Não limpar passwordInput aqui para evitar o problema de pedir duas vezes
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
-          setPasswordInput(''); 
+          setPasswordInput('');
           setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
@@ -268,7 +271,7 @@ function HomePageInternal() {
         }
       } else {
         setLoginError('Jogador não encontrado ou sem dados de senha.');
-        setPasswordInput(''); 
+        setPasswordInput('');
         setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
@@ -278,7 +281,7 @@ function HomePageInternal() {
       console.error('Fetch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setLoginError(`Erro ao buscar dados: ${errorMessage}`);
-      setPasswordInput(''); 
+      setPasswordInput('');
       setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
@@ -310,7 +313,7 @@ function HomePageInternal() {
 
 
     setTimeout(async () => {
-      if (!currentPlayerId || !playerData) { 
+      if (!currentPlayerId || !playerData) {
           setActiveActionAnimation(null);
           setIsActionInProgress(false);
           setCurrentActionLoading(null);
@@ -375,7 +378,7 @@ function HomePageInternal() {
         toast({ title: "Erro ao Salvar no Servidor", description: err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.", variant: "destructive" });
       }
 
-      const newCooldownEndTime = Date.now() + (60 * 60 * 1000); 
+      const newCooldownEndTime = Date.now() + (60 * 60 * 1000);
       setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
       if (typeof window !== 'undefined') localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
 
@@ -383,7 +386,7 @@ function HomePageInternal() {
       setIsActionInProgress(false);
       setCurrentActionLoading(null);
 
-    }, 1200); 
+    }, 1200);
   };
 
   const handleChangeName = async (event: FormEvent) => {
@@ -424,8 +427,8 @@ function HomePageInternal() {
     if (result.success && result.updatedPlayer?.senha && playerData) {
       toast({ title: "Sucesso!", description: result.message });
       const updatedData = { ...playerData, senha: result.updatedPlayer.senha };
-      setPlayerData(updatedData); 
-      sessionStorage.setItem('playerData', JSON.stringify(updatedData)); 
+      setPlayerData(updatedData);
+      sessionStorage.setItem('playerData', JSON.stringify(updatedData));
       setNewPassword('');
     } else {
       toast({ title: "Erro ao Alterar Senha", description: result.message, variant: "destructive" });
@@ -435,27 +438,40 @@ function HomePageInternal() {
   const handleChangePhoto = async (event: FormEvent) => {
     event.preventDefault();
     if (!currentPlayerId || !newPhotoUrl.trim()) {
-      toast({ title: "Erro", description: "URL da foto não pode estar vazia.", variant: "destructive" });
-      return;
-    }
-    try {
-      new URL(newPhotoUrl.trim());
-    } catch (_) {
-      toast({ title: "Erro", description: "URL da foto inválida.", variant: "destructive" });
-      return;
+        // If newPhotoUrl is empty, treat as request to remove photo
+        if (newPhotoUrl.trim() === '' && playerData?.foto) {
+             // Allow removing photo
+        } else {
+            toast({ title: "Erro", description: "URL da foto não pode estar vazia (a menos que removendo uma foto existente).", variant: "destructive" });
+            return;
+        }
     }
 
+    // Validate URL only if it's not an intentional removal
+    if (newPhotoUrl.trim() !== '') {
+        try {
+        new URL(newPhotoUrl.trim());
+        } catch (_) {
+        toast({ title: "Erro", description: "URL da foto inválida.", variant: "destructive" });
+        return;
+        }
+    }
+
+
     setIsUpdatingPhoto(true);
-    // If newPhotoUrl is empty, we want to set foto to null to remove it in Firebase
     const photoPayload = newPhotoUrl.trim() === '' ? null : newPhotoUrl.trim();
     const result = await adminUpdatePlayerFullAction(currentPlayerId, { foto: photoPayload as any });
     setIsUpdatingPhoto(false);
 
     if (result.success && playerData) {
-      toast({ title: "Sucesso!", description: "Foto de perfil atualizada." });
+      toast({ title: "Sucesso!", description: photoPayload === null ? "Foto de perfil removida." : "Foto de perfil atualizada." });
+      // Ensure correct update for local state: if result.updatedPlayer.foto is undefined (meaning it was set to null),
+      // then playerData.foto should also become '' or null.
+      // If firebase returns the actual new URL, use that.
       const updatedFoto = result.updatedPlayer?.foto === undefined ? (photoPayload === null ? '' : playerData.foto) : result.updatedPlayer.foto;
+
       const updatedData = { ...playerData, foto: updatedFoto };
-      
+
       setPlayerData(updatedData);
       sessionStorage.setItem('playerData', JSON.stringify(updatedData));
       setNewPhotoUrl('');
@@ -468,16 +484,16 @@ function HomePageInternal() {
   const handleOpenEditUserDialog = (id: string, player: Player) => {
     setEditingUserId(id);
     const initialEditingData: Partial<Player> = {
-        nome: player.nome || id, 
-        senha: '', 
+        nome: player.nome || id,
+        senha: '',
         vida: player.vida ?? 0,
         ouro: player.ouro ?? 0,
-        nivel: player.nivel ?? 1, 
+        nivel: player.nivel ?? 1,
         xp: player.xp ?? 0,
         energia: player.energia ?? 0,
         mana: player.mana ?? 0,
-        foto: player.foto || '', 
-        inventario: player.inventario ? { ...player.inventario } : {}, 
+        foto: player.foto || '',
+        inventario: player.inventario ? { ...player.inventario } : {},
     };
     setEditingUserData(initialEditingData);
     setAdminNewItemName('');
@@ -490,7 +506,7 @@ function HomePageInternal() {
       if (!prev) return null;
       if (['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'].includes(field as string) && typeof value === 'string') {
         const numValue = parseInt(value, 10);
-        return { ...prev, [field]: isNaN(numValue) ? 0 : numValue }; 
+        return { ...prev, [field]: isNaN(numValue) ? 0 : numValue };
       }
       return { ...prev, [field]: value };
     });
@@ -499,12 +515,12 @@ function HomePageInternal() {
   const handleAdminInventoryItemQuantityChange = (itemName: string, quantityStr: string) => {
     const quantity = parseInt(quantityStr, 10);
     setEditingUserData(prev => {
-        if (!prev || !prev.inventario) return prev; 
+        if (!prev || !prev.inventario) return prev;
         const newInventario = { ...prev.inventario };
         if (!isNaN(quantity) && quantity > 0) {
             newInventario[itemName] = quantity;
         } else if (!isNaN(quantity) && quantity <= 0) {
-            delete newInventario[itemName]; 
+            delete newInventario[itemName];
         }
         return { ...prev, inventario: newInventario };
     });
@@ -525,13 +541,13 @@ function HomePageInternal() {
         return;
     }
     setEditingUserData(prev => {
-        if (!prev) return prev; 
-        const newInventario = { ...(prev.inventario || {}) }; 
+        if (!prev) return prev;
+        const newInventario = { ...(prev.inventario || {}) };
         newInventario[adminNewItemName] = (newInventario[adminNewItemName] || 0) + adminNewItemQuantity;
         return { ...prev, inventario: newInventario };
     });
-    setAdminNewItemName(''); 
-    setAdminNewItemQuantity(1); 
+    setAdminNewItemName('');
+    setAdminNewItemQuantity(1);
   };
 
 
@@ -545,11 +561,11 @@ function HomePageInternal() {
     setIsUpdatingFullPlayer(true);
     const payload: Partial<Player> = { ...editingUserData };
 
-    if (!payload.senha?.trim()) { 
-      delete payload.senha; 
+    if (!payload.senha?.trim()) {
+      delete payload.senha;
     }
     if (payload.foto !== undefined && payload.foto.trim() === '') {
-        payload.foto = null as any; 
+        payload.foto = null as any;
     }
 
 
@@ -561,13 +577,13 @@ function HomePageInternal() {
 
       if (allPlayers) {
         setAllPlayers(prev => {
-            if (!prev || !editingUserId) return null; 
+            if (!prev || !editingUserId) return null;
             const updatedPlayerLocally = { ...prev[editingUserId], ...result.updatedPlayer };
-            if (payload.foto === null) updatedPlayerLocally.foto = ''; 
+            if (payload.foto === null) updatedPlayerLocally.foto = '';
 
             if (result.updatedPlayer.inventario === undefined && payload.inventario && Object.keys(payload.inventario).length === 0) {
-                updatedPlayerLocally.inventario = {}; 
-            } else if (result.updatedPlayer.inventario === null) { 
+                updatedPlayerLocally.inventario = {};
+            } else if (result.updatedPlayer.inventario === null) {
                 updatedPlayerLocally.inventario = {};
             }
 
@@ -587,8 +603,8 @@ function HomePageInternal() {
         sessionStorage.setItem('playerData', JSON.stringify(updatedCurrentPlayerData));
       }
       setIsEditUserDialogOpen(false);
-      setEditingUserData(null); 
-      setEditingUserId(null); 
+      setEditingUserData(null);
+      setEditingUserId(null);
     } else {
       toast({ title: "Erro ao Atualizar Jogador", description: result.message, variant: "destructive" });
     }
@@ -601,11 +617,11 @@ function HomePageInternal() {
   if (loading && !playerData && !loginError) {
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow mt-10">
-        <Loader2 className="w-16 h-16 text-primary" />
+        <Loader2 className="w-16 h-16 text-primary " />
         <p className="mt-4 text-lg text-muted-foreground">Buscando informações do jogador...</p>
       </div>
     );
-  } else if (!playerData && !loading) { 
+  } else if (!playerData && !loading) {
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4">
         {loginError && (
@@ -617,9 +633,9 @@ function HomePageInternal() {
         )}
         <Card className={cn(
           "w-full p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50 card-glow",
-          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-[2%]" 
+          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-[2%]"
         )}
-        data-state="open" 
+        data-state="open"
         >
           <CardHeader className="p-0 pb-6 mb-6 text-center border-b border-border/30">
             <CardTitle className="text-3xl font-bold text-primary">Bem-vindo!</CardTitle>
@@ -655,8 +671,8 @@ function HomePageInternal() {
                 className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-transform active:scale-95 shadow-md hover:shadow-lg"
                 aria-label="Buscar Jogador"
               >
-                {loading ? ( 
-                  <Loader2 className="w-5 h-5" />
+                {loading ? (
+                  <Loader2 className="w-5 h-5 " />
                 ) : (
                   <Search size={20} />
                 )}
@@ -667,12 +683,12 @@ function HomePageInternal() {
         </Card>
       </div>
     );
-  } else if (playerData && !loginError && !loading) { 
+  } else if (playerData && !loginError && !loading) {
     contentToRender = (
-      <div className="w-full max-w-5xl px-2 space-y-6 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+      <div className="w-full max-w-5xl px-2 space-y-6 "
         data-state="open"
       >
-        {error && !loginError && ( 
+        {error && !loginError && (
           <Alert variant="destructive" className="w-full max-w-md mx-auto my-4 shadow-lg card-glow">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
@@ -680,6 +696,7 @@ function HomePageInternal() {
           </Alert>
         )}
         <PlayerStatsCard playerData={playerData} isLoading={loading && !!currentPlayerId && !playerData} />
+
 
         <Accordion type="multiple" defaultValue={['player-actions']} className="w-full space-y-6">
           <AccordionItem value="player-actions" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden card-glow">
@@ -720,7 +737,7 @@ function HomePageInternal() {
                         className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
                       />
                       <Button type="submit" disabled={isUpdatingName || !newName.trim()} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
-                        {isUpdatingName ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Nome'}
+                        {isUpdatingName ? <Loader2 className="w-5 h-5 mr-2 " /> : 'Salvar Nome'}
                       </Button>
                     </form>
                   </CardContent>
@@ -740,7 +757,7 @@ function HomePageInternal() {
                       className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
                     />
                     <Button type="submit" disabled={isUpdatingPhoto} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
-                      {isUpdatingPhoto ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Foto'}
+                      {isUpdatingPhoto ? <Loader2 className="w-5 h-5 mr-2 " /> : 'Salvar Foto'}
                     </Button>
                   </form>
                 </CardContent>
@@ -759,7 +776,7 @@ function HomePageInternal() {
                       className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
                     />
                     <Button type="submit" disabled={isUpdatingPassword || !newPassword.trim() || newPassword.length < 4} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
-                      {isUpdatingPassword ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Senha'}
+                      {isUpdatingPassword ? <Loader2 className="w-5 h-5 mr-2 " /> : 'Salvar Senha'}
                     </Button>
                   </form>
                 </CardContent>
@@ -778,7 +795,7 @@ function HomePageInternal() {
               <AccordionContent className="p-4 sm:p-6">
                 {loadingAllPlayers && (
                   <div className="flex justify-center items-center py-8">
-                    <Loader2 className="w-10 h-10 text-primary" />
+                    <Loader2 className="w-10 h-10 text-primary " />
                     <p className="ml-3 text-muted-foreground">Carregando todos os jogadores...</p>
                   </div>
                 )}
@@ -824,7 +841,7 @@ function HomePageInternal() {
                     disabled={loadingAllPlayers}
                     className="mt-4 w-full"
                   >
-                    {loadingAllPlayers ? <Loader2 className="mr-2 h-4 w-4" /> : null}
+                    {loadingAllPlayers ? <Loader2 className="mr-2 h-4 w-4 " /> : null}
                     Atualizar Lista de Jogadores
                   </Button>
               </AccordionContent>
@@ -834,9 +851,9 @@ function HomePageInternal() {
         </Accordion>
       </div>
     );
-  } else if (loading && playerData) { 
+  } else if (loading && playerData) {
     contentToRender = (
-      <div className="w-full max-w-5xl px-2 space-y-8 data-[state=open]:animate-in data-[state=open]:fade-in-0">
+      <div className="w-full max-w-5xl px-2 space-y-8 ">
         <PlayerStatsCard playerData={playerData} isLoading={true} />
         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
           <div className="h-8 bg-muted rounded w-1/3"></div>
@@ -846,7 +863,7 @@ function HomePageInternal() {
         </div>
       </div>
     );
-  } else { 
+  } else {
      contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow mt-10">
         <Alert variant="destructive" className="max-w-md card-glow">
@@ -906,8 +923,8 @@ function HomePageInternal() {
             <DialogHeader>
               <DialogTitle className="text-primary">Editar Usuário: {editingUserData.nome || editingUserId}</DialogTitle>
             </DialogHeader>
-            <ScrollArea className="max-h-[70vh] p-1"> 
-              <form onSubmit={handleAdminUpdatePlayer} className="space-y-4 p-4"> 
+            <ScrollArea className="max-h-[70vh] p-1">
+              <form onSubmit={handleAdminUpdatePlayer} className="space-y-4 p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="adminEditName" className="text-muted-foreground">Nome</Label>
@@ -971,7 +988,7 @@ function HomePageInternal() {
                         value={quantity}
                         onChange={(e) => handleAdminInventoryItemQuantityChange(itemName, e.target.value)}
                         className="w-20 h-8 text-sm"
-                        min="0" 
+                        min="0"
                       />
                       <Button type="button" variant="ghost" size="icon" onClick={() => handleAdminRemoveInventoryItem(itemName)} className="text-destructive hover:text-destructive/80 h-8 w-8">
                         <Trash2 size={16} />
@@ -1023,7 +1040,7 @@ function HomePageInternal() {
                     <Button type="button" variant="outline">Cancelar</Button>
                   </DialogClose>
                   <Button type="submit" disabled={isUpdatingFullPlayer} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                    {isUpdatingFullPlayer ? <Loader2 className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
+                    {isUpdatingFullPlayer ? <Loader2 className="mr-2 h-4 w-4 " /> : <Pencil className="mr-2 h-4 w-4" />}
                     Salvar Alterações
                   </Button>
                 </DialogFooter>
@@ -1048,7 +1065,7 @@ export default function HomePage() {
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Loader2 className="w-16 h-16 text-primary" />
+        <Loader2 className="w-16 h-16 text-primary " />
         <p className="mt-4 text-lg text-muted-foreground">Carregando aplicação...</p>
       </div>
     }>
@@ -1056,5 +1073,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-
-    
