@@ -13,20 +13,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2, Settings, Pencil, Lock, Users, Trash2, PlusCircle, Briefcase, Fish, Bed, Dumbbell } from 'lucide-react';
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2, Settings, Pencil, Lock, Users, Trash2, PlusCircle, Briefcase, Fish, Bed, Dumbbell, Store } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
 import CompactPlayerStats from '@/components/app/CompactPlayerStats';
 import { cn } from '@/lib/utils';
 import { updatePlayerNameAction, updatePlayerPasswordAction, adminUpdatePlayerFullAction } from './actions/playerActions';
-import { itemDetails as allShopItems } from './loja/lojaData'; // Import itemDetails
+import { itemDetails as allShopItems } from './loja/lojaData'; 
 
 
 const ADMIN_PLAYER_IDS = ['5521994361356', 'HimikoToga', 'himiko'];
 
 // Define ActionType locally as it was previously (implicitly or explicitly)
 type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
+
 
 function HomePageInternal() {
   const router = useRouter();
@@ -38,15 +39,15 @@ function HomePageInternal() {
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null); // For general errors after login
-  const [loginError, setLoginError] = useState<string | null>(null); // Specifically for login errors
+  const [error, setError] = useState<string | null>(null); 
+  const [loginError, setLoginError] = useState<string | null>(null); 
 
 
   const actionConfig: Record<ActionType, { title: string, modalTitle: string, icon: React.ElementType, goldRange: [number, number], xpRange: [number, number] }> = {
     trabalhar: { title: 'Trabalho Concluído!', modalTitle: 'Trabalhando...', icon: Briefcase, goldRange: [100, 500], xpRange: [100, 500] },
     pescar: { title: 'Pesca Realizada!', modalTitle: 'Pescando...', icon: Fish, goldRange: [100, 500], xpRange: [100, 500] },
-    dormir: { title: 'Descanso Finalizado!', modalTitle: 'Dormindo...', icon: Bed, goldRange: [0,0], xpRange: [100, 500] }, // Dormir só dá XP
-    treinar: { title: 'Treino Concluído!', modalTitle: 'Treinando...', icon: Dumbbell, goldRange: [0,0], xpRange: [100, 500] }, // Treinar só dá XP
+    dormir: { title: 'Descanso Finalizado!', modalTitle: 'Dormindo...', icon: Bed, goldRange: [0,0], xpRange: [100, 500] }, 
+    treinar: { title: 'Treino Concluído!', modalTitle: 'Treinando...', icon: Dumbbell, goldRange: [0,0], xpRange: [100, 500] }, 
   };
 
 
@@ -106,54 +107,54 @@ function HomePageInternal() {
     const sessionPlayerId = sessionStorage.getItem('currentPlayerId');
     const sessionPlayerData = sessionStorage.getItem('playerData');
     const sessionIsAdmin = sessionStorage.getItem('isAdmin');
-
+  
     if (pidFromUrl) {
-      setPlayerIdInput(pidFromUrl); // Always set input if pidFromUrl exists
+      setPlayerIdInput(pidFromUrl);
       if (sessionPlayerId === pidFromUrl && sessionPlayerData) {
         try {
           const parsedData = JSON.parse(sessionPlayerData);
           setPlayerData(parsedData);
           setCurrentPlayerId(sessionPlayerId);
           setIsAdmin(sessionIsAdmin === 'true');
-          setLoginError(null); 
-          // Password input is not cleared here to allow seamless re-display
+          setLoginError(null);
+          // Password input intentionally not cleared here to allow seamless re-display of login form if needed later by other logic
         } catch (e) {
           console.error("Falha ao parsear dados do jogador da sessão", e);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
           sessionStorage.removeItem('isAdmin');
-          // If parsing fails, treat as if no session data
           setPlayerData(null);
           setCurrentPlayerId(null);
           setIsAdmin(false);
-          setPasswordInput(''); // Clear password if session is broken and URL has player
+          setPasswordInput(''); // Clear password if session is broken
           setLoginError(null);
           setError(null);
         }
       } else {
-         // pidFromUrl exists, but no matching session or no session at all
-         // This means we need to potentially clear old state if pidFromUrl is different from current
-         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-            setPlayerData(null);
-            setCurrentPlayerId(null);
-            setIsAdmin(false);
-            setPasswordInput(''); // Different player in URL, clear password for new login
-            setLoginError(null);
-            setError(null);
-            sessionStorage.removeItem('currentPlayerId');
-            sessionStorage.removeItem('playerData');
-            sessionStorage.removeItem('isAdmin');
-         } else if (!currentPlayerId) {
-            // No current player, but pid in URL (e.g. direct navigation or different player)
-            setPasswordInput(''); // Expecting a fresh login for this pidFromUrl
-            setLoginError(null);
-            setError(null);
-         }
-         // If currentPlayerId === pidFromUrl but no sessionPlayerData, it implies a fresh load for this player
-         // The password field might be empty or pre-filled by browser, let login proceed.
+        // pidFromUrl exists, but no matching session or no session data at all
+        if (currentPlayerId && pidFromUrl !== currentPlayerId) {
+          // Navigating to a different player profile via URL
+          setPlayerData(null);
+          setCurrentPlayerId(null);
+          setIsAdmin(false);
+          setPasswordInput(''); // Clear password for new login context
+          setLoginError(null);
+          setError(null);
+          sessionStorage.removeItem('currentPlayerId');
+          sessionStorage.removeItem('playerData');
+          sessionStorage.removeItem('isAdmin');
+        } else if (!currentPlayerId) {
+          // No current player, but pid in URL (e.g. direct navigation, or returning to a specific player after session clear)
+           // Don't clear password input here, allow handleSearch to manage it
+           setLoginError(null);
+           setError(null);
+        }
+        // If currentPlayerId === pidFromUrl but no sessionPlayerData, it implies a fresh load for this player
+        // The password field might be empty or pre-filled by browser, let login proceed.
       }
-    } else { // No playerId in URL
-       if (currentPlayerId) { // If there was a player active, effectively log them out
+    } else {
+      // No playerId in URL
+      if (currentPlayerId) { // If there was a player active, effectively log them out
         setPlayerData(null);
         setCurrentPlayerId(null);
         setIsAdmin(false);
@@ -164,13 +165,13 @@ function HomePageInternal() {
         sessionStorage.removeItem('isAdmin');
         setLoginError(null);
         setError(null);
-       } else {
+      } else {
         // No pid in URL and no current player, ensure inputs are clear
         setPlayerIdInput('');
         setPasswordInput('');
-       }
+      }
     }
-  }, [searchParams, currentPlayerId]); // currentPlayerId dependency helps reset if it changes externally
+  }, [searchParams]); // Removed currentPlayerId from dependencies to avoid potential loops and rely on pidFromUrl and session
 
 
   useEffect(() => {
@@ -244,7 +245,7 @@ function HomePageInternal() {
 
     setLoading(true);
     setLoginError(null);
-    setError(null); // Clear general errors on new search
+    setError(null); 
     
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
@@ -261,8 +262,8 @@ function HomePageInternal() {
           setCurrentPlayerId(trimmedId);
           setIsAdmin(currentIsAdmin);
 
+          // Update URL only if it's different, to avoid redundant history entries
           if (searchParams.get('playerId') !== trimmedId) {
-             // Use router.replace to avoid adding to history if it's just a query param change after login
             router.replace(`/?playerId=${trimmedId}`, { scroll: false });
           }
           sessionStorage.setItem('currentPlayerId', trimmedId);
@@ -567,7 +568,7 @@ function HomePageInternal() {
   if (loading && !playerData && !loginError) {
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow mt-10 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
-        <Loader2 className="w-16 h-16 text-primary " />
+        <Loader2 className="w-16 h-16 text-primary" />
         <p className="mt-4 text-lg text-muted-foreground">Buscando informações do jogador...</p>
       </div>
     );
@@ -622,7 +623,7 @@ function HomePageInternal() {
                 aria-label="Buscar Jogador"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 " />
+                  <Loader2 className="w-5 h-5" />
                 ) : (
                   <Search size={20} />
                 )}
@@ -704,7 +705,7 @@ function HomePageInternal() {
                         className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
                       />
                       <Button type="submit" disabled={isUpdatingName || !newName.trim()} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
-                        {isUpdatingName ? <Loader2 className="w-5 h-5 mr-2 " /> : 'Salvar Nome'}
+                        {isUpdatingName ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Nome'}
                       </Button>
                     </form>
                   </CardContent>
@@ -724,7 +725,7 @@ function HomePageInternal() {
                       className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
                     />
                     <Button type="submit" disabled={isUpdatingPassword || !newPassword.trim() || newPassword.length < 4} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
-                      {isUpdatingPassword ? <Loader2 className="w-5 h-5 mr-2 " /> : 'Salvar Senha'}
+                      {isUpdatingPassword ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Senha'}
                     </Button>
                   </form>
                 </CardContent>
@@ -743,7 +744,7 @@ function HomePageInternal() {
               <AccordionContent className="p-4 sm:p-6">
                 {loadingAllPlayers && (
                   <div className="flex justify-center items-center py-8">
-                    <Loader2 className="w-10 h-10 text-primary " />
+                    <Loader2 className="w-10 h-10 text-primary" />
                     <p className="ml-3 text-muted-foreground">Carregando todos os jogadores...</p>
                   </div>
                 )}
@@ -758,7 +759,7 @@ function HomePageInternal() {
                   <p className="text-center text-muted-foreground">Nenhum outro jogador encontrado.</p>
                 )}
                 {allPlayers && !loadingAllPlayers && Object.keys(allPlayers).length > 0 && (
-                  <ScrollArea className="max-h-[500px] pr-2">
+                  <div className="max-h-[500px] overflow-y-auto pr-2">
                     <div className="space-y-4">
                         {Object.entries(allPlayers).map(([id, p]) => (
                         <Card key={id} className="bg-card/70 border-border/50 card-glow">
@@ -781,7 +782,7 @@ function HomePageInternal() {
                         </Card>
                         ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
                  <Button 
                     variant="outline" 
@@ -789,7 +790,7 @@ function HomePageInternal() {
                     disabled={loadingAllPlayers}
                     className="mt-4 w-full"
                   >
-                    {loadingAllPlayers ? <Loader2 className="mr-2 h-4 w-4 " /> : null}
+                    {loadingAllPlayers ? <Loader2 className="mr-2 h-4 w-4" /> : null}
                     Atualizar Lista de Jogadores
                   </Button>
               </AccordionContent>
@@ -968,7 +969,7 @@ function HomePageInternal() {
                     <Button type="button" variant="outline">Cancelar</Button>
                   </DialogClose>
                   <Button type="submit" disabled={isUpdatingFullPlayer} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                    {isUpdatingFullPlayer ? <Loader2 className="mr-2 h-4 w-4 " /> : <Pencil className="mr-2 h-4 w-4" />}
+                    {isUpdatingFullPlayer ? <Loader2 className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
                     Salvar Alterações
                   </Button>
                 </DialogFooter>
@@ -993,7 +994,7 @@ export default function HomePage() {
   return (
     <Suspense fallback={
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Loader2 className="w-16 h-16 text-primary " />
+        <Loader2 className="w-16 h-16 text-primary" />
         <p className="mt-4 text-lg text-muted-foreground">Carregando aplicação...</p>
       </div>
     }>
