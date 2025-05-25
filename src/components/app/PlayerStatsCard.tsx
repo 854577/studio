@@ -4,7 +4,7 @@
 import type { Player } from '@/types/player';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, CircleDollarSign, Star, User, TrendingUp, Zap, Sparkles, Wallet, Package } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, TrendingUp, Zap, Sparkles, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { itemDetails } from '@/app/loja/lojaData';
 import { cn } from '@/lib/utils';
@@ -37,16 +37,16 @@ const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, valu
     return (
       <div className="flex flex-col items-center justify-center p-2 space-y-1.5 rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden border border-border/30 card-glow">
         <Skeleton className="w-6 h-6 rounded-full" />
-        <Skeleton className="w-12 h-3" />
+        <Skeleton className="w-12 h-3 truncate" />
         <Skeleton className="w-8 h-3.5" />
       </div>
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center p-2 space-y-1.5 text-center rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200 border border-border/30 card-glow">
+    <div className="flex flex-col items-center justify-center p-2 space-y-1.5 text-center rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200 border-border/30 card-glow">
       <Icon size={22} className={cn(iconColor || 'text-primary', "shrink-0")} />
       <p className="text-[11px] font-medium text-muted-foreground truncate w-full" title={label}>{label}</p>
-      <p className="text-xs font-semibold text-foreground break-words w-full" title={String(value)}>
+      <p className="text-xs font-semibold text-foreground break-words w-full overflow-hidden" title={String(value)}>
         {typeof value === 'number' ? formatNumber(value) : (value || 'N/A')}
       </p>
     </div>
@@ -62,7 +62,7 @@ interface PlayerStatsCardProps {
 const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading, className }) => {
   if (isLoading) {
     return (
-      <Card className={cn("w-full max-w-4xl overflow-hidden shadow-xl bg-card card-glow", className)}>
+      <Card className={cn("w-full max-w-5xl overflow-hidden shadow-2xl bg-card card-glow", className)}>
         <CardHeader className="flex flex-col items-center gap-4 p-4 text-center border-b sm:flex-row sm:p-6 sm:text-left border-border/30">
           <Skeleton className="w-20 h-20 rounded-full sm:w-24 sm:h-24" />
           <div className="space-y-2">
@@ -70,10 +70,10 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
             <Skeleton className="w-32 h-5 sm:w-40" />
           </div>
         </CardHeader>
-        <CardContent className="p-2 sm:p-3">
+        <CardContent className="p-1.5 sm:p-2">
           {/* Skeleton for stats grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-            {[...Array(7)].map((_, index) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+            {[...Array(6)].map((_, index) => ( // Assuming 6 main stats
               <PlayerStatItem key={`skel-stat-${index}`} icon={User} label="Carregando" value="0" isLoading={true} />
             ))}
           </div>
@@ -95,9 +95,9 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 
   if (!playerData) return null;
 
-  let fallbackName = "?";
+  let fallbackInitial = "?";
   if (playerData.nome && playerData.nome.length > 0) {
-    fallbackName = playerData.nome.substring(0, 1).toUpperCase();
+    fallbackInitial = playerData.nome.substring(0, 1).toUpperCase();
   }
 
 
@@ -110,9 +110,9 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
     { icon: Sparkles, label: 'Mana', value: playerData.mana, color: 'text-[hsl(var(--chart-1))]' },
   ];
 
-  const ignoredKeys = ['nome', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana', 'senha', 'id', 'inventario', 'saldoBRL', 'dinheiro', 'password'];
+  const ignoredKeys = ['nome', 'vida', 'ouro', 'nivel', 'xp', 'energia', 'mana', 'senha', 'id', 'inventario', 'foto'];
   const otherStats = Object.entries(playerData)
-    .filter(([key]) => !ignoredKeys.includes(key.toLowerCase()) && playerData[key] !== undefined && playerData[key] !== null && playerData[key] !== '')
+    .filter(([key]) => !ignoredKeys.includes(key.toLowerCase()) && playerData[key] !== undefined && playerData[key] !== null && String(playerData[key]).trim() !== '')
     .map(([key, value]) => {
       let displayValue = String(value);
       if (typeof value === 'string' && value.includes('@s.whatsapp.net')) {
@@ -126,22 +126,22 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
       };
     });
 
-  const inventoryItems = playerData.inventario ? Object.entries(playerData.inventario) : [];
+  const inventoryItems = playerData.inventario ? Object.entries(playerData.inventario).filter(([_, quantity]) => quantity > 0) : [];
 
   return (
-    <Card className={cn("w-full max-w-4xl overflow-hidden shadow-xl bg-card card-glow", className)}>
+    <Card className={cn("w-full max-w-5xl overflow-hidden shadow-2xl bg-card card-glow", className)}>
       <CardHeader className="flex flex-col items-center gap-4 p-4 text-center border-b sm:flex-row sm:p-6 sm:text-left border-border/30">
         <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-primary shadow-lg">
-          <AvatarImage src={`https://placehold.co/120x120.png`} alt={playerData.nome || 'Avatar'} data-ai-hint="character face"/>
-          <AvatarFallback className="text-3xl bg-secondary text-secondary-foreground">{fallbackName}</AvatarFallback>
+          <AvatarImage src={playerData.foto || `https://placehold.co/120x120.png`} alt={playerData.nome || 'Avatar'} data-ai-hint="character face"/>
+          <AvatarFallback className="text-3xl bg-primary text-primary-foreground">{fallbackInitial}</AvatarFallback>
         </Avatar>
         <div className="mt-2 sm:mt-0">
           <CardTitle className="text-3xl sm:text-4xl font-bold text-primary break-words max-w-xs sm:max-w-md md:max-w-lg">{playerData.nome || 'Nome Desconhecido'}</CardTitle>
           <CardDescription className="mt-1 text-base text-muted-foreground">Perfil Detalhado do Jogador</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="p-2 sm:p-3">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+      <CardContent className="p-1.5 sm:p-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
           {mainStats.map(stat => stat.value !== undefined && (
             <PlayerStatItem key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} iconColor={stat.color} />
           ))}
@@ -152,7 +152,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 
         {inventoryItems.length > 0 && (
           <>
-            <h3 className="col-span-full text-lg font-semibold text-primary mb-2 sm:mb-3 px-1 sm:px-0 border-t border-border/30 pt-3 mt-3">Inventário</h3>
+            <h3 className="col-span-full text-lg font-semibold text-primary mb-1.5 sm:mb-2 px-1 sm:px-0 border-t border-border/30 pt-2 mt-2">Inventário</h3>
             <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
               {inventoryItems.map(([itemName, quantity]) => {
                 const itemDetail = itemDetails[itemName.toLowerCase()];
@@ -160,7 +160,7 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
                 return (
                   <div
                     key={itemName}
-                    className="flex flex-col items-center justify-center p-2 space-y-1 text-center rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200 border border-border/30 card-glow"
+                    className="flex flex-col items-center justify-center p-2 space-y-1 text-center rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden hover:shadow-lg transition-shadow duration-200 border-border/30 card-glow"
                   >
                     <IconComponent size={22} className={cn(itemDetail?.color || 'text-accent', "shrink-0")} />
                     <p className="text-[11px] font-medium text-muted-foreground capitalize truncate w-full" title={itemName}>{itemName}</p>

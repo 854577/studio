@@ -9,6 +9,7 @@ export interface Player {
   mana?: number;
   senha?: string;
   inventario?: Record<string, number>;
+  foto?: string; // Novo campo para URL da foto de perfil
   // Allows for other potential fields from the API
-  [key: string]: any; 
+  [key: string]: any;
 }

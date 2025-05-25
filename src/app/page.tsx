@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, AlertCircle, UserRound, KeyRound, Gamepad2, Settings, Pencil, Lock, Users, Trash2, PlusCircle, Briefcase, Fish, Bed, Dumbbell, ShoppingBag, Dices } from 'lucide-react';
+import { Search, AlertCircle, UserRound, KeyRound, Gamepad2, Settings, Pencil, Lock, Users, Trash2, PlusCircle, Briefcase, Fish, Bed, Dumbbell, ShoppingBag, Dices, Image as ImageIcon } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
@@ -63,8 +63,10 @@ function HomePageInternal() {
 
   const [newName, setNewName] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [allPlayers, setAllPlayers] = useState<Record<string, Player> | null>(null);
@@ -108,7 +110,7 @@ function HomePageInternal() {
     const sessionIsAdmin = sessionStorage.getItem('isAdmin');
 
     if (pidFromUrl) {
-      setPlayerIdInput(pidFromUrl); 
+      setPlayerIdInput(pidFromUrl);
 
       if (sessionPlayerId === pidFromUrl && sessionPlayerData) {
         try {
@@ -116,12 +118,14 @@ function HomePageInternal() {
           setPlayerData(parsedData);
           setCurrentPlayerId(sessionPlayerId);
           setIsAdmin(sessionIsAdmin === 'true');
-          setLoginError(null);
+          setLoginError(null); // Clear any previous login error
         } catch (e) {
           console.error("Falha ao parsear dados do jogador da sessão", e);
+          // Clear session if parsing fails
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
           sessionStorage.removeItem('isAdmin');
+          // Reset relevant states
           setPlayerData(null);
           setCurrentPlayerId(null);
           setIsAdmin(false);
@@ -131,11 +135,11 @@ function HomePageInternal() {
         }
       } else {
         // ID in URL, but not matching session or no session data
-        if (currentPlayerId && pidFromUrl !== currentPlayerId) {
+        if (currentPlayerId && pidFromUrl !== currentPlayerId) { // Different player ID in URL
           setPlayerData(null);
           setCurrentPlayerId(null);
           setIsAdmin(false);
-          setPasswordInput(''); 
+          setPasswordInput(''); // Clear password for new login attempt
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
           sessionStorage.removeItem('isAdmin');
@@ -144,17 +148,17 @@ function HomePageInternal() {
             // Login form will be shown, playerIdInput is pre-filled.
             // Password needs to be entered.
         }
-        setLoginError(null); 
-        setError(null);      
+        setLoginError(null); // Clear previous login errors
+        setError(null); // Clear general errors
       }
     } else {
       // No playerId in URL
-      if (currentPlayerId) { 
+      if (currentPlayerId) { // If a player was logged in, effectively log them out
         setPlayerData(null);
         setCurrentPlayerId(null);
         setIsAdmin(false);
         setPlayerIdInput('');
-        setPasswordInput(''); 
+        setPasswordInput(''); // Clear password as well
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
         sessionStorage.removeItem('isAdmin');
@@ -162,7 +166,7 @@ function HomePageInternal() {
       setLoginError(null);
       setError(null);
     }
-  }, [searchParams, currentPlayerId]); 
+  }, [searchParams, currentPlayerId]); // currentPlayerId added to dependencies
 
 
   useEffect(() => {
@@ -175,16 +179,17 @@ function HomePageInternal() {
           if (endTime > Date.now()) {
             loadedCooldowns[action] = endTime;
           } else {
-            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); // Remove expired cooldown
           }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
+      // Clear cooldowns if no player is logged in
       setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
       setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
     }
-  }, [currentPlayerId]); 
+  }, [currentPlayerId]); // actionConfig can be removed if it's stable
 
   useEffect(() => {
     const intervalIds: NodeJS.Timeout[] = [];
@@ -199,6 +204,7 @@ function HomePageInternal() {
           setTimeLeftForAction(prev => ({ ...prev, [action]: `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}` }));
         } else {
           setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+          // Clean up localStorage if cooldown just expired
           if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
@@ -206,18 +212,19 @@ function HomePageInternal() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay(); 
+        updateDisplay(); // Initial display
         const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
         setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+         // Ensure localStorage is clean if cooldown was already expired on load
          if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
         }
       }
     });
     return () => intervalIds.forEach(clearInterval);
-  }, [actionCooldownEndTimes, currentPlayerId]);
+  }, [actionCooldownEndTimes, currentPlayerId]); // actionConfig can be removed if it's stable
 
   const handleSearch = async (event?: FormEvent) => {
     if (event) event.preventDefault();
@@ -228,7 +235,7 @@ function HomePageInternal() {
       setPlayerData(null);
       setCurrentPlayerId(null);
       setIsAdmin(false);
-      // setPasswordInput(''); // Only clear password on explicit error, not just validation
+      // setPasswordInput(''); // Only clear password on explicit error
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
       sessionStorage.removeItem('isAdmin');
@@ -253,17 +260,19 @@ function HomePageInternal() {
           setPlayerData(playerDataToSet);
           setCurrentPlayerId(trimmedId);
           setIsAdmin(currentIsAdmin);
-          setLoginError(null); 
+          setLoginError(null); // Clear login error on success
 
+           // Update URL if not already matching
            if (searchParams.get('playerId') !== trimmedId) {
              window.history.pushState(null, '', `/?playerId=${trimmedId}`);
           }
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(playerDataToSet));
           sessionStorage.setItem('isAdmin', String(currentIsAdmin));
+          // Do NOT clear passwordInput here on success
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
-          setPasswordInput(''); 
+          setPasswordInput(''); // Clear password on invalid attempt
           setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
@@ -271,7 +280,7 @@ function HomePageInternal() {
         }
       } else {
         setLoginError('Jogador não encontrado ou sem dados de senha.');
-        setPasswordInput(''); 
+        setPasswordInput(''); // Clear password if player not found
         setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
@@ -281,7 +290,7 @@ function HomePageInternal() {
       console.error('Fetch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setLoginError(`Erro ao buscar dados: ${errorMessage}`);
-      setPasswordInput(''); 
+      setPasswordInput(''); // Clear password on fetch error
       setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
@@ -307,13 +316,16 @@ function HomePageInternal() {
     setIsActionInProgress(true);
     setCurrentActionLoading(actionType);
 
+    // Short delay to allow UI to update with loader
     await new Promise(resolve => setTimeout(resolve, 150));
 
     setActiveActionAnimation(actionType);
 
 
+    // Simulate animation duration
     setTimeout(async () => {
-      if (!currentPlayerId || !playerData) { 
+      // Re-check player data in case of logout/session expiry during animation
+      if (!currentPlayerId || !playerData) { // Added !playerData check
           setActiveActionAnimation(null);
           setIsActionInProgress(false);
           setCurrentActionLoading(null);
@@ -323,6 +335,7 @@ function HomePageInternal() {
           return;
       }
 
+      // Fetch fresh player data before applying rewards to avoid race conditions
       let currentPlayerDataForAction: Player | null = null;
       try {
         const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`);
@@ -352,6 +365,7 @@ function HomePageInternal() {
       const newOuro = (currentPlayerDataForAction.ouro || 0) + goldEarned;
       const newXp = (currentPlayerDataForAction.xp || 0) + xpEarned;
 
+      // Optimistically update local state
       const updatedLocalPlayerData = { ...currentPlayerDataForAction, nome: currentPlayerDataForAction.nome || currentPlayerId, ouro: newOuro, xp: newXp };
       setPlayerData(updatedLocalPlayerData);
       sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData));
@@ -367,26 +381,31 @@ function HomePageInternal() {
           }
         );
         if (!firebaseResponse.ok) {
+          // Attempt to parse Firebase error
           let errorDetail = `Status: ${firebaseResponse.status} - ${firebaseResponse.statusText}`;
           try { const errorData = await firebaseResponse.json(); if (errorData && errorData.error) errorDetail = typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error); } catch (e) { /* ignore parsing error */ }
           throw new Error(`Falha ao salvar no Firebase (${currentPlayerId}): ${errorDetail}. As recompensas foram aplicadas localmente mas não salvas no servidor.`);
         }
+        // const responseData = await firebaseResponse.json(); // Can be used to confirm update
         toast({ title: config.title, description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP. Dados salvos no servidor!` });
       } catch (err) {
         console.error('Detalhes do erro ao salvar no Firebase:', { message: err instanceof Error ? err.message : String(err), playerId: currentPlayerId, dataAttemptedToSave: { ouro: newOuro, xp: newXp }, originalError: err });
+        // Even if Firebase save fails, local update is kept. User is notified.
         setError(err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.");
         toast({ title: "Erro ao Salvar no Servidor", description: err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.", variant: "destructive" });
       }
 
+      // Set cooldown
       const newCooldownEndTime = Date.now() + (60 * 60 * 1000); // 1 hour
       setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
       if (typeof window !== 'undefined') localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
 
+      // Reset animation states
       setActiveActionAnimation(null);
       setIsActionInProgress(false);
       setCurrentActionLoading(null);
 
-    }, 1200); 
+    }, 1200); // Animation display time
   };
 
   const handleChangeName = async (event: FormEvent) => {
@@ -426,27 +445,68 @@ function HomePageInternal() {
 
     if (result.success && result.updatedPlayer?.senha && playerData) {
       toast({ title: "Sucesso!", description: result.message });
+      // Important: Update password in local state so subsequent actions requiring re-fetch use it (if applicable)
+      // However, for display, we don't show the password.
+      // The main thing is that Firebase has the new password.
       const updatedData = { ...playerData, senha: result.updatedPlayer.senha };
-      setPlayerData(updatedData);
-      sessionStorage.setItem('playerData', JSON.stringify(updatedData));
+      setPlayerData(updatedData); // Update local player data with new password hash/plain for consistency
+      sessionStorage.setItem('playerData', JSON.stringify(updatedData)); // Also update session
       setNewPassword('');
     } else {
       toast({ title: "Erro ao Alterar Senha", description: result.message, variant: "destructive" });
     }
   };
 
+  const handleChangePhoto = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!currentPlayerId || !newPhotoUrl.trim()) {
+      toast({ title: "Erro", description: "URL da foto não pode estar vazia.", variant: "destructive" });
+      return;
+    }
+    // Basic URL validation (optional, can be more robust)
+    try {
+      new URL(newPhotoUrl.trim());
+    } catch (_) {
+      toast({ title: "Erro", description: "URL da foto inválida.", variant: "destructive" });
+      return;
+    }
+
+    setIsUpdatingPhoto(true);
+    const result = await adminUpdatePlayerFullAction(currentPlayerId, { foto: newPhotoUrl.trim() });
+    setIsUpdatingPhoto(false);
+
+    if (result.success && result.updatedPlayer?.foto !== undefined && playerData) {
+      toast({ title: "Sucesso!", description: "Foto de perfil atualizada." });
+      const updatedData = { ...playerData, foto: result.updatedPlayer.foto };
+      setPlayerData(updatedData);
+      sessionStorage.setItem('playerData', JSON.stringify(updatedData));
+      setNewPhotoUrl('');
+    } else if (result.success && result.updatedPlayer?.foto === null && playerData) { // Handle case where photo is removed
+      toast({ title: "Sucesso!", description: "Foto de perfil removida." });
+      const updatedData = { ...playerData, foto: '' }; // Set to empty string or undefined
+      setPlayerData(updatedData);
+      sessionStorage.setItem('playerData', JSON.stringify(updatedData));
+      setNewPhotoUrl('');
+    } else {
+      toast({ title: "Erro ao Alterar Foto", description: result.message, variant: "destructive" });
+    }
+  };
+
+
   const handleOpenEditUserDialog = (id: string, player: Player) => {
     setEditingUserId(id);
+    // Initialize with all known fields, defaulting if undefined
     const initialEditingData: Partial<Player> = {
-        nome: player.nome || id, 
-        senha: '', 
+        nome: player.nome || id, // Default to ID if name is not present
+        senha: '', // Always start with empty password field for security
         vida: player.vida ?? 0,
         ouro: player.ouro ?? 0,
-        nivel: player.nivel ?? 1, 
+        nivel: player.nivel ?? 1, // Default level to 1
         xp: player.xp ?? 0,
         energia: player.energia ?? 0,
         mana: player.mana ?? 0,
-        inventario: player.inventario ? { ...player.inventario } : {}, 
+        foto: player.foto || '', // Default to empty string if no photo
+        inventario: player.inventario ? { ...player.inventario } : {}, // Deep copy inventory
     };
     setEditingUserData(initialEditingData);
     setAdminNewItemName('');
@@ -457,9 +517,10 @@ function HomePageInternal() {
   const handleEditingUserDataChange = (field: keyof Player, value: string | number | Record<string, number>) => {
     setEditingUserData(prev => {
       if (!prev) return null;
+      // Ensure numeric fields are parsed correctly, default to 0 if NaN
       if (['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'].includes(field as string) && typeof value === 'string') {
         const numValue = parseInt(value, 10);
-        return { ...prev, [field]: isNaN(numValue) ? 0 : numValue }; 
+        return { ...prev, [field]: isNaN(numValue) ? 0 : numValue }; // Default to 0 if parse fails
       }
       return { ...prev, [field]: value };
     });
@@ -468,13 +529,16 @@ function HomePageInternal() {
   const handleAdminInventoryItemQuantityChange = (itemName: string, quantityStr: string) => {
     const quantity = parseInt(quantityStr, 10);
     setEditingUserData(prev => {
-        if (!prev || !prev.inventario) return prev; 
+        if (!prev || !prev.inventario) return prev; // Should not happen if initialized correctly
         const newInventario = { ...prev.inventario };
         if (!isNaN(quantity) && quantity > 0) {
             newInventario[itemName] = quantity;
         } else if (!isNaN(quantity) && quantity <= 0) {
+            // Let adminUpdatePlayerFullAction handle removal of zero-quantity items on save
+            // but reflect it visually for now if they type 0
             delete newInventario[itemName]; 
         }
+        // If quantity is NaN (e.g., empty string), do nothing or keep previous value
         return { ...prev, inventario: newInventario };
     });
   };
@@ -494,13 +558,13 @@ function HomePageInternal() {
         return;
     }
     setEditingUserData(prev => {
-        if (!prev) return prev; 
-        const newInventario = { ...(prev.inventario || {}) }; 
+        if (!prev) return prev; // Should not happen
+        const newInventario = { ...(prev.inventario || {}) }; // Ensure inventario exists
         newInventario[adminNewItemName] = (newInventario[adminNewItemName] || 0) + adminNewItemQuantity;
         return { ...prev, inventario: newInventario };
     });
-    setAdminNewItemName('');
-    setAdminNewItemQuantity(1);
+    setAdminNewItemName(''); // Reset select
+    setAdminNewItemQuantity(1); // Reset quantity
   };
 
 
@@ -514,9 +578,15 @@ function HomePageInternal() {
     setIsUpdatingFullPlayer(true);
     const payload: Partial<Player> = { ...editingUserData };
 
-    if (!payload.senha?.trim()) { 
-      delete payload.senha; 
+    // Don't send password if it's empty (means no change intended)
+    if (!payload.senha?.trim()) { // Check for empty or whitespace-only password
+      delete payload.senha; // Remove senha from payload if empty
     }
+    // Remove foto from payload if it's an empty string, so Firebase deletes it
+    if (payload.foto !== undefined && payload.foto.trim() === '') {
+        payload.foto = null as any; // Firebase expects null to delete a field
+    }
+
 
     const result = await adminUpdatePlayerFullAction(editingUserId, payload);
     setIsUpdatingFullPlayer(false);
@@ -524,21 +594,32 @@ function HomePageInternal() {
     if (result.success && result.updatedPlayer) {
       toast({ title: "Sucesso!", description: `Dados de ${editingUserData.nome || editingUserId} atualizados.` });
 
+      // Update the allPlayers state if it exists
       if (allPlayers) {
         setAllPlayers(prev => {
-            if (!prev || !editingUserId) return null; 
+            if (!prev || !editingUserId) return null; // Should not happen
+            // Merge the updates from Firebase response.
+            // If a field was set to null (like foto), result.updatedPlayer might not include it.
+            // We need to ensure our local state reflects the intended deletion.
             const updatedPlayerLocally = { ...prev[editingUserId], ...result.updatedPlayer };
+            if (payload.foto === null) updatedPlayerLocally.foto = ''; // Reflect deletion locally as empty string for consistency
+
+            // Handle inventory updates properly, especially if it became empty
             if (result.updatedPlayer.inventario === undefined && payload.inventario && Object.keys(payload.inventario).length === 0) {
-                updatedPlayerLocally.inventario = {}; 
-            } else if (result.updatedPlayer.inventario === null) { 
+                updatedPlayerLocally.inventario = {}; // Reflect empty inventory
+            } else if (result.updatedPlayer.inventario === null) { // Firebase might return null for deleted map
                 updatedPlayerLocally.inventario = {};
             }
+
             return { ...prev, [editingUserId]: updatedPlayerLocally };
         });
       }
+      // If the admin edited themselves, update the main playerData state
       if (currentPlayerId === editingUserId && playerData) {
         const updatedCurrentPlayerData = { ...playerData, ...result.updatedPlayer };
-         if (result.updatedPlayer.inventario === undefined && payload.inventario && Object.keys(payload.inventario).length === 0) {
+        if (payload.foto === null) updatedCurrentPlayerData.foto = '';
+
+        if (result.updatedPlayer.inventario === undefined && payload.inventario && Object.keys(payload.inventario).length === 0) {
             updatedCurrentPlayerData.inventario = {};
         } else if (result.updatedPlayer.inventario === null) {
             updatedCurrentPlayerData.inventario = {};
@@ -547,8 +628,8 @@ function HomePageInternal() {
         sessionStorage.setItem('playerData', JSON.stringify(updatedCurrentPlayerData));
       }
       setIsEditUserDialogOpen(false);
-      setEditingUserData(null); 
-      setEditingUserId(null);
+      setEditingUserData(null); // Clear editing data
+      setEditingUserId(null); // Clear editing ID
     } else {
       toast({ title: "Erro ao Atualizar Jogador", description: result.message, variant: "destructive" });
     }
@@ -560,12 +641,12 @@ function HomePageInternal() {
 
   if (loading && !playerData && !loginError) {
     contentToRender = (
-      <div className="flex flex-col items-center justify-center flex-grow mt-10 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
+      <div className="flex flex-col items-center justify-center flex-grow mt-10">
         <Loader2 className="w-16 h-16 text-primary" />
         <p className="mt-4 text-lg text-muted-foreground">Buscando informações do jogador...</p>
       </div>
     );
-  } else if (!playerData && !loading) { 
+  } else if (!playerData && !loading) { // Login form
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4">
         {loginError && (
@@ -577,9 +658,9 @@ function HomePageInternal() {
         )}
         <Card className={cn(
           "w-full p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50 card-glow",
-          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-[2%]"
+          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-[2%]" // ShadCN like animation
         )}
-        data-state="open" 
+        data-state="open" // Trigger animation on initial render
         >
           <CardHeader className="p-0 pb-6 mb-6 text-center border-b border-border/30">
             <CardTitle className="text-3xl font-bold text-primary">Bem-vindo!</CardTitle>
@@ -615,7 +696,7 @@ function HomePageInternal() {
                 className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-transform active:scale-95 shadow-md hover:shadow-lg"
                 aria-label="Buscar Jogador"
               >
-                {loading ? ( 
+                {loading ? ( // Show loader only when search is in progress
                   <Loader2 className="w-5 h-5" />
                 ) : (
                   <Search size={20} />
@@ -627,12 +708,12 @@ function HomePageInternal() {
         </Card>
       </div>
     );
-  } else if (playerData && !loginError && !loading) { 
+  } else if (playerData && !loginError && !loading) { // Player data loaded
     contentToRender = (
       <div className="w-full max-w-5xl px-2 space-y-6 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         data-state="open"
       >
-        {error && !loginError && ( 
+        {error && !loginError && ( // Show general errors if player is loaded but an action failed
           <Alert variant="destructive" className="w-full max-w-md mx-auto my-4 shadow-lg card-glow">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
@@ -686,6 +767,25 @@ function HomePageInternal() {
                   </CardContent>
                 </Card>
               )}
+              <Card className="bg-card/80 border-border/50 shadow-lg card-glow">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center text-primary"><ImageIcon size={20} className="mr-2" />Alterar Foto de Perfil</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleChangePhoto} className="space-y-4">
+                    <Input
+                      type="url"
+                      placeholder="URL da nova foto de perfil"
+                      value={newPhotoUrl}
+                      onChange={(e) => setNewPhotoUrl(e.target.value)}
+                      className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
+                    />
+                    <Button type="submit" disabled={isUpdatingPhoto || !newPhotoUrl.trim()} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
+                      {isUpdatingPhoto ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Foto'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
               <Card className="bg-card/80 border-border/50 shadow-lg card-glow">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center text-primary"><Lock size={20} className="mr-2" />Alterar Senha</CardTitle>
@@ -775,10 +875,13 @@ function HomePageInternal() {
         </Accordion>
       </div>
     );
-  } else if (loading && playerData) { 
+  } else if (loading && playerData) { // Skeleton loader while player data is present but might be refreshing (e.g., after action)
+    // This specific skeleton might be too brief if data updates fast.
+    // Consider if PlayerStatsCard's internal isLoading is sufficient or if a more global loading is needed.
     contentToRender = (
       <div className="w-full max-w-5xl px-2 space-y-8 data-[state=open]:animate-in data-[state=open]:fade-in-0">
         <PlayerStatsCard playerData={playerData} isLoading={true} />
+        {/* Skeleton for Accordions - simplified */}
         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
           <div className="h-8 bg-muted rounded w-1/3"></div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -787,7 +890,7 @@ function HomePageInternal() {
         </div>
       </div>
     );
-  } else { 
+  } else { // Fallback for any unexpected state
      contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow mt-10">
         <Alert variant="destructive" className="max-w-md card-glow">
@@ -847,9 +950,9 @@ function HomePageInternal() {
             <DialogHeader>
               <DialogTitle className="text-primary">Editar Usuário: {editingUserData.nome || editingUserId}</DialogTitle>
             </DialogHeader>
-            <ScrollArea className="max-h-[70vh] p-1"> 
-              <form onSubmit={handleAdminUpdatePlayer} className="space-y-4 p-4"> 
-                
+            <ScrollArea className="max-h-[70vh] p-1"> {/* Add padding to ScrollArea if needed */}
+              <form onSubmit={handleAdminUpdatePlayer} className="space-y-4 p-4"> {/* Add padding to form */}
+                {/* Name and Password */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="adminEditName" className="text-muted-foreground">Nome</Label>
@@ -873,7 +976,20 @@ function HomePageInternal() {
                   </div>
                 </div>
 
-                
+                 <div>
+                    <Label htmlFor="adminEditFoto" className="text-muted-foreground">URL da Foto de Perfil</Label>
+                    <Input
+                      id="adminEditFoto"
+                      type="url"
+                      placeholder="https://exemplo.com/imagem.png"
+                      value={editingUserData.foto || ''}
+                      onChange={(e) => handleEditingUserDataChange('foto', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+
+
+                {/* Stats */}
                 <h3 className="text-lg font-semibold text-primary pt-2">Estatísticas</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {(['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'] as (keyof Player)[]).map(statKey => (
@@ -891,7 +1007,7 @@ function HomePageInternal() {
                   ))}
                 </div>
 
-                
+                {/* Inventory */}
                 <h3 className="text-lg font-semibold text-primary pt-2">Inventário</h3>
                 <div className="space-y-3">
                   {editingUserData.inventario && Object.entries(editingUserData.inventario).map(([itemName, quantity]) => (
@@ -902,7 +1018,7 @@ function HomePageInternal() {
                         value={quantity}
                         onChange={(e) => handleAdminInventoryItemQuantityChange(itemName, e.target.value)}
                         className="w-20 h-8 text-sm"
-                        min="0" 
+                        min="0" // Allow 0 for removal by adminUpdatePlayerFullAction
                       />
                       <Button type="button" variant="ghost" size="icon" onClick={() => handleAdminRemoveInventoryItem(itemName)} className="text-destructive hover:text-destructive/80 h-8 w-8">
                         <Trash2 size={16} />
@@ -914,7 +1030,7 @@ function HomePageInternal() {
                   )}
                 </div>
 
-                
+                {/* Add New Item to Inventory */}
                 <Card className="p-3 bg-background/30 card-glow">
                     <Label className="text-muted-foreground">Adicionar Novo Item ao Inventário</Label>
                     <div className="flex items-end gap-2 mt-1">
@@ -988,4 +1104,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-
