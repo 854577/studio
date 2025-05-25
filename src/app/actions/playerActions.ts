@@ -97,3 +97,91 @@ export async function updatePlayerPasswordAction(
     return { success: false, message: errorMessage };
   }
 }
+
+export async function adminUpdatePlayerFullAction(
+  playerId: string,
+  updates: Partial<Player>
+): Promise<UpdateResult> {
+  if (!playerId) {
+    return { success: false, message: 'ID do jogador é obrigatório.' };
+  }
+  if (Object.keys(updates).length === 0) {
+    return { success: false, message: 'Nenhuma atualização fornecida.' };
+  }
+
+  // Sanitize numeric fields that might come as strings from inputs
+  const sanitizedUpdates: Partial<Player> = { ...updates };
+  const numericFields: (keyof Player)[] = ['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'];
+  numericFields.forEach(field => {
+    if (sanitizedUpdates[field] !== undefined && typeof sanitizedUpdates[field] === 'string') {
+      const numValue = parseInt(sanitizedUpdates[field] as string, 10);
+      if (!isNaN(numValue)) {
+        sanitizedUpdates[field] = numValue;
+      } else {
+        // Keep as is or set to undefined/null if invalid, depends on desired behavior
+        // For now, let's assume it might be an intentional string or handle it later
+      }
+    }
+  });
+
+  // Sanitize inventory quantities
+  if (sanitizedUpdates.inventario) {
+    const sanitizedInventory: Record<string, number> = {};
+    for (const itemKey in sanitizedUpdates.inventario) {
+      const quantity = sanitizedUpdates.inventario[itemKey];
+      if (typeof quantity === 'string') {
+        const numQuantity = parseInt(quantity, 10);
+        if (!isNaN(numQuantity) && numQuantity >= 0) {
+          sanitizedInventory[itemKey] = numQuantity;
+        }
+        // If quantity is invalid or zero, it effectively removes the item if it was zero.
+        // Or you might want to keep it if it was an invalid string, depends on strictness.
+      } else if (typeof quantity === 'number' && quantity >= 0) {
+        sanitizedInventory[itemKey] = quantity;
+      }
+    }
+    // Filter out items with zero quantity
+    for (const itemKey in sanitizedInventory) {
+        if (sanitizedInventory[itemKey] === 0) {
+            delete sanitizedInventory[itemKey];
+        }
+    }
+    sanitizedUpdates.inventario = sanitizedInventory;
+  }
+
+
+  try {
+    const firebaseResponse = await fetch(
+      `https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${playerId}.json`,
+      {
+        method: 'PATCH', // Use PATCH to update only specified fields
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sanitizedUpdates),
+      }
+    );
+
+    if (!firebaseResponse.ok) {
+      let errorDetail = `Status: ${firebaseResponse.status} - ${firebaseResponse.statusText}`;
+      try {
+        const errorData = await firebaseResponse.json();
+        if (errorData && errorData.error) {
+          errorDetail = typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error);
+        }
+      } catch (e) { /* ignore parsing error */ }
+      throw new Error(`Falha ao atualizar dados do jogador no Firebase: ${errorDetail}`);
+    }
+    
+    // Firebase PATCH returns the updated data for the patched fields
+    const responseData = await firebaseResponse.json();
+
+    return {
+      success: true,
+      message: 'Dados do jogador atualizados com sucesso!',
+      updatedPlayer: responseData, // Return the fields that were actually updated by Firebase
+    };
+  } catch (error) {
+    console.error('Erro ao atualizar dados completos do jogador:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido ao atualizar os dados do jogador.';
+    return { success: false, message: errorMessage };
+  }
+}

@@ -11,13 +11,16 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2, Briefcase, Fish, Bed, Dumbbell, Settings, Pencil, Lock, Users } from 'lucide-react';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, AlertCircle, UserRound, KeyRound, ShoppingBag, Dices, Loader2, Gamepad2, Briefcase, Fish, Bed, Dumbbell, Settings, Pencil, Lock, Users, Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import PlayerStatsCard from '@/components/app/PlayerStatsCard';
 import PlayerActionsCard from '@/components/app/PlayerActionsCard';
 import CompactPlayerStats from '@/components/app/CompactPlayerStats';
 import { cn } from '@/lib/utils';
-import { updatePlayerNameAction, updatePlayerPasswordAction } from './actions/playerActions';
+import { updatePlayerNameAction, updatePlayerPasswordAction, adminUpdatePlayerFullAction } from './actions/playerActions';
+import { itemDetails as allShopItems } from './loja/lojaData';
 
 const ACTION_COOLDOWN_DURATION = 60 * 60 * 1000; // 1 hora em milissegundos
 type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
@@ -74,11 +77,13 @@ function HomePageInternal() {
   const [adminPanelError, setAdminPanelError] = useState<string | null>(null);
 
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<{ id: string; player: Player } | null>(null);
-  const [editUserNewName, setEditUserNewName] = useState('');
-  const [editUserNewPassword, setEditUserNewPassword] = useState('');
-  const [isUpdatingOtherUserName, setIsUpdatingOtherUserName] = useState(false);
-  const [isUpdatingOtherUserPassword, setIsUpdatingOtherUserPassword] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editingUserData, setEditingUserData] = useState<Partial<Player> | null>(null);
+  
+  const [adminNewItemName, setAdminNewItemName] = useState<string>('');
+  const [adminNewItemQuantity, setAdminNewItemQuantity] = useState<number>(1);
+  const [isUpdatingFullPlayer, setIsUpdatingFullPlayer] = useState(false);
+
 
   const fetchAllPlayers = useCallback(async () => {
     if (!isAdmin) return;
@@ -248,14 +253,15 @@ function HomePageInternal() {
           setIsAdmin(currentIsAdmin);
 
           if (searchParams.get('playerId') !== trimmedId) {
-             router.push(`/?playerId=${trimmedId}`, { scroll: false });
+            router.push(`/?playerId=${trimmedId}`, { scroll: false });
           }
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(playerDataToSet));
           sessionStorage.setItem('isAdmin', String(currentIsAdmin));
+          // Não limpar a senha aqui se o login for bem-sucedido
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
-          setPasswordInput('');
+          setPasswordInput(''); // Limpar senha apenas em caso de erro
           setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
@@ -263,7 +269,7 @@ function HomePageInternal() {
         }
       } else {
         setLoginError('Jogador não encontrado ou sem dados de senha.');
-        setPasswordInput('');
+        setPasswordInput(''); // Limpar senha
         setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
         sessionStorage.removeItem('currentPlayerId');
         sessionStorage.removeItem('playerData');
@@ -273,7 +279,7 @@ function HomePageInternal() {
       console.error('Fetch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setLoginError(`Erro ao buscar dados: ${errorMessage}`);
-      setPasswordInput('');
+      setPasswordInput(''); // Limpar senha
       setPlayerData(null); setCurrentPlayerId(null); setIsAdmin(false);
       sessionStorage.removeItem('currentPlayerId');
       sessionStorage.removeItem('playerData');
@@ -306,7 +312,7 @@ function HomePageInternal() {
 
 
     setTimeout(async () => {
-      if (!currentPlayerId || !playerData) {
+      if (!currentPlayerId || !playerData) { // Re-check after animation
         setActiveActionAnimation(null); 
         setIsActionInProgress(false); 
         const msg = !currentPlayerId ? "ID do jogador não encontrado." : "Dados do jogador não encontrados.";
@@ -427,71 +433,135 @@ function HomePageInternal() {
   };
 
   const handleOpenEditUserDialog = (id: string, player: Player) => {
-    setEditingUser({ id, player });
-    setEditUserNewName(player.nome || id);
-    setEditUserNewPassword(''); 
+    setEditingUserId(id);
+    // Deep copy to avoid modifying the original allPlayers state directly
+    // and ensure all potential fields are included for editing.
+    const initialEditingData: Partial<Player> = {
+        nome: player.nome || id,
+        senha: '', // Don't prefill password for security, admin must type a new one to change
+        vida: player.vida ?? 0,
+        ouro: player.ouro ?? 0,
+        nivel: player.nivel ?? 1,
+        xp: player.xp ?? 0,
+        energia: player.energia ?? 0,
+        mana: player.mana ?? 0,
+        inventario: player.inventario ? { ...player.inventario } : {},
+    };
+    setEditingUserData(initialEditingData);
+    setAdminNewItemName('');
+    setAdminNewItemQuantity(1);
     setIsEditUserDialogOpen(true);
   };
 
-  const handleUpdateOtherUserName = async (event: FormEvent) => {
+  const handleEditingUserDataChange = (field: keyof Player, value: string | number | Record<string, number>) => {
+    setEditingUserData(prev => {
+      if (!prev) return null;
+      // For numeric fields, parse to number if it's a string from input
+      if (['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'].includes(field as string) && typeof value === 'string') {
+        const numValue = parseInt(value, 10);
+        return { ...prev, [field]: isNaN(numValue) ? 0 : numValue }; // Default to 0 if NaN
+      }
+      return { ...prev, [field]: value };
+    });
+  };
+  
+  const handleAdminInventoryItemQuantityChange = (itemName: string, quantityStr: string) => {
+    const quantity = parseInt(quantityStr, 10);
+    setEditingUserData(prev => {
+        if (!prev || !prev.inventario) return prev;
+        const newInventario = { ...prev.inventario };
+        if (!isNaN(quantity) && quantity > 0) {
+            newInventario[itemName] = quantity;
+        } else if (!isNaN(quantity) && quantity <= 0) {
+            delete newInventario[itemName]; // Remove if quantity is 0 or less
+        }
+        return { ...prev, inventario: newInventario };
+    });
+  };
+
+  const handleAdminRemoveInventoryItem = (itemName: string) => {
+    setEditingUserData(prev => {
+        if (!prev || !prev.inventario) return prev;
+        const newInventario = { ...prev.inventario };
+        delete newInventario[itemName];
+        return { ...prev, inventario: newInventario };
+    });
+  };
+
+  const handleAdminAddNewInventoryItem = () => {
+    if (!adminNewItemName || adminNewItemQuantity <= 0) {
+        toast({ title: "Erro", description: "Selecione um item e defina uma quantidade válida.", variant: "destructive" });
+        return;
+    }
+    setEditingUserData(prev => {
+        if (!prev) return prev;
+        const newInventario = { ...(prev.inventario || {}) };
+        newInventario[adminNewItemName] = (newInventario[adminNewItemName] || 0) + adminNewItemQuantity;
+        return { ...prev, inventario: newInventario };
+    });
+    setAdminNewItemName(''); // Reset for next addition
+    setAdminNewItemQuantity(1);
+  };
+
+
+  const handleAdminUpdatePlayer = async (event: FormEvent) => {
     event.preventDefault();
-    if (!editingUser || !editUserNewName.trim()) {
-      toast({ title: "Erro", description: "Novo nome não pode estar vazio.", variant: "destructive" });
+    if (!editingUserId || !editingUserData) {
+      toast({ title: "Erro", description: "Nenhum usuário selecionado para edição.", variant: "destructive" });
       return;
     }
-    setIsUpdatingOtherUserName(true);
-    const result = await updatePlayerNameAction(editingUser.id, editUserNewName);
-    setIsUpdatingOtherUserName(false);
 
-    if (result.success) {
-      toast({ title: "Sucesso!", description: `Nome de ${editingUser.id} atualizado para ${editUserNewName}.` });
-      if (allPlayers && result.updatedPlayer?.nome) {
+    setIsUpdatingFullPlayer(true);
+    const payload: Partial<Player> = { ...editingUserData };
+
+    // Only include password in payload if it's been changed (not empty)
+    if (!payload.senha?.trim()) {
+      delete payload.senha;
+    }
+
+    const result = await adminUpdatePlayerFullAction(editingUserId, payload);
+    setIsUpdatingFullPlayer(false);
+
+    if (result.success && result.updatedPlayer) {
+      toast({ title: "Sucesso!", description: `Dados de ${editingUserData.nome || editingUserId} atualizados.` });
+      
+      // Update allPlayers state for the admin panel list
+      if (allPlayers) {
         setAllPlayers(prev => {
-            if (!prev) return null;
+            if (!prev || !editingUserId) return null;
+            // The result.updatedPlayer from Firebase PATCH might only contain the changed fields.
+            // We need to merge it with the existing player data for a complete update.
+            const updatedPlayerLocally = { ...prev[editingUserId], ...result.updatedPlayer };
+             // Ensure inventario is properly handled (Firebase might return null for empty object)
+            if (result.updatedPlayer.inventario === undefined && payload.inventario && Object.keys(payload.inventario).length === 0) {
+                updatedPlayerLocally.inventario = {}; // Ensure it's an empty object if admin cleared it
+            } else if (result.updatedPlayer.inventario === null) {
+                updatedPlayerLocally.inventario = {};
+            }
+
+
             return {
                 ...prev,
-                [editingUser.id]: {
-                    ...prev[editingUser.id],
-                    nome: result.updatedPlayer.nome
-                }
+                [editingUserId]: updatedPlayerLocally,
             };
         });
       }
-      if (currentPlayerId === editingUser.id && playerData && result.updatedPlayer?.nome) {
-        const updatedData = { ...playerData, nome: result.updatedPlayer.nome };
-        setPlayerData(updatedData);
-        sessionStorage.setItem('playerData', JSON.stringify(updatedData));
+      // If admin edited themselves, update their current session data
+      if (currentPlayerId === editingUserId && playerData) {
+        const updatedCurrentPlayerData = { ...playerData, ...result.updatedPlayer };
+         if (result.updatedPlayer.inventario === undefined && payload.inventario && Object.keys(payload.inventario).length === 0) {
+            updatedCurrentPlayerData.inventario = {};
+        } else if (result.updatedPlayer.inventario === null) {
+            updatedCurrentPlayerData.inventario = {};
+        }
+        setPlayerData(updatedCurrentPlayerData);
+        sessionStorage.setItem('playerData', JSON.stringify(updatedCurrentPlayerData));
       }
       setIsEditUserDialogOpen(false);
+      setEditingUserData(null);
+      setEditingUserId(null);
     } else {
-      toast({ title: "Erro ao Alterar Nome", description: result.message, variant: "destructive" });
-    }
-  };
-
-  const handleUpdateOtherUserPassword = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!editingUser || !editUserNewPassword) {
-      toast({ title: "Erro", description: "Nova senha não pode estar vazia.", variant: "destructive" });
-      return;
-    }
-    if (editUserNewPassword.length < 4) {
-      toast({ title: "Erro", description: "A nova senha deve ter pelo menos 4 caracteres.", variant: "destructive" });
-      return;
-    }
-    setIsUpdatingOtherUserPassword(true);
-    const result = await updatePlayerPasswordAction(editingUser.id, editUserNewPassword);
-    setIsUpdatingOtherUserPassword(false);
-
-    if (result.success) {
-      toast({ title: "Sucesso!", description: `Senha de ${editingUser.id} atualizada.` });
-       if (currentPlayerId === editingUser.id && playerData && result.updatedPlayer?.senha) {
-        const updatedData = { ...playerData, senha: result.updatedPlayer.senha };
-        setPlayerData(updatedData);
-        sessionStorage.setItem('playerData', JSON.stringify(updatedData));
-      }
-      setIsEditUserDialogOpen(false);
-    } else {
-      toast({ title: "Erro ao Alterar Senha", description: result.message, variant: "destructive" });
+      toast({ title: "Erro ao Atualizar Jogador", description: result.message, variant: "destructive" });
     }
   };
 
@@ -688,28 +758,30 @@ function HomePageInternal() {
                   <p className="text-center text-muted-foreground">Nenhum outro jogador encontrado.</p>
                 )}
                 {allPlayers && !loadingAllPlayers && Object.keys(allPlayers).length > 0 && (
-                  <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                    {Object.entries(allPlayers).map(([id, p]) => (
-                      <Card key={id} className="bg-card/70 border-border/50 card-glow">
-                        <CardHeader className='p-4'>
-                          <div className="flex justify-between items-center">
-                            <CardTitle className="text-lg text-primary">{p.nome || id}</CardTitle>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenEditUserDialog(id, p)}
-                              className="ml-auto"
-                            >
-                              <Pencil size={16} className="mr-2" /> Editar
-                            </Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent className='p-4 pt-0'>
-                          <CompactPlayerStats player={p} />
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                  <ScrollArea className="max-h-[500px] pr-2">
+                    <div className="space-y-4">
+                        {Object.entries(allPlayers).map(([id, p]) => (
+                        <Card key={id} className="bg-card/70 border-border/50 card-glow">
+                            <CardHeader className='p-4'>
+                            <div className="flex justify-between items-center">
+                                <CardTitle className="text-lg text-primary">{p.nome || id}</CardTitle>
+                                <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenEditUserDialog(id, p)}
+                                className="ml-auto"
+                                >
+                                <Pencil size={16} className="mr-2" /> Editar
+                                </Button>
+                            </div>
+                            </CardHeader>
+                            <CardContent className='p-4 pt-0'>
+                            <CompactPlayerStats player={p} />
+                            </CardContent>
+                        </Card>
+                        ))}
+                    </div>
+                  </ScrollArea>
                 )}
                  <Button 
                     variant="outline" 
@@ -732,13 +804,17 @@ function HomePageInternal() {
       <div className="w-full max-w-5xl px-2 space-y-8">
         <PlayerStatsCard playerData={playerData} isLoading={true} />
         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
-          <Skeleton className="h-8 bg-muted rounded w-1/3" />
+           {/* Skeleton for Accordion Trigger */}
+          <div className="h-8 bg-muted rounded w-1/3"></div> 
+          {/* Skeleton for Accordion Content (e.g., player actions) */}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-muted rounded"></div>)}
           </div>
         </div>
          <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
-          <Skeleton className="h-8 bg-muted rounded w-1/3" />
+           {/* Skeleton for Accordion Trigger */}
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          {/* Skeleton for Accordion Content (e.g., shop link button) */}
           <div className="h-12 bg-muted rounded w-full"></div>
         </div>
       </div>
@@ -773,51 +849,128 @@ function HomePageInternal() {
         </Dialog>
       )}
 
-      {editingUser && (
+    {isEditUserDialogOpen && editingUser && editingUserData && (
         <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
-          <DialogContent className="sm:max-w-md bg-card border-border/50 card-glow">
+          <DialogContent className="sm:max-w-2xl bg-card border-border/50 card-glow">
             <DialogHeader>
-              <DialogTitle className="text-primary">Editar Usuário: {editingUser.player.nome || editingUser.id}</DialogTitle>
+              <DialogTitle className="text-primary">Editar Usuário: {editingUserData.nome || editingUserId}</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-6 py-4">
-              <form onSubmit={handleUpdateOtherUserName} className="space-y-3">
-                <Label htmlFor="editUserNewName" className="text-left text-muted-foreground">Novo Nome</Label>
-                <Input
-                  id="editUserNewName"
-                  value={editUserNewName}
-                  onChange={(e) => setEditUserNewName(e.target.value)}
-                  className="col-span-3"
-                  placeholder="Novo nome do usuário"
-                />
-                <Button type="submit" disabled={isUpdatingOtherUserName || !editUserNewName.trim()} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                  {isUpdatingOtherUserName ? <Loader2 className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
-                  Salvar Nome
-                </Button>
+            <ScrollArea className="max-h-[70vh] p-1">
+              <form onSubmit={handleAdminUpdatePlayer} className="space-y-4 p-4">
+                {/* Basic Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="adminEditName" className="text-muted-foreground">Nome</Label>
+                    <Input
+                      id="adminEditName"
+                      value={editingUserData.nome || ''}
+                      onChange={(e) => handleEditingUserDataChange('nome', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="adminEditPassword" className="text-muted-foreground">Nova Senha (deixe em branco para não alterar)</Label>
+                    <Input
+                      id="adminEditPassword"
+                      type="password"
+                      placeholder="Nova Senha (mín. 4 caracteres)"
+                      value={editingUserData.senha || ''}
+                      onChange={(e) => handleEditingUserDataChange('senha', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <h3 className="text-lg font-semibold text-primary pt-2">Estatísticas</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {(['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'] as (keyof Player)[]).map(statKey => (
+                    <div key={statKey}>
+                      <Label htmlFor={`adminEdit${statKey}`} className="capitalize text-muted-foreground">{statKey}</Label>
+                      <Input
+                        id={`adminEdit${statKey}`}
+                        type="number"
+                        value={editingUserData[statKey] as number || 0}
+                        onChange={(e) => handleEditingUserDataChange(statKey, e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Inventory */}
+                <h3 className="text-lg font-semibold text-primary pt-2">Inventário</h3>
+                <div className="space-y-3">
+                  {editingUserData.inventario && Object.entries(editingUserData.inventario).map(([itemName, quantity]) => (
+                    <div key={itemName} className="flex items-center gap-2 p-2 border rounded-md bg-background/50">
+                      <span className="flex-grow capitalize text-sm">{itemName}</span>
+                      <Input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => handleAdminInventoryItemQuantityChange(itemName, e.target.value)}
+                        className="w-20 h-8 text-sm"
+                        min="0"
+                      />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => handleAdminRemoveInventoryItem(itemName)} className="text-destructive hover:text-destructive/80 h-8 w-8">
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                   {editingUserData.inventario && Object.keys(editingUserData.inventario).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">Inventário vazio.</p>
+                  )}
+                </div>
+                
+                <Card className="p-3 bg-background/30">
+                    <Label className="text-muted-foreground">Adicionar Novo Item ao Inventário</Label>
+                    <div className="flex items-end gap-2 mt-1">
+                    <div className="flex-grow">
+                        <Label htmlFor="adminNewItemNameSelect" className="sr-only">Item</Label>
+                        <Select value={adminNewItemName} onValueChange={setAdminNewItemName}>
+                        <SelectTrigger id="adminNewItemNameSelect" className="h-9">
+                            <SelectValue placeholder="Selecione um item" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.keys(allShopItems).sort().map(itemName => (
+                            <SelectItem key={itemName} value={itemName} className="capitalize">
+                                {itemName}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label htmlFor="adminNewItemQuantityInput" className="sr-only">Quantidade</Label>
+                        <Input
+                        id="adminNewItemQuantityInput"
+                        type="number"
+                        value={adminNewItemQuantity}
+                        onChange={(e) => setAdminNewItemQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        className="w-20 h-9"
+                        min="1"
+                        />
+                    </div>
+                    <Button type="button" onClick={handleAdminAddNewInventoryItem} variant="outline" size="sm" className="h-9">
+                        <PlusCircle size={16} className="mr-1" /> Adicionar
+                    </Button>
+                    </div>
+                </Card>
+                
+                <DialogFooter className="pt-4">
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">Cancelar</Button>
+                  </DialogClose>
+                  <Button type="submit" disabled={isUpdatingFullPlayer} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    {isUpdatingFullPlayer ? <Loader2 className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
+                    Salvar Alterações
+                  </Button>
+                </DialogFooter>
               </form>
-              <form onSubmit={handleUpdateOtherUserPassword} className="space-y-3">
-                <Label htmlFor="editUserNewPassword" className="text-left text-muted-foreground">Nova Senha</Label>
-                <Input
-                  id="editUserNewPassword"
-                  type="password"
-                  value={editUserNewPassword}
-                  onChange={(e) => setEditUserNewPassword(e.target.value)}
-                  className="col-span-3"
-                  placeholder="Nova senha (mín. 4 caracteres)"
-                />
-                <Button type="submit" disabled={isUpdatingOtherUserPassword || !editUserNewPassword.trim() || editUserNewPassword.length < 4} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                  {isUpdatingOtherUserPassword ? <Loader2 className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
-                  Salvar Senha
-                </Button>
-              </form>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Cancelar</Button>
-              </DialogClose>
-            </DialogFooter>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       )}
+
 
       <footer className="w-full py-8 mt-12 text-center border-t border-border/20">
         <p className="text-xs text-muted-foreground">
@@ -841,5 +994,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-
-    
