@@ -47,11 +47,11 @@ export async function handleProfilePhotoUploadAction(
         return { success: false, message: `Falha ao remover foto: ${removeResult.message}` };
       }
     } catch (error) {
-      console.error('[imageUploadActions] Error during photo removal for playerId:', playerId, error);
-      const message = error instanceof Error ? error.message : 'Erro desconhecido ao tentar remover a foto.';
+      console.error('[imageUploadActions] Error during photo removal for playerId (adminUpdatePlayerFullAction failed):', playerId, error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao tentar remover a foto.';
       return { 
         success: false, 
-        message: `Erro ao remover foto: ${message.substring(0, 250)}` 
+        message: `Erro ao remover foto: ${errorMessage.substring(0,100)}` 
       };
     }
   }
@@ -68,14 +68,27 @@ export async function handleProfilePhotoUploadAction(
     return { success: false, message: 'Arquivo inválido. Por favor, selecione uma imagem.' };
   }
 
+  let fileBuffer: Buffer;
   try {
     console.log('[imageUploadActions] Converting file to buffer for playerId:', playerId);
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const arrayBuffer = await file.arrayBuffer();
+    fileBuffer = Buffer.from(arrayBuffer);
     console.log(`[imageUploadActions] File buffer created for playerId ${playerId}, size: ${fileBuffer.length}`);
-
+  } catch (bufferError) {
+    console.error(`[imageUploadActions] Error converting file to buffer for playerId ${playerId}:`, bufferError);
+    const errorMsg = bufferError instanceof Error ? bufferError.message : 'Erro ao processar arquivo de imagem.';
+    return { success: false, message: `Falha ao processar arquivo: ${errorMsg.substring(0,100)}` };
+  }
+  
+  try {
     console.log('[imageUploadActions] Uploading file to host for playerId:', playerId);
     const imageUrl = await uploadFileToHost(fileBuffer, file.name, file.type);
     console.log(`[imageUploadActions] Image URL from host for playerId ${playerId}: ${imageUrl}`);
+
+    if (!imageUrl || typeof imageUrl !== 'string' || !(imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+        console.error('[imageUploadActions] Invalid image URL received from host:', imageUrl);
+        return { success: false, message: 'URL da imagem inválida retornada pelo servidor de upload.' };
+    }
 
     console.log(`[imageUploadActions] Updating player ${playerId} with foto: ${imageUrl}`);
     const updateResult = await adminUpdatePlayerFullAction(playerId, { foto: imageUrl });
@@ -93,22 +106,21 @@ export async function handleProfilePhotoUploadAction(
         message: `Foto hospedada, mas falha ao salvar no perfil: ${updateResult.message}`,
       };
     }
-  } catch (error) {
-    console.error(`[imageUploadActions] CRITICAL ERROR during profile photo upload for playerId: ${playerId}:`, error);
+  } catch (uploadOrDbError) { // Catches errors from uploadFileToHost or adminUpdatePlayerFullAction
+    console.error(`[imageUploadActions] CRITICAL ERROR during profile photo upload (upload/DB stage) for playerId: ${playerId}:`, uploadOrDbError);
     
-    // Ensure a simple, serializable error object is always returned
     let errorMessage = 'Ocorreu um erro desconhecido durante o processamento da foto.';
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    } else if (typeof error === 'string') {
-      // This case is less common for caught errors but good to have
-      errorMessage = error;
+    if (uploadOrDbError instanceof Error) {
+      errorMessage = uploadOrDbError.message;
+    } else if (typeof uploadOrDbError === 'string') {
+      errorMessage = uploadOrDbError;
+    } else if (uploadOrDbError && typeof (uploadOrDbError as any).message === 'string') {
+      errorMessage = (uploadOrDbError as any).message;
     }
-    // Avoid complex error.toString() which might not be serializable
     
     return { 
       success: false, 
-      message: `Falha no upload: ${errorMessage.substring(0, 250)}` 
+      message: `Falha crítica no upload: ${errorMessage.substring(0, 100)}` 
     };
   }
 }
