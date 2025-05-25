@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, type FormEvent, useEffect, Suspense, useCallback } from 'react';
+import React, { useState, type FormEvent, useEffect, Suspense, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Player } from '@/types/player';
 import { Input } from '@/components/ui/input';
@@ -23,9 +23,7 @@ import { cn } from '@/lib/utils';
 import { updatePlayerNameAction, updatePlayerPasswordAction, adminUpdatePlayerFullAction } from './actions/playerActions';
 import { itemDetails as allShopItems } from './loja/lojaData';
 
-
-const ADMIN_PLAYER_IDS = ['5521994361356', 'HimikoToga', 'himiko'];
-
+// Moved ActionType and actionConfig to module level for stable reference
 type ActionType = 'trabalhar' | 'pescar' | 'dormir' | 'treinar';
 
 const actionConfig: Record<ActionType, { title: string, modalTitle: string, icon: React.ElementType, goldRange: [number, number], xpRange: [number, number] }> = {
@@ -34,6 +32,8 @@ const actionConfig: Record<ActionType, { title: string, modalTitle: string, icon
   dormir: { title: 'Descanso Finalizado!', modalTitle: 'Dormindo...', icon: Bed, goldRange: [100,500], xpRange: [100, 500] },
   treinar: { title: 'Treino Concluído!', modalTitle: 'Treinando...', icon: Dumbbell, goldRange: [100,500], xpRange: [100, 500] },
 };
+
+const ADMIN_PLAYER_IDS = ['5521994361356', 'HimikoToga', 'himiko'];
 
 
 function HomePageInternal() {
@@ -62,7 +62,7 @@ function HomePageInternal() {
   const [currentActionLoading, setCurrentActionLoading] = useState<ActionType | null>(null);
 
   const [newPassword, setNewPassword] = useState('');
-  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [newPhotoUrl, setNewPhotoUrl] = useState(''); // For accordion form
   const [isUpdatingName, setIsUpdatingName] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
@@ -81,6 +81,12 @@ function HomePageInternal() {
   const [adminNewItemQuantity, setAdminNewItemQuantity] = useState<number>(1);
   const [isUpdatingFullPlayer, setIsUpdatingFullPlayer] = useState(false);
 
+  const [accordionValue, setAccordionValue] = useState<string[]>(['player-actions']);
+
+  // State for the new photo change dialog
+  const [isChangePhotoDialogOpen, setIsChangePhotoDialogOpen] = useState(false);
+  const [photoDialogInputValue, setPhotoDialogInputValue] = useState('');
+
 
   const fetchAllPlayers = useCallback(async () => {
     if (!isAdmin) return;
@@ -96,11 +102,11 @@ function HomePageInternal() {
     } catch (err) {
       console.error("Erro ao buscar todos os jogadores:", err);
       const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro desconhecido.";
-      setAdminPanelError(errorMessage);
+      if (adminPanelError !== errorMessage) setAdminPanelError(errorMessage);
     } finally {
       setLoadingAllPlayers(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, adminPanelError]);
 
 
  useEffect(() => {
@@ -117,7 +123,7 @@ function HomePageInternal() {
       if (sessionPlayerId === pidFromUrl && sessionPlayerData) {
         try {
           const parsedData = JSON.parse(sessionPlayerData);
-          if (playerData?.nome !== parsedData.nome || playerData?.ouro !== parsedData.ouro) { // Example condition
+          if (JSON.stringify(playerData) !== JSON.stringify(parsedData)) { // More robust check
             setPlayerData(parsedData);
           }
           if (currentPlayerId !== sessionPlayerId) {
@@ -141,22 +147,22 @@ function HomePageInternal() {
           if (error !== null) setError(null);
         }
       } else {
-        // If URL has playerId but no matching session, or session data is invalid/stale
         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-          // Navigating to a new player ID via URL, clear old session
           if (playerData !== null) setPlayerData(null);
           if (currentPlayerId !== null) setCurrentPlayerId(null);
           if (isAdmin !== false) setIsAdmin(false);
-          if (passwordInput !== '') setPasswordInput(''); // Reset password input for new login
+          if (passwordInput !== '') setPasswordInput('');
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
           sessionStorage.removeItem('isAdmin');
+        } else if (!currentPlayerId && pidFromUrl) {
+            // If no currentPlayerId, but there's a pidFromUrl, it's a fresh load for this ID
+            // No need to clear passwordInput here if it was pre-filled by URL for direct access attempts
         }
         if (loginError !== null) setLoginError(null);
         if (error !== null) setError(null);
       }
     } else {
-      // No playerId in URL, effectively a logout or initial visit
       if (currentPlayerId) {
         if (playerData !== null) setPlayerData(null);
         if (currentPlayerId !== null) setCurrentPlayerId(null);
@@ -170,7 +176,9 @@ function HomePageInternal() {
       if (loginError !== null) setLoginError(null);
       if (error !== null) setError(null);
     }
-  }, [searchParams, currentPlayerId, playerData, isAdmin, playerIdInput, passwordInput, loginError, error, setPlayerData, setCurrentPlayerId, setIsAdmin, setPlayerIdInput, setPasswordInput, setLoginError, setError]);
+  }, [searchParams, currentPlayerId, playerData, isAdmin, playerIdInput, passwordInput, loginError, error,
+      setPlayerData, setCurrentPlayerId, setIsAdmin, setPlayerIdInput, setPasswordInput, setLoginError, setError
+  ]);
 
 
   useEffect(() => {
@@ -183,16 +191,20 @@ function HomePageInternal() {
           if (endTime > Date.now()) {
             loadedCooldowns[action] = endTime;
           } else {
-            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); // Clean up expired
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
           }
         }
       });
       setActionCooldownEndTimes(loadedCooldowns);
     } else {
-      setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
-      setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
+      if(Object.values(actionCooldownEndTimes).some(t => t !== 0)) { // Only reset if not already default
+        setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
+      }
+      if(Object.values(timeLeftForAction).some(t => t !== null)) { // Only reset if not already default
+        setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
+      }
     }
-  }, [currentPlayerId]); // actionConfig is now stable
+  }, [currentPlayerId]);
 
   useEffect(() => {
     const intervalIds: NodeJS.Timeout[] = [];
@@ -214,25 +226,27 @@ function HomePageInternal() {
       };
 
       if (endTime > Date.now()) {
-        updateDisplay(); // Initial display
+        updateDisplay();
         const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
-        setTimeLeftForAction(prev => ({ ...prev, [action]: null })); // Ensure it's null if not active
-         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) { // Cleanup if somehow missed
+         if (timeLeftForAction[action] !== null) { // Only update if it's not already null
+            setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
+         }
+         if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
             localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`);
         }
       }
     });
     return () => intervalIds.forEach(clearInterval);
-  }, [actionCooldownEndTimes, currentPlayerId]); // actionConfig is now stable
+  }, [actionCooldownEndTimes, currentPlayerId, timeLeftForAction]);
 
   const handleSearch = async (event?: FormEvent) => {
     if (event) event.preventDefault();
     const trimmedId = playerIdInput.trim();
 
     if (!trimmedId || !passwordInput) {
-      setLoginError('Nome de usuário e senha são obrigatórios.');
+      if (loginError !== 'Nome de usuário e senha são obrigatórios.') setLoginError('Nome de usuário e senha são obrigatórios.');
       if (playerData !== null) setPlayerData(null);
       if (currentPlayerId !== null) setCurrentPlayerId(null);
       if (isAdmin !== false) setIsAdmin(false);
@@ -243,7 +257,7 @@ function HomePageInternal() {
     }
 
     setLoading(true);
-    setLoginError(null);
+    if (loginError !== null) setLoginError(null);
     if (error !== null) setError(null);
 
     try {
@@ -268,10 +282,10 @@ function HomePageInternal() {
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(playerDataToSet));
           sessionStorage.setItem('isAdmin', String(currentIsAdmin));
-          // Password input is not cleared here to avoid re-prompt if a subsequent effect clears playerData temporarily
+          // Do not clear passwordInput here
         } else {
-          setLoginError('Nome de usuário ou senha inválidos.');
-          setPasswordInput(''); // Clear password on explicit login failure
+          if (loginError !== 'Nome de usuário ou senha inválidos.') setLoginError('Nome de usuário ou senha inválidos.');
+          if (passwordInput !== '') setPasswordInput('');
           if (playerData !== null) setPlayerData(null);
           if (currentPlayerId !== null) setCurrentPlayerId(null);
           if (isAdmin !== false) setIsAdmin(false);
@@ -280,8 +294,9 @@ function HomePageInternal() {
           sessionStorage.removeItem('isAdmin');
         }
       } else {
-        setLoginError('Jogador não encontrado ou sem dados de senha.');
-        setPasswordInput(''); // Clear password on explicit login failure
+        const notFoundMsg = 'Jogador não encontrado ou sem dados de senha.';
+        if (loginError !== notFoundMsg) setLoginError(notFoundMsg);
+        if (passwordInput !== '') setPasswordInput('');
         if (playerData !== null) setPlayerData(null);
         if (currentPlayerId !== null) setCurrentPlayerId(null);
         if (isAdmin !== false) setIsAdmin(false);
@@ -292,8 +307,8 @@ function HomePageInternal() {
     } catch (err) {
       console.error('Fetch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setLoginError(`Erro ao buscar dados: ${errorMessage}`);
-      setPasswordInput(''); // Clear password on explicit login failure
+      if (loginError !== `Erro ao buscar dados: ${errorMessage}`) setLoginError(`Erro ao buscar dados: ${errorMessage}`);
+      if (passwordInput !== '') setPasswordInput('');
       if (playerData !== null) setPlayerData(null);
       if (currentPlayerId !== null) setCurrentPlayerId(null);
       if (isAdmin !== false) setIsAdmin(false);
@@ -307,8 +322,9 @@ function HomePageInternal() {
 
   const handlePlayerAction = async (actionType: ActionType) => {
     if (!playerData || !currentPlayerId) {
-      if (error !== "Busque um jogador primeiro para realizar ações.") setError("Busque um jogador primeiro para realizar ações.");
-      toast({ title: "Erro", description: "Busque um jogador primeiro para realizar ações.", variant: "destructive" });
+      const msg = "Busque um jogador primeiro para realizar ações.";
+      if (error !== msg) setError(msg);
+      toast({ title: "Erro", description: msg, variant: "destructive" });
       return;
     }
 
@@ -320,26 +336,21 @@ function HomePageInternal() {
 
     setIsActionInProgress(true);
     setCurrentActionLoading(actionType);
-
-    // Short delay for animation to kick in if dialog doesn't appear instantly
-    await new Promise(resolve => setTimeout(resolve, 150)); 
-
     setActiveActionAnimation(actionType);
 
+    await new Promise(resolve => setTimeout(resolve, 150)); 
 
     setTimeout(async () => {
-      // Re-check player data validity inside timeout, as state might have changed
-      if (!currentPlayerId || !playerData) { // Check playerData directly from state here
+      if (!currentPlayerId || !playerData) {
           setActiveActionAnimation(null);
           setIsActionInProgress(false);
           setCurrentActionLoading(null);
           const msg = !currentPlayerId ? "ID do jogador não encontrado." : "Dados do jogador não encontrados.";
-          if (error !== msg) setError(`${msg} Por favor, faça login novamente.`);
+           if (error !== msg) setError(`${msg} Por favor, faça login novamente.`);
           toast({ title: "Erro de Sessão", description: msg, variant: "destructive" });
           return;
       }
 
-      // Fetch latest player data before applying action to prevent stale data issues
       let currentPlayerDataForAction: Player | null = null;
       try {
         const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`);
@@ -347,7 +358,6 @@ function HomePageInternal() {
           throw new Error('Falha ao buscar dados atualizados do jogador para a ação.');
         }
         currentPlayerDataForAction = await response.json();
-
         if (!currentPlayerDataForAction) {
           throw new Error('Não foi possível encontrar os dados atualizados do jogador para a ação.');
         }
@@ -361,21 +371,17 @@ function HomePageInternal() {
         return;
       }
 
-
       const config = actionConfig[actionType];
       const goldEarned = Math.floor(Math.random() * (config.goldRange[1] - config.goldRange[0] + 1)) + config.goldRange[0];
       const xpEarned = Math.floor(Math.random() * (config.xpRange[1] - config.xpRange[0] + 1)) + config.xpRange[0];
 
       const newOuro = (currentPlayerDataForAction.ouro || 0) + goldEarned;
       const newXp = (currentPlayerDataForAction.xp || 0) + xpEarned;
-
-      // Update local state immediately for responsiveness
       const updatedLocalPlayerData = { ...currentPlayerDataForAction, nome: currentPlayerDataForAction.nome || currentPlayerId, ouro: newOuro, xp: newXp };
-      setPlayerData(updatedLocalPlayerData); // Update the main playerData state
+      
+      setPlayerData(updatedLocalPlayerData);
       sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData));
 
-
-      // Attempt to save to Firebase
       try {
         const firebaseResponse = await fetch(
           `https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`,
@@ -393,19 +399,19 @@ function HomePageInternal() {
         toast({ title: config.title, description: `Você ganhou ${goldEarned > 0 ? `${goldEarned} de ouro e ` : ''}${xpEarned} XP. Dados salvos no servidor!` });
       } catch (err) {
         console.error('Detalhes do erro ao salvar no Firebase:', { message: err instanceof Error ? err.message : String(err), playerId: currentPlayerId, dataAttemptedToSave: { ouro: newOuro, xp: newXp }, originalError: err });
-        if (error !== (err instanceof Error ? err.message : "Erro desconhecido")) setError(err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.");
-        toast({ title: "Erro ao Salvar no Servidor", description: err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.", variant: "destructive" });
+        const firebaseErrorMsg = err instanceof Error ? err.message : "Não foi possível salvar os dados no servidor. Suas recompensas foram aplicadas localmente.";
+        if (error !== firebaseErrorMsg) setError(firebaseErrorMsg);
+        toast({ title: "Erro ao Salvar no Servidor", description: firebaseErrorMsg, variant: "destructive" });
       }
 
-      const newCooldownEndTime = Date.now() + (60 * 60 * 1000); // 1 hour
+      const newCooldownEndTime = Date.now() + (60 * 60 * 1000);
       setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
       if (typeof window !== 'undefined') localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
 
       setActiveActionAnimation(null);
       setIsActionInProgress(false);
       setCurrentActionLoading(null);
-
-    }, 1200); // Duration of the animation dialog
+    }, 1200);
   };
 
   const handleChangeName = async (event: FormEvent) => {
@@ -454,43 +460,35 @@ function HomePageInternal() {
     }
   };
 
+  // For the accordion form
   const handleChangePhoto = async (event: FormEvent) => {
     event.preventDefault();
     if (!currentPlayerId || !newPhotoUrl.trim()) {
-        // If newPhotoUrl is empty, treat as request to remove photo
         if (newPhotoUrl.trim() === '' && playerData?.foto) {
-             // Allow removing photo
+           // Allow removing photo
         } else {
             toast({ title: "Erro", description: "URL da foto não pode estar vazia (a menos que removendo uma foto existente).", variant: "destructive" });
             return;
         }
     }
-
-    // Validate URL only if it's not an intentional removal
     if (newPhotoUrl.trim() !== '') {
         try {
-        new URL(newPhotoUrl.trim());
+            new URL(newPhotoUrl.trim());
         } catch (_) {
-        toast({ title: "Erro", description: "URL da foto inválida.", variant: "destructive" });
-        return;
+            toast({ title: "Erro", description: "URL da foto inválida.", variant: "destructive" });
+            return;
         }
     }
 
-
     setIsUpdatingPhoto(true);
     const photoPayload = newPhotoUrl.trim() === '' ? null : newPhotoUrl.trim();
-    const result = await adminUpdatePlayerFullAction(currentPlayerId, { foto: photoPayload as any }); // Using adminUpdatePlayerFullAction for photo
+    const result = await adminUpdatePlayerFullAction(currentPlayerId, { foto: photoPayload as any });
     setIsUpdatingPhoto(false);
 
     if (result.success && playerData) {
       toast({ title: "Sucesso!", description: photoPayload === null ? "Foto de perfil removida." : "Foto de perfil atualizada." });
-      // Ensure correct update for local state: if result.updatedPlayer.foto is undefined (meaning it was set to null),
-      // then playerData.foto should also become '' or null.
-      // If firebase returns the actual new URL, use that.
-      const updatedFoto = result.updatedPlayer?.foto === undefined ? (photoPayload === null ? '' : playerData.foto) : result.updatedPlayer.foto;
-
+      const updatedFoto = result.updatedPlayer?.foto === undefined ? (photoPayload === null ? '' : (playerData.foto || '')) : (result.updatedPlayer.foto || '');
       const updatedData = { ...playerData, foto: updatedFoto };
-
       setPlayerData(updatedData);
       sessionStorage.setItem('playerData', JSON.stringify(updatedData));
       setNewPhotoUrl('');
@@ -498,26 +496,62 @@ function HomePageInternal() {
       toast({ title: "Erro ao Alterar Foto", description: result.message, variant: "destructive" });
     }
   };
+  
+  // For the dialog triggered by avatar click
+  const handleSavePhotoFromDialog = async () => {
+    if (!currentPlayerId) {
+      toast({ title: "Erro", description: "ID do jogador não encontrado.", variant: "destructive" });
+      return;
+    }
+    if (photoDialogInputValue.trim() !== '') {
+        try {
+            new URL(photoDialogInputValue.trim());
+        } catch (_) {
+            toast({ title: "Erro", description: "URL da foto inválida.", variant: "destructive" });
+            return;
+        }
+    }
+
+    setIsUpdatingPhoto(true); // Reuse existing loading state
+    const photoPayload = photoDialogInputValue.trim() === '' ? null : photoDialogInputValue.trim();
+    const result = await adminUpdatePlayerFullAction(currentPlayerId, { foto: photoPayload as any });
+    setIsUpdatingPhoto(false);
+
+    if (result.success && playerData) {
+      toast({ title: "Sucesso!", description: photoPayload === null ? "Foto de perfil removida." : "Foto de perfil atualizada." });
+      const updatedFoto = result.updatedPlayer?.foto === undefined ? (photoPayload === null ? '' : (playerData.foto || '')) : (result.updatedPlayer.foto || '');
+      const updatedData = { ...playerData, foto: updatedFoto };
+      setPlayerData(updatedData);
+      sessionStorage.setItem('playerData', JSON.stringify(updatedData));
+      // setPhotoDialogInputValue(''); // Input value is managed by dialog state, no need to clear here
+      setIsChangePhotoDialogOpen(false);
+    } else {
+      toast({ title: "Erro ao Alterar Foto", description: result.message, variant: "destructive" });
+    }
+  };
+
+  const openPhotoDialog = () => {
+    setPhotoDialogInputValue(playerData?.foto || '');
+    setIsChangePhotoDialogOpen(true);
+  };
 
 
   const handleOpenEditUserDialog = (id: string, player: Player) => {
     setEditingUserId(id);
-    // Initialize editingUserData with all fields from player, ensuring numeric fields default to 0 if undefined/null
-    // and inventory to an empty object.
     const initialEditingData: Partial<Player> = {
         nome: player.nome || id,
-        senha: '', // Always start with an empty password field for security/UX
+        senha: '',
         vida: player.vida ?? 0,
         ouro: player.ouro ?? 0,
-        nivel: player.nivel ?? 1, // Default level to 1 if not set
+        nivel: player.nivel ?? 1,
         xp: player.xp ?? 0,
         energia: player.energia ?? 0,
         mana: player.mana ?? 0,
-        foto: player.foto || '', // Default to empty string if no photo
-        inventario: player.inventario ? { ...player.inventario } : {}, // Deep copy inventory or default to empty
+        foto: player.foto || '',
+        inventario: player.inventario ? { ...player.inventario } : {},
     };
     setEditingUserData(initialEditingData);
-    setAdminNewItemName(''); // Reset new item selectors
+    setAdminNewItemName('');
     setAdminNewItemQuantity(1);
     setIsEditUserDialogOpen(true);
   };
@@ -525,7 +559,6 @@ function HomePageInternal() {
   const handleEditingUserDataChange = (field: keyof Player, value: string | number | Record<string, number>) => {
     setEditingUserData(prev => {
       if (!prev) return null;
-      // Ensure numeric fields are parsed correctly, defaulting to 0 if NaN
       if (['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'].includes(field as string) && typeof value === 'string') {
         const numValue = parseInt(value, 10);
         return { ...prev, [field]: isNaN(numValue) ? 0 : numValue };
@@ -537,14 +570,13 @@ function HomePageInternal() {
   const handleAdminInventoryItemQuantityChange = (itemName: string, quantityStr: string) => {
     const quantity = parseInt(quantityStr, 10);
     setEditingUserData(prev => {
-        if (!prev || !prev.inventario) return prev; // Should not happen if initialized correctly
+        if (!prev || !prev.inventario) return prev;
         const newInventario = { ...prev.inventario };
         if (!isNaN(quantity) && quantity > 0) {
             newInventario[itemName] = quantity;
-        } else if (!isNaN(quantity) && quantity <= 0) { // Allow setting to 0 to effectively remove
-            delete newInventario[itemName]; // Or set to 0, then filter out before PATCH
+        } else if (!isNaN(quantity) && quantity <= 0) {
+            delete newInventario[itemName];
         }
-        // If quantityStr is not a valid number, do nothing to prevent data corruption
         return { ...prev, inventario: newInventario };
     });
   };
@@ -564,12 +596,12 @@ function HomePageInternal() {
         return;
     }
     setEditingUserData(prev => {
-        if (!prev) return prev; // Should not happen
-        const newInventario = { ...(prev.inventario || {}) }; // Ensure inventory exists
+        if (!prev) return prev;
+        const newInventario = { ...(prev.inventario || {}) };
         newInventario[adminNewItemName] = (newInventario[adminNewItemName] || 0) + adminNewItemQuantity;
         return { ...prev, inventario: newInventario };
     });
-    setAdminNewItemName(''); // Reset for next addition
+    setAdminNewItemName('');
     setAdminNewItemQuantity(1);
   };
 
@@ -583,48 +615,34 @@ function HomePageInternal() {
 
     setIsUpdatingFullPlayer(true);
     const payload: Partial<Player> = { ...editingUserData };
-
-    // Don't send password if it's empty (meaning no change intended)
     if (!payload.senha?.trim()) {
       delete payload.senha;
     }
-    // Handle empty photo URL as a request to remove the photo
     if (payload.foto !== undefined && payload.foto.trim() === '') {
-        payload.foto = null as any; // Firebase will delete the field if set to null
+        payload.foto = null as any;
     }
-
 
     const result = await adminUpdatePlayerFullAction(editingUserId, payload);
     setIsUpdatingFullPlayer(false);
 
     if (result.success && result.updatedPlayer) {
       toast({ title: "Sucesso!", description: `Dados de ${editingUserData.nome || editingUserId} atualizados.` });
-
-      // Update the allPlayers list if it's loaded
       if (allPlayers) {
         setAllPlayers(prev => {
-            if (!prev || !editingUserId) return null; // Should not happen
-            // Merge existing player data with updated fields from Firebase response
+            if (!prev || !editingUserId) return null;
             const updatedPlayerLocally = { ...prev[editingUserId], ...result.updatedPlayer };
-            // Explicitly handle photo removal in local state if it was set to null
-            if (payload.foto === null) updatedPlayerLocally.foto = ''; // Or null, depending on desired display
-
-            // Handle inventory: if PATCH returns undefined for inventory (because it was empty and thus removed by Firebase or not touched)
-            // ensure local state reflects an empty inventory if that was the intent.
+            if (payload.foto === null) updatedPlayerLocally.foto = '';
             if (result.updatedPlayer.inventario === undefined && payload.inventario && Object.keys(payload.inventario).length === 0) {
                 updatedPlayerLocally.inventario = {};
-            } else if (result.updatedPlayer.inventario === null) { // Firebase might return null for a deleted field
+            } else if (result.updatedPlayer.inventario === null) {
                 updatedPlayerLocally.inventario = {};
             }
-
             return { ...prev, [editingUserId]: updatedPlayerLocally };
         });
       }
-      // If admin edited their own currently viewed profile
       if (currentPlayerId === editingUserId && playerData) {
         const updatedCurrentPlayerData = { ...playerData, ...result.updatedPlayer };
         if (payload.foto === null) updatedCurrentPlayerData.foto = '';
-
         if (result.updatedPlayer.inventario === undefined && payload.inventario && Object.keys(payload.inventario).length === 0) {
             updatedCurrentPlayerData.inventario = {};
         } else if (result.updatedPlayer.inventario === null) {
@@ -634,19 +652,17 @@ function HomePageInternal() {
         sessionStorage.setItem('playerData', JSON.stringify(updatedCurrentPlayerData));
       }
       setIsEditUserDialogOpen(false);
-      setEditingUserData(null); // Clear editing state
+      setEditingUserData(null);
       setEditingUserId(null);
     } else {
       toast({ title: "Erro ao Atualizar Jogador", description: result.message, variant: "destructive" });
     }
   };
 
-
   const currentYear = new Date().getFullYear();
   let contentToRender;
 
   if (loading && !playerData && !loginError) {
-    // Primary loading state (e.g., initial search)
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow mt-10">
         <Loader2 className="w-16 h-16 text-primary" />
@@ -654,7 +670,6 @@ function HomePageInternal() {
       </div>
     );
   } else if (!playerData && !loading) {
-    // Login form state
     contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow w-full max-w-md px-4">
         {loginError && (
@@ -664,11 +679,8 @@ function HomePageInternal() {
             <AlertDescription>{loginError}</AlertDescription>
           </Alert>
         )}
-        <Card className={cn(
-          "w-full p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50 card-glow",
-          // "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-[2%]"
-        )}
-        // data-state="open" // Removed to avoid animation issues on re-render
+        <Card 
+          className={cn("w-full p-6 pt-4 shadow-xl sm:p-8 sm:pt-6 bg-card border-border/50 card-glow")}
         >
           <CardHeader className="p-0 pb-6 mb-6 text-center border-b border-border/30">
             <CardTitle className="text-3xl font-bold text-primary">Bem-vindo!</CardTitle>
@@ -681,7 +693,7 @@ function HomePageInternal() {
                 <Input
                   type="text"
                   value={playerIdInput}
-                  onChange={(e) => { setPlayerIdInput(e.target.value); setLoginError(null); }}
+                  onChange={(e) => { setPlayerIdInput(e.target.value); if (loginError) setLoginError(null); }}
                   placeholder="Nome de usuário"
                   className="pl-12 text-base rounded-md h-12 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
                   aria-label="Nome de usuário Input"
@@ -692,7 +704,7 @@ function HomePageInternal() {
                 <Input
                   type="password"
                   value={passwordInput}
-                  onChange={(e) => { setPasswordInput(e.target.value); setLoginError(null); }}
+                  onChange={(e) => { setPasswordInput(e.target.value); if (loginError) setLoginError(null); }}
                   placeholder="Senha"
                   className="pl-12 text-base rounded-md h-12 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
                   aria-label="Password Input"
@@ -717,20 +729,20 @@ function HomePageInternal() {
       </div>
     );
   } else if (playerData && !loginError && !loading) {
-    // Player data loaded state
     contentToRender = (
-      <div className="w-full max-w-5xl px-2 space-y-6"
-        // data-state="open" // Removed to avoid animation issues on re-render
-      >
-        {error && !loginError && ( // Show non-login errors if player data is present
+      <div className="w-full max-w-5xl px-2 space-y-6">
+        {error && !loginError && (
           <Alert variant="destructive" className="w-full max-w-md mx-auto my-4 shadow-lg card-glow">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <PlayerStatsCard playerData={playerData} isLoading={loading && !!currentPlayerId && !playerData} />
-
+        <PlayerStatsCard 
+            playerData={playerData} 
+            isLoading={loading && !!currentPlayerId && !playerData} 
+            onAvatarClick={openPhotoDialog}
+        />
         <div className="w-full flex justify-end">
            <Button
             variant="outline"
@@ -743,9 +755,7 @@ function HomePageInternal() {
             Loja
           </Button>
         </div>
-
-
-        <Accordion type="multiple" defaultValue={['player-actions']} className="w-full space-y-6">
+        <Accordion type="multiple" value={accordionValue} onValueChange={setAccordionValue} className="w-full space-y-6">
           <AccordionItem value="player-actions" className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden card-glow">
             <AccordionTrigger className="px-6 py-4 text-xl font-semibold text-primary hover:text-primary/90 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/30 [&[data-state=open]>svg]:[transform:rotate(0deg)]">
               <Gamepad2 size={24} className="mr-3 data-[state=open]:rotate-0" /> Ações do Jogador
@@ -792,7 +802,7 @@ function HomePageInternal() {
               )}
               <Card className="bg-card/80 border-border/50 shadow-lg card-glow">
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center text-primary"><ImageIcon size={20} className="mr-2" />Alterar Foto de Perfil</CardTitle>
+                  <CardTitle className="text-lg flex items-center text-primary"><ImageIcon size={20} className="mr-2" />Alterar Foto de Perfil (Formulário)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleChangePhoto} className="space-y-4">
@@ -804,7 +814,7 @@ function HomePageInternal() {
                       className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
                     />
                     <Button type="submit" disabled={isUpdatingPhoto} className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md">
-                      {isUpdatingPhoto ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Foto'}
+                      {isUpdatingPhoto ? <Loader2 className="w-5 h-5 mr-2" /> : 'Salvar Foto (Formulário)'}
                     </Button>
                   </form>
                 </CardContent>
@@ -857,7 +867,7 @@ function HomePageInternal() {
                   <p className="text-center text-muted-foreground">Nenhum outro jogador encontrado.</p>
                 )}
                 {allPlayers && !loadingAllPlayers && Object.keys(allPlayers).length > 0 && (
-                  <div className="max-h-[500px] overflow-y-auto pr-2">
+                   <div className="max-h-[500px] overflow-y-auto pr-2">
                     <div className="space-y-4">
                         {Object.entries(allPlayers).map(([id, p]) => (
                         <Card key={id} className="bg-card/70 border-border/50 card-glow">
@@ -894,26 +904,22 @@ function HomePageInternal() {
               </AccordionContent>
             </AccordionItem>
           )}
-
         </Accordion>
       </div>
     );
   } else if (loading && playerData) {
-    // Loading state while player data is already present (e.g. action in progress)
     contentToRender = (
       <div className="w-full max-w-5xl px-2 space-y-8">
-        <PlayerStatsCard playerData={playerData} isLoading={true} /> {/* Show existing data but indicate loading */}
-        {/* Placeholder for action cards or similar during this loading state */}
+        <PlayerStatsCard playerData={playerData} isLoading={true} onAvatarClick={openPhotoDialog} />
         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
-          <div className="h-8 bg-muted rounded w-1/3"></div> {/* Skeleton title */}
+          <div className="h-8 bg-muted rounded w-1/3"></div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-muted rounded"></div>)} {/* Skeleton buttons */}
+            {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-muted rounded"></div>)}
           </div>
         </div>
       </div>
     );
   } else {
-     // Fallback for any unexpected state
      contentToRender = (
       <div className="flex flex-col items-center justify-center flex-grow mt-10">
         <Alert variant="destructive" className="max-w-md card-glow">
@@ -924,7 +930,6 @@ function HomePageInternal() {
       </div>
     );
   }
-
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen p-4 pt-10 sm:pt-12 bg-background text-foreground">
@@ -960,7 +965,7 @@ function HomePageInternal() {
             <DialogHeader className="items-center text-center">
               <DialogTitle className="mb-4 text-2xl font-semibold text-primary">{actionConfig[activeActionAnimation].modalTitle}</DialogTitle>
             </DialogHeader>
-            <div className="flex justify-center text-primary"> {/* Removed animate-pulse here */}
+            <div className="flex justify-center text-primary">
               {React.createElement(actionConfig[activeActionAnimation].icon, { size: 80, strokeWidth: 1.5 })}
             </div>
           </DialogContent>
@@ -973,9 +978,19 @@ function HomePageInternal() {
             <DialogHeader>
               <DialogTitle className="text-primary">Editar Usuário: {editingUserData.nome || editingUserId}</DialogTitle>
             </DialogHeader>
-            <ScrollArea className="max-h-[70vh] p-1"> {/* Added p-1 for slight spacing from dialog edge */}
-              <form onSubmit={handleAdminUpdatePlayer} className="space-y-4 p-4"> {/* Added p-4 for inner padding */}
-                {/* Name and Password fields */}
+            <ScrollArea className="max-h-[70vh] p-1">
+              <form onSubmit={handleAdminUpdatePlayer} className="space-y-4 p-4">
+                 <div>
+                    <Label htmlFor="adminEditFoto" className="text-muted-foreground">URL da Foto de Perfil (deixe em branco para remover)</Label>
+                    <Input
+                      id="adminEditFoto"
+                      type="url"
+                      placeholder="https://exemplo.com/imagem.png"
+                      value={editingUserData.foto || ''}
+                      onChange={(e) => handleEditingUserDataChange('foto', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="adminEditName" className="text-muted-foreground">Nome</Label>
@@ -998,22 +1013,6 @@ function HomePageInternal() {
                     />
                   </div>
                 </div>
-
-                 {/* Photo URL field */}
-                 <div>
-                    <Label htmlFor="adminEditFoto" className="text-muted-foreground">URL da Foto de Perfil (deixe em branco para remover)</Label>
-                    <Input
-                      id="adminEditFoto"
-                      type="url"
-                      placeholder="https://exemplo.com/imagem.png"
-                      value={editingUserData.foto || ''}
-                      onChange={(e) => handleEditingUserDataChange('foto', e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-
-
-                {/* Stats fields */}
                 <h3 className="text-lg font-semibold text-primary pt-2">Estatísticas</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {(['vida', 'ouro', 'nivel', 'xp', 'energia', 'mana'] as (keyof Player)[]).map(statKey => (
@@ -1022,16 +1021,14 @@ function HomePageInternal() {
                       <Input
                         id={`adminEdit${statKey}`}
                         type="number"
-                        value={editingUserData[statKey] as number ?? 0} // Ensure value is number or 0
+                        value={editingUserData[statKey] as number ?? 0}
                         onChange={(e) => handleEditingUserDataChange(statKey, e.target.value)}
                         className="mt-1"
-                        min="0" // Basic validation for non-negative numbers
+                        min="0"
                       />
                     </div>
                   ))}
                 </div>
-
-                {/* Inventory fields */}
                 <h3 className="text-lg font-semibold text-primary pt-2">Inventário</h3>
                 <div className="space-y-3">
                   {editingUserData.inventario && Object.entries(editingUserData.inventario).map(([itemName, quantity]) => (
@@ -1042,7 +1039,7 @@ function HomePageInternal() {
                         value={quantity}
                         onChange={(e) => handleAdminInventoryItemQuantityChange(itemName, e.target.value)}
                         className="w-20 h-8 text-sm"
-                        min="0" // Allow 0 to remove item effectively on save
+                        min="0"
                       />
                       <Button type="button" variant="ghost" size="icon" onClick={() => handleAdminRemoveInventoryItem(itemName)} className="text-destructive hover:text-destructive/80 h-8 w-8">
                         <Trash2 size={16} />
@@ -1053,8 +1050,6 @@ function HomePageInternal() {
                     <p className="text-sm text-muted-foreground text-center py-2">Inventário vazio.</p>
                   )}
                 </div>
-
-                {/* Add new item to inventory */}
                 <Card className="p-3 bg-background/30 card-glow">
                     <Label className="text-muted-foreground">Adicionar Novo Item ao Inventário</Label>
                     <div className="flex items-end gap-2 mt-1">
@@ -1089,7 +1084,6 @@ function HomePageInternal() {
                     </Button>
                     </div>
                 </Card>
-
                 <DialogFooter className="pt-4">
                   <DialogClose asChild>
                     <Button type="button" variant="outline">Cancelar</Button>
@@ -1105,6 +1099,40 @@ function HomePageInternal() {
         </Dialog>
       )}
 
+      {/* Dialog for changing profile photo by clicking avatar */}
+      {isChangePhotoDialogOpen && currentPlayerId && (
+        <Dialog open={isChangePhotoDialogOpen} onOpenChange={setIsChangePhotoDialogOpen}>
+          <DialogContent className="sm:max-w-md bg-card border-border/50 card-glow">
+            <DialogHeader>
+              <DialogTitle className="text-primary">Alterar Foto de Perfil</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <Input
+                type="url"
+                placeholder="URL da nova foto de perfil (ou deixe em branco para remover)"
+                value={photoDialogInputValue}
+                onChange={(e) => setPhotoDialogInputValue(e.target.value)}
+                className="text-base rounded-md h-11 focus-visible:ring-primary focus-visible:ring-2 shadow-sm"
+              />
+            </div>
+            <DialogFooter className="pt-4">
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Cancelar</Button>
+              </DialogClose>
+              <Button
+                type="button"
+                onClick={handleSavePhotoFromDialog}
+                disabled={isUpdatingPhoto}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                {isUpdatingPhoto ? <Loader2 className="w-5 h-5 mr-2" /> : <Pencil className="mr-2 h-4 w-4" />}
+                Salvar Foto
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
 
       <footer className="w-full py-8 mt-12 text-center border-t border-border/20">
         <p className="text-xs text-muted-foreground">
@@ -1114,7 +1142,6 @@ function HomePageInternal() {
     </div>
   );
 }
-
 
 export default function HomePage() {
   return (

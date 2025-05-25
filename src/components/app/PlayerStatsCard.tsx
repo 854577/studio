@@ -4,7 +4,7 @@
 import type { Player } from '@/types/player';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, CircleDollarSign, Star, User, TrendingUp, Zap, Sparkles, Package } from 'lucide-react';
+import { Heart, CircleDollarSign, Star, User, TrendingUp, Zap, Sparkles, Package, Wallet } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { itemDetails } from '@/app/loja/lojaData';
 import { cn } from '@/lib/utils';
@@ -35,7 +35,7 @@ const formatNumber = (num: number | undefined): string => {
 const PlayerStatItem: React.FC<PlayerStatItemProps> = ({ icon: Icon, label, value, iconColor, isLoading }) => {
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center p-2 space-y-1.5 rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden border border-border/30 card-glow">
+      <div className="flex flex-col items-center justify-center p-2 space-y-1.5 rounded-lg bg-card/70 shadow-md min-h-[70px] overflow-hidden border-border/30 card-glow">
         <Skeleton className="w-6 h-6 rounded-full" />
         <Skeleton className="w-12 h-3 truncate" />
         <Skeleton className="w-8 h-3.5" />
@@ -57,9 +57,10 @@ interface PlayerStatsCardProps {
   playerData: Player | null;
   isLoading?: boolean;
   className?: string;
+  onAvatarClick?: () => void; // Callback for avatar click
 }
 
-const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading, className }) => {
+const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading, className, onAvatarClick }) => {
   if (isLoading) {
     return (
       <Card className={cn("w-full max-w-5xl overflow-hidden shadow-2xl bg-card card-glow", className)}>
@@ -71,15 +72,13 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
           </div>
         </CardHeader>
         <CardContent className="p-1.5 sm:p-2">
-          {/* Skeleton for stats grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-            {[...Array(6)].map((_, index) => ( // Assuming 6 main stats
+           <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 p-2 sm:gap-2 sm:p-3">
+            {[...Array(6)].map((_, index) => (
               <PlayerStatItem key={`skel-stat-${index}`} icon={User} label="Carregando" value="0" isLoading={true} />
             ))}
           </div>
-          {/* Skeleton for inventory title and grid */}
-          <Skeleton className="w-1/3 h-5 mt-4 mb-2 ml-1 sm:ml-0" />
-          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+          <Skeleton className="w-1/3 h-5 mt-3 mb-1.5 ml-1 sm:ml-0" />
+          <div className="grid grid-cols-5 gap-1.5 p-2 sm:gap-2 sm:p-3">
             {[...Array(5)].map((_, index) => (
               <div key={`skel-inv-${index}`} className="flex flex-col items-center justify-center p-2 space-y-1 rounded-lg bg-card/70 shadow-md min-h-[70px] border border-border/30 card-glow">
                 <Skeleton className="w-6 h-6 rounded-md" />
@@ -119,10 +118,10 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
         displayValue = value.split('@s.whatsapp.net')[0];
       }
       return {
-        icon: User,
+        icon: User, // Placeholder, could be dynamic based on key
         label: key.charAt(0).toUpperCase() + key.slice(1),
         value: displayValue,
-        color: 'text-foreground'
+        color: 'text-foreground' 
       };
     });
 
@@ -131,17 +130,25 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
   return (
     <Card className={cn("w-full max-w-5xl overflow-hidden shadow-2xl bg-card card-glow", className)}>
       <CardHeader className="flex flex-col items-center gap-4 p-4 text-center border-b sm:flex-row sm:p-6 sm:text-left border-border/30">
-        <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-primary shadow-lg">
-          <AvatarImage src={playerData.foto || `https://placehold.co/120x120.png`} alt={playerData.nome || 'Avatar'} data-ai-hint="character face"/>
-          <AvatarFallback className="text-3xl bg-primary text-primary-foreground">{fallbackInitial}</AvatarFallback>
-        </Avatar>
+        <button
+          type="button"
+          onClick={onAvatarClick}
+          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          aria-label="Alterar foto de perfil"
+          title="Clique para alterar a foto de perfil"
+        >
+          <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-primary shadow-lg cursor-pointer hover:opacity-80 transition-opacity">
+            <AvatarImage src={playerData.foto || `https://placehold.co/120x120.png`} alt={playerData.nome || 'Avatar'} data-ai-hint="character face"/>
+            <AvatarFallback className="text-3xl bg-primary text-primary-foreground">{fallbackInitial}</AvatarFallback>
+          </Avatar>
+        </button>
         <div className="mt-2 sm:mt-0">
           <CardTitle className="text-3xl sm:text-4xl font-bold text-primary break-words max-w-xs sm:max-w-md md:max-w-lg">{playerData.nome || 'Nome Desconhecido'}</CardTitle>
           <CardDescription className="mt-1 text-base text-muted-foreground">Perfil Detalhado do Jogador</CardDescription>
         </div>
       </CardHeader>
       <CardContent className="p-1.5 sm:p-2">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 p-2 sm:gap-2 sm:p-3">
           {mainStats.map(stat => stat.value !== undefined && (
             <PlayerStatItem key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} iconColor={stat.color} />
           ))}
@@ -152,8 +159,8 @@ const PlayerStatsCard: React.FC<PlayerStatsCardProps> = ({ playerData, isLoading
 
         {inventoryItems.length > 0 && (
           <>
-            <h3 className="col-span-full text-lg font-semibold text-primary mb-1.5 sm:mb-2 px-1 sm:px-0 border-t border-border/30 pt-2 mt-2">Inventário</h3>
-            <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+            <h3 className="col-span-full text-lg font-semibold text-primary mb-1.5 sm:mb-2 px-1 sm:px-0 border-t border-border/30 pt-3 mt-3">Inventário</h3>
+            <div className="grid grid-cols-5 gap-1.5 p-2 sm:gap-2 sm:p-3">
               {inventoryItems.map(([itemName, quantity]) => {
                 const itemDetail = itemDetails[itemName.toLowerCase()];
                 const IconComponent = itemDetail ? itemDetail.icon : Package;
