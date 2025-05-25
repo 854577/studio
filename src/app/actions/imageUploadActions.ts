@@ -49,9 +49,9 @@ export async function handleProfilePhotoUploadAction(
     } catch (error) {
       console.error('[imageUploadActions] Error during photo removal for playerId (adminUpdatePlayerFullAction failed):', playerId, error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao tentar remover a foto.';
-      return { 
-        success: false, 
-        message: `Erro ao remover foto: ${errorMessage.substring(0,100)}` 
+      return {
+        success: false,
+        message: `Erro ao remover foto: ${errorMessage.substring(0,100)}`
       };
     }
   }
@@ -79,7 +79,7 @@ export async function handleProfilePhotoUploadAction(
     const errorMsg = bufferError instanceof Error ? bufferError.message : 'Erro ao processar arquivo de imagem.';
     return { success: false, message: `Falha ao processar arquivo: ${errorMsg.substring(0,100)}` };
   }
-  
+
   try {
     console.log('[imageUploadActions] Uploading file to host for playerId:', playerId);
     const imageUrl = await uploadFileToHost(fileBuffer, file.name, file.type);
@@ -106,21 +106,21 @@ export async function handleProfilePhotoUploadAction(
         message: `Foto hospedada, mas falha ao salvar no perfil: ${updateResult.message}`,
       };
     }
-  } catch (uploadOrDbError) { // Catches errors from uploadFileToHost or adminUpdatePlayerFullAction
+  } catch (uploadOrDbError) {
     console.error(`[imageUploadActions] CRITICAL ERROR during profile photo upload (upload/DB stage) for playerId: ${playerId}:`, uploadOrDbError);
-    
+
     let errorMessage = 'Ocorreu um erro desconhecido durante o processamento da foto.';
+    // Simplified error message derivation
     if (uploadOrDbError instanceof Error) {
       errorMessage = uploadOrDbError.message;
-    } else if (typeof uploadOrDbError === 'string') {
+    } else if (typeof uploadOrDbError === 'string' && uploadOrDbError.length > 0) {
       errorMessage = uploadOrDbError;
-    } else if (uploadOrDbError && typeof (uploadOrDbError as any).message === 'string') {
-      errorMessage = (uploadOrDbError as any).message;
     }
-    
-    return { 
-      success: false, 
-      message: `Falha crítica no upload: ${errorMessage.substring(0, 100)}` 
+    // Removed the (uploadOrDbError as any).message to prevent potential errors if uploadOrDbError is not an object
+
+    return {
+      success: false,
+      message: `Falha crítica no upload: ${errorMessage.substring(0, 100)}`
     };
   }
 }
