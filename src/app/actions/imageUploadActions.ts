@@ -29,11 +29,21 @@ export async function handleProfilePhotoUploadAction(
 
   if (fileEntry instanceof File) {
     file = fileEntry;
+     // Check if the file input was actually left empty by the user
+    if (file.name === "" && file.size === 0 && !file.type) {
+        console.log('[imageUploadActions] Empty file input detected, treating as no file for upload.');
+        file = null; // Treat as if no file was selected, leading to removal logic
+    }
   } else if (fileEntry === null) {
-    // This is the "no file" case, handled below
+    // This means the key 'profileImage' was not appended or was explicitly set to null.
+    // This path is for explicit photo removal or no file selected.
+    console.log('[imageUploadActions] fileEntry is null, proceeding with photo removal/no file logic.');
+  } else if (typeof fileEntry === 'string' && fileEntry === 'null') {
+    // If 'profileImage' was appended as the string "null"
+    console.log('[imageUploadActions] fileEntry is the string "null", proceeding with photo removal/no file logic.');
   } else if (fileEntry) {
     console.error('[imageUploadActions] Invalid data type for profileImage. Expected File or null, got:', typeof fileEntry, fileEntry);
-    return { success: false, message: 'Tipo de arquivo de imagem inválido. Por favor, selecione um arquivo de imagem válido.' };
+    return { success: false, message: 'Tipo de arquivo de imagem inválido.' };
   }
 
 
@@ -45,33 +55,41 @@ export async function handleProfilePhotoUploadAction(
         console.log('[imageUploadActions] Photo removed successfully for playerId:', playerId);
         return { success: true, message: 'Foto de perfil removida.', newPhotoUrl: null };
       } else {
-        console.error('[imageUploadActions] Failed to remove photo for playerId:', playerId, removeResult.message);
-        return { success: false, message: `Falha ao remover foto. Detalhes no servidor.` };
+        console.error('[imageUploadActions] Failed to remove photo for playerId:', playerId, 'Details:', removeResult.message);
+        return { success: false, message: 'Falha ao remover foto do perfil.' };
       }
     } catch (error) {
       console.error('[imageUploadActions] Error during photo removal for playerId (adminUpdatePlayerFullAction failed):', playerId, error);
       return {
         success: false,
-        message: `Erro ao remover foto. Detalhes no servidor.`
+        message: 'Erro ao processar remoção da foto.'
       };
     }
   }
 
-  console.log('[imageUploadActions] File received:', file.name, file.size, file.type);
+  console.log('[imageUploadActions] File received for upload:', file.name, file.size, file.type);
 
-  if (file.size === 0) {
-    console.error('[imageUploadActions] File is empty for playerId:', playerId);
-    return { success: false, message: 'Arquivo da imagem está vazio.' };
+  if (file.size === 0 && file.name === "" && !file.type) {
+      // This case should ideally be caught earlier and file set to null
+      console.log('[imageUploadActions] Empty file object (no selection), treating as no file for upload.');
+      // This should now go to the removal path handled by !file, but as a safeguard:
+      // Re-evaluating the logic: if 'file' is not null here, it means it IS a File object.
+      // An actual empty file (0 bytes but with a name/type) IS an error.
+      // If it was an empty input, 'file' should have been nullified above.
+      // So if we reach here and file.size is 0, it's an invalid empty file.
+      console.error('[imageUploadActions] File is empty (0 bytes but is a File object) for playerId:', playerId);
+      return { success: false, message: 'Arquivo da imagem está vazio.' };
   }
+
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
     console.error(`[imageUploadActions] File size exceeds 1MB limit for playerId: ${playerId}. Size: ${file.size} bytes.`);
-    return { success: false, message: `Arquivo da imagem excede o limite de 1MB. Por favor, selecione um arquivo menor.` };
+    return { success: false, message: `Arquivo da imagem excede o limite de 1MB.` };
   }
 
   if (!file.type.startsWith('image/')) {
     console.error('[imageUploadActions] Invalid file type for playerId:', playerId, file.type);
-    return { success: false, message: 'Arquivo inválido. Por favor, selecione uma imagem.' };
+    return { success: false, message: 'Arquivo inválido, selecione uma imagem.' };
   }
 
   let fileBuffer: Buffer;
@@ -82,7 +100,7 @@ export async function handleProfilePhotoUploadAction(
     console.log(`[imageUploadActions] File buffer created for playerId ${playerId}, size: ${fileBuffer.length}`);
   } catch (bufferError) {
     console.error(`[imageUploadActions] Error converting file to buffer for playerId ${playerId}:`, bufferError);
-    return { success: false, message: `Falha ao processar arquivo. Detalhes no servidor.` };
+    return { success: false, message: `Falha ao processar o arquivo.` };
   }
 
   try {
@@ -92,7 +110,7 @@ export async function handleProfilePhotoUploadAction(
 
     if (!imageUrl || typeof imageUrl !== 'string' || !(imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
         console.error('[imageUploadActions] Invalid image URL received from host:', imageUrl);
-        return { success: false, message: 'URL da imagem inválida retornada pelo servidor de upload. Detalhes no servidor.' };
+        return { success: false, message: 'URL da imagem inválida do servidor de upload.' };
     }
 
     console.log(`[imageUploadActions] Updating player ${playerId} with foto: ${imageUrl}`);
@@ -106,21 +124,17 @@ export async function handleProfilePhotoUploadAction(
         newPhotoUrl: imageUrl,
       };
     } else {
+      console.error('[imageUploadActions] Firebase update failed for playerId:', playerId, 'Details:', updateResult.message);
       return {
         success: false,
-        message: `Foto hospedada, mas falha ao salvar no perfil. Detalhes no servidor.`,
+        message: `Falha ao salvar foto no perfil.`,
       };
     }
   } catch (uploadOrDbError) {
     console.error(`[imageUploadActions] CRITICAL ERROR during profile photo upload (upload/DB stage) for playerId: ${playerId}:`, uploadOrDbError);
-    const errorMessage = uploadOrDbError instanceof Error ? uploadOrDbError.message : 'Erro desconhecido no upload/DB.';
     return {
       success: false,
-      message: `Falha crítica no upload: ${errorMessage.substring(0, 150)}. Verifique os logs do servidor.`
+      message: `Falha crítica no upload da foto.`
     };
   }
-  
-  // Failsafe return, should ideally not be reached if all paths above are handled.
-  console.warn(`[imageUploadActions] Reached end of function without explicit return for playerId: ${playerId}. This indicates a logic flaw.`);
-  return { success: false, message: 'Ação de upload terminou de forma inesperada. Verifique os logs.' };
 }
