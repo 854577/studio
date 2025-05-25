@@ -1,6 +1,7 @@
 
 'use server';
 
+import type { Player } from '@/types/player';
 import { adminUpdatePlayerFullAction } from './playerActions';
 import { uploadFileToHost } from '@/lib/imageUploader';
 
@@ -29,7 +30,6 @@ export async function handleProfilePhotoUploadAction(
   } else if (fileEntry === null) {
     // This is the "no file" case, handled below
   } else if (fileEntry) {
-    // The entry exists but is not a File object
     console.error('[imageUploadActions] Invalid data type for profileImage. Expected File or null, got:', typeof fileEntry, fileEntry);
     return { success: false, message: 'Tipo de arquivo de imagem inválido. Por favor, selecione um arquivo de imagem válido.' };
   }
@@ -44,14 +44,13 @@ export async function handleProfilePhotoUploadAction(
         return { success: true, message: 'Foto de perfil removida.', newPhotoUrl: null };
       } else {
         console.error('[imageUploadActions] Failed to remove photo for playerId:', playerId, removeResult.message);
-        return { success: false, message: `Falha ao remover foto: ${removeResult.message}` };
+        return { success: false, message: `Falha ao remover foto. Detalhes no servidor.` };
       }
     } catch (error) {
       console.error('[imageUploadActions] Error during photo removal for playerId (adminUpdatePlayerFullAction failed):', playerId, error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao tentar remover a foto.';
       return {
         success: false,
-        message: `Erro ao remover foto: ${errorMessage.substring(0,100)}`
+        message: `Erro ao remover foto. Detalhes no servidor.`
       };
     }
   }
@@ -76,8 +75,7 @@ export async function handleProfilePhotoUploadAction(
     console.log(`[imageUploadActions] File buffer created for playerId ${playerId}, size: ${fileBuffer.length}`);
   } catch (bufferError) {
     console.error(`[imageUploadActions] Error converting file to buffer for playerId ${playerId}:`, bufferError);
-    const errorMsg = bufferError instanceof Error ? bufferError.message : 'Erro ao processar arquivo de imagem.';
-    return { success: false, message: `Falha ao processar arquivo: ${errorMsg.substring(0,100)}` };
+    return { success: false, message: `Falha ao processar arquivo. Detalhes no servidor.` };
   }
 
   try {
@@ -87,7 +85,7 @@ export async function handleProfilePhotoUploadAction(
 
     if (!imageUrl || typeof imageUrl !== 'string' || !(imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
         console.error('[imageUploadActions] Invalid image URL received from host:', imageUrl);
-        return { success: false, message: 'URL da imagem inválida retornada pelo servidor de upload.' };
+        return { success: false, message: 'URL da imagem inválida retornada pelo servidor de upload. Detalhes no servidor.' };
     }
 
     console.log(`[imageUploadActions] Updating player ${playerId} with foto: ${imageUrl}`);
@@ -103,24 +101,18 @@ export async function handleProfilePhotoUploadAction(
     } else {
       return {
         success: false,
-        message: `Foto hospedada, mas falha ao salvar no perfil: ${updateResult.message}`,
+        message: `Foto hospedada, mas falha ao salvar no perfil. Detalhes no servidor.`,
       };
     }
   } catch (uploadOrDbError) {
     console.error(`[imageUploadActions] CRITICAL ERROR during profile photo upload (upload/DB stage) for playerId: ${playerId}:`, uploadOrDbError);
-
-    let errorMessage = 'Ocorreu um erro desconhecido durante o processamento da foto.';
-    // Simplified error message derivation
-    if (uploadOrDbError instanceof Error) {
-      errorMessage = uploadOrDbError.message;
-    } else if (typeof uploadOrDbError === 'string' && uploadOrDbError.length > 0) {
-      errorMessage = uploadOrDbError;
-    }
-    // Removed the (uploadOrDbError as any).message to prevent potential errors if uploadOrDbError is not an object
-
     return {
       success: false,
-      message: `Falha crítica no upload: ${errorMessage.substring(0, 100)}`
+      message: `Falha crítica no upload. Verifique os logs do servidor para detalhes.`
     };
   }
+  
+  // Failsafe return, should ideally not be reached if all paths above are handled.
+  console.warn(`[imageUploadActions] Reached end of function without explicit return for playerId: ${playerId}. This indicates a logic flaw.`);
+  return { success: false, message: 'Ação de upload terminou de forma inesperada. Verifique os logs.' };
 }
