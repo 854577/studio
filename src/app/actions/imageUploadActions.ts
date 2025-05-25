@@ -11,6 +11,8 @@ interface UploadResult {
   newPhotoUrl?: string | null;
 }
 
+const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1MB
+
 export async function handleProfilePhotoUploadAction(
   formData: FormData,
   playerId: string
@@ -62,6 +64,11 @@ export async function handleProfilePhotoUploadAction(
     return { success: false, message: 'Arquivo da imagem está vazio.' };
   }
 
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    console.error(`[imageUploadActions] File size exceeds 1MB limit for playerId: ${playerId}. Size: ${file.size} bytes.`);
+    return { success: false, message: `Arquivo da imagem excede o limite de 1MB. Por favor, selecione um arquivo menor.` };
+  }
+
   if (!file.type.startsWith('image/')) {
     console.error('[imageUploadActions] Invalid file type for playerId:', playerId, file.type);
     return { success: false, message: 'Arquivo inválido. Por favor, selecione uma imagem.' };
@@ -106,9 +113,10 @@ export async function handleProfilePhotoUploadAction(
     }
   } catch (uploadOrDbError) {
     console.error(`[imageUploadActions] CRITICAL ERROR during profile photo upload (upload/DB stage) for playerId: ${playerId}:`, uploadOrDbError);
+    const errorMessage = uploadOrDbError instanceof Error ? uploadOrDbError.message : 'Erro desconhecido no upload/DB.';
     return {
       success: false,
-      message: `Falha crítica no upload. Verifique os logs do servidor para detalhes.`
+      message: `Falha crítica no upload: ${errorMessage.substring(0, 150)}. Verifique os logs do servidor.`
     };
   }
   
