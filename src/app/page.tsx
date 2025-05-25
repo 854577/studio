@@ -37,7 +37,7 @@ export const actionConfig: Record<ActionType, ActionConfig> = {
   treinar: { icon: Dumbbell, goldRange: [100, 500], xpRange: [100, 500], title: "Treino intenso!", modalTitle: "Treinando..." },
 };
 
-const ADMIN_PLAYER_IDS = ['5521994361356', 'HimikoToga'];
+const ADMIN_PLAYER_IDS = ['5521994361356', 'HimikoToga', 'himiko'];
 
 function HomePageInternal() {
   const router = useRouter();
@@ -121,7 +121,7 @@ function HomePageInternal() {
           sessionStorage.removeItem('playerData');
           sessionStorage.removeItem('isAdmin');
            if (currentPlayerId && pidFromUrl !== currentPlayerId) {
-            setPasswordInput(''); // Clear password if changing player context
+            setPasswordInput(''); 
             setPlayerData(null);
             setCurrentPlayerId(null);
             setIsAdmin(false);
@@ -134,7 +134,7 @@ function HomePageInternal() {
             setPlayerData(null);
             setCurrentPlayerId(null);
             setIsAdmin(false);
-            setPasswordInput(''); // Clear password if context is fully changing
+            setPasswordInput(''); 
             setLoginError(null);
             setError(null);
             sessionStorage.removeItem('currentPlayerId');
@@ -143,7 +143,7 @@ function HomePageInternal() {
          }
       }
     } else {
-       if (currentPlayerId) { // If URL has no playerId but we had a session
+       if (currentPlayerId) { 
         setPlayerData(null);
         setCurrentPlayerId(null);
         setIsAdmin(false);
@@ -169,7 +169,7 @@ function HomePageInternal() {
           if (endTime > Date.now()) {
             loadedCooldowns[action] = endTime;
           } else {
-            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); // Cooldown expired
+            localStorage.removeItem(`cooldown_${action}_${currentPlayerId}`); 
           }
         }
       });
@@ -231,9 +231,7 @@ function HomePageInternal() {
     setLoading(true);
     setLoginError(null);
     setError(null);
-    // Do not clear playerData and currentPlayerId here if they might be valid from session/URL
-    // Only clear them if the login attempt is for a *different* ID or if it fails.
-
+    
     try {
       const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${trimmedId}.json`);
       if (!response.ok) throw new Error(`API request failed: ${response.statusText} (status ${response.status})`);
@@ -250,12 +248,11 @@ function HomePageInternal() {
           setIsAdmin(currentIsAdmin);
 
           if (searchParams.get('playerId') !== trimmedId) {
-            router.push(`/?playerId=${trimmedId}`, { scroll: false });
+             router.push(`/?playerId=${trimmedId}`, { scroll: false });
           }
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(playerDataToSet));
           sessionStorage.setItem('isAdmin', String(currentIsAdmin));
-          // Do NOT clear passwordInput here if login is successful
         } else {
           setLoginError('Nome de usuário ou senha inválidos.');
           setPasswordInput('');
@@ -300,27 +297,24 @@ function HomePageInternal() {
     }
     
     setIsActionInProgress(true);
-    setCurrentActionLoading(actionType); // Set loading specific to this action button
+    setCurrentActionLoading(actionType); 
 
-    // Short delay to allow UI to update with spinner before modal
     await new Promise(resolve => setTimeout(resolve, 300)); 
 
     setActiveActionAnimation(actionType);
-    setCurrentActionLoading(null); // Clear specific button loading once modal is up
+    setCurrentActionLoading(null); 
 
 
     setTimeout(async () => {
-      // Re-check playerData and currentPlayerId inside setTimeout as they might change
       if (!currentPlayerId || !playerData) {
-        setActiveActionAnimation(null); // Close animation dialog
-        setIsActionInProgress(false); // Re-enable action buttons
+        setActiveActionAnimation(null); 
+        setIsActionInProgress(false); 
         const msg = !currentPlayerId ? "ID do jogador não encontrado." : "Dados do jogador não encontrados.";
         setError(`${msg} Por favor, faça login novamente.`);
         toast({ title: "Erro de Sessão", description: msg, variant: "destructive" });
         return;
       }
 
-      // Fetch fresh player data before applying action
       let currentPlayerDataForAction: Player | null = null;
       try {
         const response = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${currentPlayerId}.json`);
@@ -349,7 +343,6 @@ function HomePageInternal() {
       const newOuro = (currentPlayerDataForAction.ouro || 0) + goldEarned;
       const newXp = (currentPlayerDataForAction.xp || 0) + xpEarned;
       
-      // Update local state immediately for responsiveness
       const updatedLocalPlayerData = { ...currentPlayerDataForAction, nome: currentPlayerDataForAction.nome || currentPlayerId, ouro: newOuro, xp: newXp };
       setPlayerData(updatedLocalPlayerData); 
       sessionStorage.setItem('playerData', JSON.stringify(updatedLocalPlayerData));
@@ -381,10 +374,10 @@ function HomePageInternal() {
       setActionCooldownEndTimes(prev => ({ ...prev, [actionType]: newCooldownEndTime }));
       if (typeof window !== 'undefined') localStorage.setItem(`cooldown_${actionType}_${currentPlayerId}`, newCooldownEndTime.toString());
 
-      setActiveActionAnimation(null); // Close animation dialog
-      setIsActionInProgress(false); // Re-enable action buttons
+      setActiveActionAnimation(null); 
+      setIsActionInProgress(false); 
 
-    }, 1200); // Duration of the animation dialog
+    }, 1200); 
   };
 
   const handleChangeName = async (event: FormEvent) => {
@@ -426,7 +419,7 @@ function HomePageInternal() {
       toast({ title: "Sucesso!", description: result.message });
       const updatedData = { ...playerData, senha: result.updatedPlayer.senha };
       setPlayerData(updatedData);
-      sessionStorage.setItem('playerData', JSON.stringify(updatedData)); // Update session with new password if needed
+      sessionStorage.setItem('playerData', JSON.stringify(updatedData)); 
       setNewPassword('');
     } else {
       toast({ title: "Erro ao Alterar Senha", description: result.message, variant: "destructive" });
@@ -436,7 +429,7 @@ function HomePageInternal() {
   const handleOpenEditUserDialog = (id: string, player: Player) => {
     setEditingUser({ id, player });
     setEditUserNewName(player.nome || id);
-    setEditUserNewPassword(''); // Don't prefill password
+    setEditUserNewPassword(''); 
     setIsEditUserDialogOpen(true);
   };
 
@@ -464,7 +457,6 @@ function HomePageInternal() {
             };
         });
       }
-      // If the admin is editing their own name via this dialog, update current playerData too
       if (currentPlayerId === editingUser.id && playerData && result.updatedPlayer?.nome) {
         const updatedData = { ...playerData, nome: result.updatedPlayer.nome };
         setPlayerData(updatedData);
@@ -492,7 +484,6 @@ function HomePageInternal() {
 
     if (result.success) {
       toast({ title: "Sucesso!", description: `Senha de ${editingUser.id} atualizada.` });
-      // If admin changes their own password via this dialog, update current playerData too
        if (currentPlayerId === editingUser.id && playerData && result.updatedPlayer?.senha) {
         const updatedData = { ...playerData, senha: result.updatedPlayer.senha };
         setPlayerData(updatedData);
@@ -575,10 +566,10 @@ function HomePageInternal() {
     );
   } else if (playerData && !loginError && !loading) {
     contentToRender = (
-      <div className="w-full max-w-5xl px-2 space-y-8 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-[1%]"
+      <div className="w-full max-w-5xl px-2 space-y-8"
         style={{ '--animate-duration': '300ms' } as React.CSSProperties}
       >
-        {error && !loginError && ( // Only show this general error if not a login error and playerData exists
+        {error && !loginError && ( 
           <Alert variant="destructive" className="w-full max-w-md mx-auto my-4 shadow-lg card-glow">
             <AlertCircle className="w-4 h-4" />
             <AlertTitle>Ocorreu um Erro</AlertTitle>
@@ -736,11 +727,10 @@ function HomePageInternal() {
         </Accordion>
       </div>
     );
-  } else if (loading && playerData) { // Show skeleton for main content if loading new data for an already logged-in player
+  } else if (loading && playerData) { 
     contentToRender = (
       <div className="w-full max-w-5xl px-2 space-y-8">
         <PlayerStatsCard playerData={playerData} isLoading={true} />
-        {/* Skeleton for Accordions */}
         <div className="bg-card border border-border/50 rounded-lg shadow-xl overflow-hidden p-6 space-y-4 card-glow">
           <Skeleton className="h-8 bg-muted rounded w-1/3" />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -851,3 +841,5 @@ export default function HomePage() {
     </Suspense>
   );
 }
+
+    
