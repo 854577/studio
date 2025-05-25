@@ -123,7 +123,7 @@ function HomePageInternal() {
       if (sessionPlayerId === pidFromUrl && sessionPlayerData) {
         try {
           const parsedData = JSON.parse(sessionPlayerData);
-          if (JSON.stringify(playerData) !== JSON.stringify(parsedData)) { // More robust check
+          if (JSON.stringify(playerData) !== JSON.stringify(parsedData)) { 
             setPlayerData(parsedData);
           }
           if (currentPlayerId !== sessionPlayerId) {
@@ -142,28 +142,31 @@ function HomePageInternal() {
           if (playerData !== null) setPlayerData(null);
           if (currentPlayerId !== null) setCurrentPlayerId(null);
           if (isAdmin !== false) setIsAdmin(false);
-          if (passwordInput !== '') setPasswordInput('');
+          // Do not clear passwordInput here if pidFromUrl is present, allow login attempt
           if (loginError !== null) setLoginError(null);
           if (error !== null) setError(null);
         }
       } else {
+        // If pidFromUrl is different from currentPlayerId (or if currentPlayerId is null)
+        // This means we are trying to load a new player, or it's an initial load with pidFromUrl
+        // We should clear old player data but not necessarily the password if a login attempt is intended
         if (currentPlayerId && pidFromUrl !== currentPlayerId) {
           if (playerData !== null) setPlayerData(null);
           if (currentPlayerId !== null) setCurrentPlayerId(null);
           if (isAdmin !== false) setIsAdmin(false);
-          if (passwordInput !== '') setPasswordInput('');
+          // Do not clear passwordInput here, as a new login might be attempted with a new ID
           sessionStorage.removeItem('currentPlayerId');
           sessionStorage.removeItem('playerData');
           sessionStorage.removeItem('isAdmin');
         } else if (!currentPlayerId && pidFromUrl) {
-            // If no currentPlayerId, but there's a pidFromUrl, it's a fresh load for this ID
-            // No need to clear passwordInput here if it was pre-filled by URL for direct access attempts
+            // Initial load for this ID, no session data.
+            // No need to clear passwordInput here if it was pre-filled for direct access attempts.
         }
         if (loginError !== null) setLoginError(null);
         if (error !== null) setError(null);
       }
-    } else {
-      if (currentPlayerId) {
+    } else { // No pidFromUrl
+      if (currentPlayerId) { // If there was a player active, clear everything (logout)
         if (playerData !== null) setPlayerData(null);
         if (currentPlayerId !== null) setCurrentPlayerId(null);
         if (isAdmin !== false) setIsAdmin(false);
@@ -176,9 +179,10 @@ function HomePageInternal() {
       if (loginError !== null) setLoginError(null);
       if (error !== null) setError(null);
     }
-  }, [searchParams, currentPlayerId, playerData, isAdmin, playerIdInput, passwordInput, loginError, error,
-      setPlayerData, setCurrentPlayerId, setIsAdmin, setPlayerIdInput, setPasswordInput, setLoginError, setError
-  ]);
+  }, [
+    searchParams, currentPlayerId, playerData, isAdmin, playerIdInput, passwordInput, loginError, error,
+    setPlayerData, setCurrentPlayerId, setIsAdmin, setPlayerIdInput, setPasswordInput, setLoginError, setError
+ ]);
 
 
   useEffect(() => {
@@ -195,16 +199,20 @@ function HomePageInternal() {
           }
         }
       });
-      setActionCooldownEndTimes(loadedCooldowns);
-    } else {
-      if(Object.values(actionCooldownEndTimes).some(t => t !== 0)) { // Only reset if not already default
-        setActionCooldownEndTimes({ trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 });
+      if(JSON.stringify(actionCooldownEndTimes) !== JSON.stringify(loadedCooldowns)) {
+        setActionCooldownEndTimes(loadedCooldowns);
       }
-      if(Object.values(timeLeftForAction).some(t => t !== null)) { // Only reset if not already default
-        setTimeLeftForAction({ trabalhar: null, pescar: null, dormir: null, treinar: null });
+    } else {
+      const defaultCooldowns = { trabalhar: 0, pescar: 0, dormir: 0, treinar: 0 };
+      if(JSON.stringify(actionCooldownEndTimes) !== JSON.stringify(defaultCooldowns)) { 
+        setActionCooldownEndTimes(defaultCooldowns);
+      }
+      const defaultTimeLeft = { trabalhar: null, pescar: null, dormir: null, treinar: null };
+      if(JSON.stringify(timeLeftForAction) !== JSON.stringify(defaultTimeLeft)) { 
+        setTimeLeftForAction(defaultTimeLeft);
       }
     }
-  }, [currentPlayerId]);
+  }, [currentPlayerId, actionCooldownEndTimes, timeLeftForAction]);
 
   useEffect(() => {
     const intervalIds: NodeJS.Timeout[] = [];
@@ -230,7 +238,7 @@ function HomePageInternal() {
         const id = setInterval(updateDisplay, 1000);
         intervalIds.push(id);
       } else {
-         if (timeLeftForAction[action] !== null) { // Only update if it's not already null
+         if (timeLeftForAction[action] !== null) { 
             setTimeLeftForAction(prev => ({ ...prev, [action]: null }));
          }
          if (currentPlayerId && localStorage.getItem(`cooldown_${action}_${currentPlayerId}`)) {
@@ -282,7 +290,7 @@ function HomePageInternal() {
           sessionStorage.setItem('currentPlayerId', trimmedId);
           sessionStorage.setItem('playerData', JSON.stringify(playerDataToSet));
           sessionStorage.setItem('isAdmin', String(currentIsAdmin));
-          // Do not clear passwordInput here
+          // Do not clear passwordInput here for successful login
         } else {
           if (loginError !== 'Nome de usuário ou senha inválidos.') setLoginError('Nome de usuário ou senha inválidos.');
           if (passwordInput !== '') setPasswordInput('');
@@ -341,11 +349,11 @@ function HomePageInternal() {
     await new Promise(resolve => setTimeout(resolve, 150)); 
 
     setTimeout(async () => {
-      if (!currentPlayerId || !playerData) {
+      if (!currentPlayerId || !playerData) { // Re-check after timeout
           setActiveActionAnimation(null);
           setIsActionInProgress(false);
           setCurrentActionLoading(null);
-          const msg = !currentPlayerId ? "ID do jogador não encontrado." : "Dados do jogador não encontrados.";
+          const msg = !currentPlayerId ? "ID do jogador não encontrado após ação." : "Dados do jogador não encontrados após ação.";
            if (error !== msg) setError(`${msg} Por favor, faça login novamente.`);
           toast({ title: "Erro de Sessão", description: msg, variant: "destructive" });
           return;
@@ -463,14 +471,11 @@ function HomePageInternal() {
   // For the accordion form
   const handleChangePhoto = async (event: FormEvent) => {
     event.preventDefault();
-    if (!currentPlayerId || !newPhotoUrl.trim()) {
-        if (newPhotoUrl.trim() === '' && playerData?.foto) {
-           // Allow removing photo
-        } else {
-            toast({ title: "Erro", description: "URL da foto não pode estar vazia (a menos que removendo uma foto existente).", variant: "destructive" });
-            return;
-        }
+    if (!currentPlayerId) {
+        toast({ title: "Erro", description: "ID do jogador não encontrado.", variant: "destructive" });
+        return;
     }
+    // Allow empty newPhotoUrl to remove photo
     if (newPhotoUrl.trim() !== '') {
         try {
             new URL(newPhotoUrl.trim());
@@ -487,7 +492,9 @@ function HomePageInternal() {
 
     if (result.success && playerData) {
       toast({ title: "Sucesso!", description: photoPayload === null ? "Foto de perfil removida." : "Foto de perfil atualizada." });
-      const updatedFoto = result.updatedPlayer?.foto === undefined ? (photoPayload === null ? '' : (playerData.foto || '')) : (result.updatedPlayer.foto || '');
+      const updatedFoto = result.updatedPlayer?.foto === undefined ? 
+          (photoPayload === null ? '' : (playerData.foto || '')) 
+          : (result.updatedPlayer.foto || '');
       const updatedData = { ...playerData, foto: updatedFoto };
       setPlayerData(updatedData);
       sessionStorage.setItem('playerData', JSON.stringify(updatedData));
@@ -519,11 +526,12 @@ function HomePageInternal() {
 
     if (result.success && playerData) {
       toast({ title: "Sucesso!", description: photoPayload === null ? "Foto de perfil removida." : "Foto de perfil atualizada." });
-      const updatedFoto = result.updatedPlayer?.foto === undefined ? (photoPayload === null ? '' : (playerData.foto || '')) : (result.updatedPlayer.foto || '');
+      const updatedFoto = result.updatedPlayer?.foto === undefined ? 
+            (photoPayload === null ? '' : (playerData.foto || '')) 
+            : (result.updatedPlayer.foto || '');
       const updatedData = { ...playerData, foto: updatedFoto };
       setPlayerData(updatedData);
       sessionStorage.setItem('playerData', JSON.stringify(updatedData));
-      // setPhotoDialogInputValue(''); // Input value is managed by dialog state, no need to clear here
       setIsChangePhotoDialogOpen(false);
     } else {
       toast({ title: "Erro ao Alterar Foto", description: result.message, variant: "destructive" });
@@ -941,19 +949,7 @@ function HomePageInternal() {
         </h1>
       </header>
 
-      {playerData && currentPlayerId && (
-        <div className="w-full max-w-5xl px-2 mb-6 flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/loja?playerId=${currentPlayerId}`)}
-            className="rounded-md shadow-sm card-glow hover:shadow-lg"
-          >
-            <ShoppingBag size={16} className="mr-1.5" />
-            Loja
-          </Button>
-        </div>
-      )}
+      {/* Removed the top shop button */}
 
       <div className="flex flex-col items-center justify-center w-full flex-grow">
         {contentToRender}
@@ -1155,3 +1151,4 @@ export default function HomePage() {
     </Suspense>
   );
 }
+
