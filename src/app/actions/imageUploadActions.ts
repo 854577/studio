@@ -2,7 +2,7 @@
 'use server';
 
 import { adminUpdatePlayerFullAction } from './playerActions';
-import { uploadFileToHost } from '@/lib/imageUploader'; // Placeholder uploader
+import { uploadFileToHost } from '@/lib/imageUploader';
 
 interface UploadResult {
   success: boolean;
@@ -14,50 +14,56 @@ export async function handleProfilePhotoUploadAction(
   formData: FormData,
   playerId: string
 ): Promise<UploadResult> {
+  console.log('[imageUploadActions] Action started for playerId:', playerId);
+
   if (!playerId) {
+    console.error('[imageUploadActions] Player ID not provided.');
     return { success: false, message: 'ID do jogador não fornecido.' };
   }
 
   const file = formData.get('profileImage') as File | null;
 
   if (!file) {
-    // If no file is provided, it means the user wants to remove the photo
-    // Or if your UI prevents this, you can treat it as an error.
-    // For now, let's assume removing the photo if no file is sent.
-    // However, the UI logic in page.tsx is now more explicit about selection.
-    // This path might not be hit if button is disabled when !selectedFile
-    console.warn('Tentativa de upload sem arquivo. Verifique a lógica da UI.');
-    // Let's try to remove the photo if no file is selected
-    const removeResult = await adminUpdatePlayerFullAction(playerId, { foto: null });
-     if (removeResult.success) {
-      return { success: true, message: 'Foto de perfil removida.', newPhotoUrl: null };
-    } else {
-      return { success: false, message: `Falha ao remover foto: ${removeResult.message}` };
+    console.log('[imageUploadActions] No file provided, attempting to remove photo for playerId:', playerId);
+    try {
+      const removeResult = await adminUpdatePlayerFullAction(playerId, { foto: null });
+      if (removeResult.success) {
+        console.log('[imageUploadActions] Photo removed successfully for playerId:', playerId);
+        return { success: true, message: 'Foto de perfil removida.', newPhotoUrl: null };
+      } else {
+        console.error('[imageUploadActions] Failed to remove photo for playerId:', playerId, removeResult.message);
+        return { success: false, message: `Falha ao remover foto: ${removeResult.message}` };
+      }
+    } catch (error) {
+      console.error('[imageUploadActions] Error during photo removal for playerId:', playerId, error);
+      return { success: false, message: 'Erro ao tentar remover a foto.' };
     }
   }
 
+  console.log('[imageUploadActions] File received:', file.name, file.size, file.type);
+
   if (file.size === 0) {
+    console.error('[imageUploadActions] File is empty.');
     return { success: false, message: 'Arquivo da imagem está vazio.' };
   }
 
-  // Validate file type (optional, but good practice)
   if (!file.type.startsWith('image/')) {
+    console.error('[imageUploadActions] Invalid file type:', file.type);
     return { success: false, message: 'Arquivo inválido. Por favor, selecione uma imagem.' };
   }
 
   try {
+    console.log('[imageUploadActions] Converting file to buffer...');
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    
-    // Call the (placeholder) upload function
-    // This is where you'd integrate your actual image hosting API call
+    console.log(`[imageUploadActions] File buffer created, size: ${fileBuffer.length}`);
+
+    console.log('[imageUploadActions] Uploading file to host...');
     const imageUrl = await uploadFileToHost(fileBuffer, file.name, file.type);
+    console.log(`[imageUploadActions] Image URL from host: ${imageUrl}`);
 
-    if (!imageUrl) {
-      throw new Error('Falha ao obter URL da imagem do serviço de hospedagem.');
-    }
-
-    // Save the new image URL to Firebase
+    console.log(`[imageUploadActions] Updating player ${playerId} with foto: ${imageUrl}`);
     const updateResult = await adminUpdatePlayerFullAction(playerId, { foto: imageUrl });
+    console.log(`[imageUploadActions] Firebase update result:`, updateResult);
 
     if (updateResult.success) {
       return {
@@ -66,18 +72,22 @@ export async function handleProfilePhotoUploadAction(
         newPhotoUrl: imageUrl,
       };
     } else {
-      // Attempt to "rollback" or notify about partial failure if needed.
-      // For now, just return the Firebase update error.
       return {
         success: false,
         message: `Foto hospedada, mas falha ao salvar no perfil: ${updateResult.message}`,
       };
     }
-  } catch (error) {
-    console.error('Erro durante o upload da foto de perfil:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido ao processar a foto.';
-    return { success: false, message: errorMessage };
+  } catch (error: any) {
+    console.error('[imageUploadActions] CRITICAL ERROR during profile photo upload:', error);
+    let errorMessage = 'Ocorreu um erro desconhecido durante o processamento da foto.';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error.toString === 'function') {
+      errorMessage = error.toString();
+    }
+    
+    return { success: false, message: `Falha no upload: ${String(errorMessage).substring(0, 250)}` };
   }
 }
-
-    

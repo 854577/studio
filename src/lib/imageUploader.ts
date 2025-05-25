@@ -16,16 +16,8 @@ export async function uploadFileToHost(
   fileType: string
 ): Promise<string> {
   console.log(
-    `[imageUploader.ts] Placeholder: Simulating upload for ${fileName} (${fileType}, ${fileBuffer.length} bytes)`
+    `[imageUploader.ts] Attempting upload for ${fileName} (${fileType}, ${fileBuffer.length} bytes)`
   );
-
-  // ======================================================================
-  // TODO: REPLACE THIS WITH YOUR ACTUAL IMAGE UPLOAD LOGIC
-  // ======================================================================
-
-  // For now, simulate a delay and use a temporary uploader.
-  // This temporary uploader (catbox.moe) is for demonstration and NOT for production.
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
 
   try {
     const tempFormData = new FormData();
@@ -37,26 +29,34 @@ export async function uploadFileToHost(
       body: tempFormData,
     });
 
+    const responseText = await tempUploadResponse.text().catch(e => {
+      // Handle cases where .text() itself might fail, though rare for fetch
+      console.error('[imageUploader.ts] Failed to read response text from catbox.moe:', e);
+      throw new Error('Falha ao ler resposta do serviço de upload.');
+    });
+
     if (!tempUploadResponse.ok) {
-      const errorText = await tempUploadResponse.text().catch(() => tempUploadResponse.statusText);
-      console.error('Temporary upload to catbox.moe failed:', tempUploadResponse.status, errorText);
-      throw new Error(`Falha no upload temporário para o serviço de imagem: ${tempUploadResponse.status} ${errorText}`);
+      console.error(
+        '[imageUploader.ts] Temporary upload to catbox.moe failed HTTP Status:',
+        tempUploadResponse.status,
+        responseText
+      );
+      throw new Error(
+        `Falha no upload temporário (HTTP ${tempUploadResponse.status}): ${responseText.substring(0, 100)}`
+      );
     }
 
-    const tempUrl = await tempUploadResponse.text();
-    if (tempUrl && (tempUrl.startsWith('http://') || tempUrl.startsWith('https://'))) {
-      console.log(`[imageUploader.ts] Placeholder: Successfully uploaded to temporary host: ${tempUrl}`);
-      return tempUrl;
+    if (responseText && (responseText.startsWith('http://') || responseText.startsWith('https://'))) {
+      console.log(`[imageUploader.ts] Successfully uploaded to temporary host: ${responseText}`);
+      return responseText;
     } else {
-      console.error('Temporary upload to catbox.moe returned invalid URL:', tempUrl);
-      throw new Error(`URL inválida retornada pelo serviço de upload temporário: ${tempUrl}`);
+      console.error('[imageUploader.ts] Temporary upload to catbox.moe returned invalid content:', responseText);
+      throw new Error(`Resposta inválida do serviço de upload temporário: ${responseText.substring(0, 100)}`);
     }
-  } catch (e) {
-    console.error('[imageUploader.ts] Error during temporary placeholder upload:', e);
-    // Re-throw the error to be caught by the calling Server Action
-    if (e instanceof Error) {
-        throw new Error(`Erro ao processar upload temporário: ${e.message}`);
-    }
-    throw new Error('Erro desconhecido durante o upload temporário da imagem.');
+  } catch (e: any) {
+    console.error('[imageUploader.ts] Error during placeholder upload process:', e);
+    const errorMessage = e instanceof Error ? e.message : 'Erro desconhecido no uploader.';
+    // Re-throw a new, simple error to be caught by the Server Action
+    throw new Error(`Erro no upload da imagem: ${errorMessage.substring(0, 150)}`);
   }
 }
