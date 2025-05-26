@@ -45,12 +45,15 @@ export async function handleProfilePhotoUploadAction(
   let oldPhotoUrl: string | null = null;
   if (playerId) {
     try {
+      console.log(`[imageUploadActions] Fetching current player data for ${playerId} to get old photo URL.`);
       const playerResponse = await fetch(`https://himiko-info-default-rtdb.firebaseio.com/rpgUsuarios/${playerId}.json`);
       if (playerResponse.ok) {
         const currentPlayer: Player | null = await playerResponse.json();
         if (currentPlayer && currentPlayer.foto) {
           oldPhotoUrl = currentPlayer.foto;
           console.log(`[imageUploadActions] Found old photo URL for player ${playerId}: ${oldPhotoUrl}`);
+        } else {
+          console.log(`[imageUploadActions] Player ${playerId} has no current photo or player data is incomplete.`);
         }
       } else {
         console.warn(`[imageUploadActions] Could not fetch current player data for ${playerId} to get old photo URL. Status: ${playerResponse.status}`);
@@ -83,22 +86,20 @@ export async function handleProfilePhotoUploadAction(
       fileBuffer = Buffer.from(arrayBuffer);
       console.log(`[imageUploadActions] File buffer created for playerId ${playerId}, size: ${fileBuffer.length}`);
     } catch (bufferError) {
-      const errorMessage = bufferError instanceof Error ? bufferError.message : 'Erro desconhecido na conversão.';
-      console.error(`[imageUploadActions] Error converting file to buffer for playerId ${playerId}:`, errorMessage);
-      return { success: false, message: `Falha ao processar o arquivo: ${errorMessage.substring(0, 100)}` };
+      console.error(`[imageUploadActions] Error converting file to buffer for playerId ${playerId}:`, bufferError);
+      return { success: false, message: 'Falha ao processar o arquivo. Verifique o console do servidor.' };
     }
 
     try {
-      console.log('[imageUploadActions] Uploading file to host for playerId:', playerId);
+      console.log('[imageUploadActions] Attempting to upload file to host for playerId:', playerId);
       const newImageUrl = await uploadFileToHost(fileBuffer, file.name, file.type);
       console.log(`[imageUploadActions] Image URL from host for playerId ${playerId}: ${newImageUrl}`);
 
       if (!newImageUrl || typeof newImageUrl !== 'string' || !(newImageUrl.startsWith('http://') || newImageUrl.startsWith('https://'))) {
         console.error('[imageUploadActions] Invalid image URL received from host:', newImageUrl);
-        return { success: false, message: 'URL da imagem inválida do servidor de upload.' };
+        return { success: false, message: 'URL da imagem inválida do servidor de upload. Verifique o console do servidor.' };
       }
       
-      // If upload of new image is successful and there was an old photo, attempt to delete old one
       if (oldPhotoUrl && oldPhotoUrl !== newImageUrl) {
         try {
           console.log(`[imageUploadActions] Attempting to delete old photo: ${oldPhotoUrl} for player ${playerId}`);
@@ -124,21 +125,18 @@ export async function handleProfilePhotoUploadAction(
         console.error('[imageUploadActions] Firebase update failed for playerId:', playerId, 'Details:', updateResult.message);
         return {
           success: false,
-          message: `Falha ao salvar foto no perfil: ${updateResult.message.substring(0, 100)}`,
+          message: `Falha ao salvar foto no perfil: ${updateResult.message}`, // Message is already simple
         };
       }
     } catch (uploadOrDbError: any) {
       console.error(`[imageUploadActions] CRITICAL ERROR during new photo upload (upload/DB stage) for playerId: ${playerId}:`, uploadOrDbError);
-      if (uploadOrDbError.message && uploadOrDbError.message.includes('Funcionalidade de upload de imagem não implementada')) {
-        return {
-          success: false,
-          message: 'A funcionalidade de upload de fotos ainda não está configurada pelo administrador do site.'
-        };
+      let userMessage = 'Falha crítica no upload da foto. Verifique o console do servidor.';
+      if (uploadOrDbError && typeof uploadOrDbError.message === 'string' && uploadOrDbError.message.includes('Funcionalidade de upload de imagem não implementada')) {
+        userMessage = 'A funcionalidade de upload de fotos ainda não está configurada pelo administrador do site.';
       }
-      const errorMessage = uploadOrDbError instanceof Error ? uploadOrDbError.message : 'Erro desconhecido no upload/DB.';
       return {
         success: false,
-        message: `Falha crítica no upload da foto: ${errorMessage.substring(0, 150)}`
+        message: userMessage
       };
     }
   }
@@ -157,20 +155,20 @@ export async function handleProfilePhotoUploadAction(
     }
     
     try {
+      console.log(`[imageUploadActions] Updating player ${playerId} to remove photo (foto: null).`);
       const removeResult = await adminUpdatePlayerFullAction(playerId, { foto: null });
       if (removeResult.success) {
         console.log('[imageUploadActions] Photo removed successfully from Firebase for playerId:', playerId);
         return { success: true, message: 'Foto de perfil removida.', newPhotoUrl: null };
       } else {
         console.error('[imageUploadActions] Failed to remove photo from Firebase for playerId:', playerId, 'Details:', removeResult.message);
-        return { success: false, message: 'Falha ao remover foto do perfil do Firebase.' };
+        return { success: false, message: `Falha ao remover foto do perfil do Firebase: ${removeResult.message}` };
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao processar remoção do Firebase.';
-      console.error('[imageUploadActions] Error during photo removal from Firebase for playerId (adminUpdatePlayerFullAction failed):', playerId, errorMessage);
+    } catch (error: any) {
+      console.error('[imageUploadActions] Error during photo removal from Firebase for playerId (adminUpdatePlayerFullAction failed):', playerId, error);
       return {
         success: false,
-        message: `Erro ao processar remoção da foto do Firebase: ${errorMessage.substring(0, 100)}`
+        message: 'Erro ao processar remoção da foto do Firebase. Verifique o console do servidor.'
       };
     }
   }
